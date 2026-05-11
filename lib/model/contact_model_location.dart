@@ -2,6 +2,7 @@
 // File Name: contact_us_model.dart
 // Created by: Claude Assistant
 // UPDATED: ContactOfficeLocation now has mapLink field for Google Maps
+// FIXED: added lastUpdatedAt to ContactUsCmsModel (mirrors AboutPageModel pattern)
 
 class ContactUsCmsModel {
   final String publishStatus;
@@ -11,6 +12,10 @@ class ContactUsCmsModel {
   final List<ContactOfficeLocation> officeLocations;
   final ContactConfirmMessage confirmMessage;
 
+  /// Tracks the last time this document was saved to Firestore.
+  /// Injected by the repo after extracting the Firestore Timestamp.
+  final DateTime? lastUpdatedAt;                              // ← ADD
+
   ContactUsCmsModel({
     required this.publishStatus,
     required this.subDescription,
@@ -18,6 +23,7 @@ class ContactUsCmsModel {
     required this.socialIcons,
     required this.officeLocations,
     required this.confirmMessage,
+    this.lastUpdatedAt,                                       // ← ADD
   });
 
   factory ContactUsCmsModel.fromJson(Map<String, dynamic> json) {
@@ -32,12 +38,14 @@ class ContactUsCmsModel {
           .toList() ??
           [],
       officeLocations: (json['officeLocations'] as List<dynamic>?)
-          ?.map((e) => ContactOfficeLocation.fromJson(e as Map<String, dynamic>))
+          ?.map((e) =>
+          ContactOfficeLocation.fromJson(e as Map<String, dynamic>))
           .toList() ??
           [],
       confirmMessage: ContactConfirmMessage.fromJson(
         json['confirmMessage'] ?? {},
       ),
+      // lastUpdatedAt intentionally omitted — injected by repo after Timestamp extraction
     );
   }
 
@@ -49,6 +57,7 @@ class ContactUsCmsModel {
       'socialIcons': socialIcons.map((e) => e.toJson()).toList(),
       'officeLocations': officeLocations.map((e) => e.toJson()).toList(),
       'confirmMessage': confirmMessage.toJson(),
+      // lastUpdatedAt is written by the repo as FieldValue.serverTimestamp()
     };
   }
 
@@ -59,6 +68,7 @@ class ContactUsCmsModel {
     List<ContactSocialIcon>? socialIcons,
     List<ContactOfficeLocation>? officeLocations,
     ContactConfirmMessage? confirmMessage,
+    DateTime? lastUpdatedAt,                                  // ← ADD
   }) {
     return ContactUsCmsModel(
       publishStatus: publishStatus ?? this.publishStatus,
@@ -67,6 +77,7 @@ class ContactUsCmsModel {
       socialIcons: socialIcons ?? this.socialIcons,
       officeLocations: officeLocations ?? this.officeLocations,
       confirmMessage: confirmMessage ?? this.confirmMessage,
+      lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,     // ← ADD
     );
   }
 }
@@ -137,7 +148,7 @@ class ContactSocialIcon {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Office Location  ── NEW: mapLink field
+// Office Location  ── mapLink field for Google Maps
 // ═══════════════════════════════════════════════════════════════════════════
 
 class ContactOfficeLocation {
@@ -148,7 +159,6 @@ class ContactOfficeLocation {
   final ContactBilingualText text2;
 
   /// Google Maps URL or any link opened when the card is tapped.
-  /// e.g. "https://maps.google.com/?q=30.0444,31.2357"
   final String mapLink;
 
   ContactOfficeLocation({
@@ -170,7 +180,7 @@ class ContactOfficeLocation {
           json['text1'] ?? {'en': '', 'ar': ''}),
       text2: ContactBilingualText.fromJson(
           json['text2'] ?? {'en': '', 'ar': ''}),
-      mapLink: json['mapLink'] ?? '', // ✅ new — old docs default to ''
+      mapLink: json['mapLink'] ?? '',
     );
   }
 
@@ -180,7 +190,7 @@ class ContactOfficeLocation {
     'locationName': locationName.toJson(),
     'text1':        text1.toJson(),
     'text2':        text2.toJson(),
-    'mapLink':      mapLink,           // ✅ persisted
+    'mapLink':      mapLink,
   };
 
   ContactOfficeLocation copyWith({

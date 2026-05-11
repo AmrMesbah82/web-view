@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:website_app/controller/job_list/job_listing_cubit.dart';
 import 'package:website_app/controller/job_list/job_listing_state.dart';
+import 'package:website_app/controller/home_cubit.dart';
+import 'package:website_app/controller/home_state.dart';
 import 'package:website_app/model/job_listing_model.dart';
+import '../controller/lang_state.dart';
 import '../core/custom_svg.dart';
 import '../theme/appcolors.dart';
 import '../widgets/app_footer.dart';
@@ -13,6 +17,56 @@ import '../widgets/app_navbar.dart';
 const Color _kGreen      = Color(0xFF2D8C4E);
 const Color _kGreenLight = Color(0xFFE8F5EE);
 const Color _kDivider    = Color(0xFFDDE8DD);
+
+// ─── Helper: parse hex color from Firebase branding ──────────────────────────
+
+Color _parseColor(String hex, {required Color fallback}) {
+  try {
+    final h = hex.replaceAll('#', '');
+    if (h.length == 6) return Color(int.parse('FF$h', radix: 16));
+  } catch (_) {}
+  return fallback;
+}
+
+// ─── Hardcoded department EN → AR map ────────────────────────────────────────
+
+const Map<String, String> _kDeptAr = {
+  'Design':      'تصميم',
+  'Engineering': 'هندسة',
+  'Marketing':   'تسويق',
+  'HR':          'موارد بشرية',
+  'Finance':     'مالية',
+};
+
+// ─── Localization strings ─────────────────────────────────────────────────────
+
+class _L {
+  final bool isAr;
+  const _L(this.isAr);
+
+  String get heroTitle        => isAr ? 'أطلق إمكاناتك في العالم الرقمي'               : 'Unlock Your Potential in the Digital World';
+  String get sectionTitle     => isAr ? 'الوظائف المتاحة في بياناتز'                   : 'Job Listings at Bayanatz';
+  String get allLabel         => isAr ? 'الكل'                                         : 'All';
+  String get noJobsAll        => isAr ? 'لا توجد وظائف متاحة حالياً.'                  : 'No job openings available at the moment.';
+  String noJobsDept(String d) => isAr ? 'لا توجد وظائف في "$d"'                       : 'No jobs found for "$d"';
+  String get errorMsg         => isAr ? 'فشل تحميل الوظائف. يتم عرض البيانات المحفوظة.' : 'Failed to load jobs. Showing cached data.';
+  String get retry            => isAr ? 'إعادة المحاولة'                               : 'Retry';
+  String get linkCopied       => isAr ? 'تم نسخ الرابط!'                              : 'Link Copied!';
+  String get hireDate         => isAr ? 'تاريخ التعيين المتوقع'                        : 'Expected Hire Date';
+  String get experience       => isAr ? 'سنوات الخبرة'                                : 'Year Of Experience';
+  String get employmentType   => isAr ? 'نوع التوظيف'                                 : 'Employment Type';
+  String get compensation     => isAr ? 'نطاق الراتب'                                 : 'Compensation Range';
+  String get qualification    => isAr ? 'المؤهل المطلوب'                              : 'Required Qualification';
+  String get skillsLabel      => isAr ? 'المهارات:'                                   : 'Skills:';
+  String get locationLabel    => isAr ? 'القاهرة، مصر'                                : 'Cairo, Egypt';
+  String get viewJob          => isAr ? 'عرض الوظيفة'                                : 'VIEW JOB';
+  String get untitled         => isAr ? 'بدون عنوان'                                 : 'Untitled';
+  TextDirection get dir       => isAr ? TextDirection.rtl : TextDirection.ltr;
+}
+
+// ─── Department display record ────────────────────────────────────────────────
+
+typedef _DeptItem = ({String display, String key});
 
 // ─── Job Listings Page ────────────────────────────────────────────────────────
 
@@ -24,43 +78,57 @@ class JobListingsPage extends StatefulWidget {
 }
 
 class _JobListingsPageState extends State<JobListingsPage> {
-  String _selectedFilter = 'All';
+  /// Selected department raw EN key. null = "All".
+  String? _selectedDept;
 
   @override
   void initState() {
     super.initState();
-    // Load jobs from Firebase
     final cubit = context.read<JobListingCubit>();
     if (cubit.state is JobListingInitial || cubit.allJobs.isEmpty) {
       cubit.loadJobs();
     }
+    // ✅ Ensure HomeCmsCubit is loaded (branding colors)
+    context.read<HomeCmsCubit>().load();
   }
 
-  /// Only active + published jobs are visible on the public website
-  List<JobPostModel> _getActiveJobs(List<JobPostModel> allJobs) {
-    return allJobs
-        .where((j) =>
-    j.status == JobStatus.active &&
-        j.publishStatus == 'published')
-        .toList();
-  }
+  List<JobPostModel> _getActiveJobs(List<JobPostModel> all) => all
+      .where((j) =>
+  j.status == JobStatus.active && j.publishStatus == 'published')
+      .toList();
 
-  /// Build dynamic department filter tabs from actual job data
-  List<String> _buildFilterTabs(List<JobPostModel> activeJobs) {
-    final departments = <String>{};
-    for (final job in activeJobs) {
-      if (job.department.isNotEmpty) {
-        departments.add(job.department);
-      }
+  /// Returns localized display label + raw EN key for each unique department.
+  /// Uses hardcoded [_kDeptAr] map for Arabic translation.
+  List<_DeptItem> _departments(List<JobPostModel> active, bool isAr) {
+    final keys = <String>{};
+    for (final j in active) {
+      if (j.department.isNotEmpty) keys.add(j.department);
     }
-    return ['All', ...departments.toList()..sort()];
+
+    final items = keys.map((key) {
+      String display = key;
+      if (isAr) {
+        // Try exact match first, then case-insensitive fallback
+        display = _kDeptAr[key] ??
+            _kDeptAr.entries
+                .firstWhere(
+                  (e) => e.key.toLowerCase() == key.toLowerCase(),
+              orElse: () => MapEntry(key, key),
+            )
+                .value;
+      }
+      return (display: display, key: key);
+    }).toList()
+      ..sort((a, b) => a.display.compareTo(b.display));
+
+    return items;
   }
 
-  /// Apply department filter
-  List<JobPostModel> _applyFilter(List<JobPostModel> activeJobs) {
-    if (_selectedFilter == 'All') return activeJobs;
-    return activeJobs
-        .where((j) => j.department.toLowerCase() == _selectedFilter.toLowerCase())
+  List<JobPostModel> _applyFilter(List<JobPostModel> active) {
+    if (_selectedDept == null) return active;
+    return active
+        .where((j) =>
+    j.department.toLowerCase() == _selectedDept!.toLowerCase())
         .toList();
   }
 
@@ -68,246 +136,299 @@ class _JobListingsPageState extends State<JobListingsPage> {
   Widget build(BuildContext context) {
     final double contentW = (339.w * 4) + (12.w * 3);
 
-    return BlocBuilder<JobListingCubit, JobListingState>(
-      builder: (context, state) {
-        // ── Loading state ──────────────────────────────────────────
-        if (state is JobListingInitial || state is JobListingLoading) {
-          return Scaffold(
-            backgroundColor: AppColors.background,
-            body: SingleChildScrollView(
-              child: SizedBox(
-                width: double.infinity,
-                child: Column(
-                  children: [
-                    AppNavbar(currentRoute: '/careers'),
-                    SizedBox(height: 200.h),
-                    const CircularProgressIndicator(color: _kGreen),
-                    SizedBox(height: 200.h),
-                    const AppFooter(),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
+    // ✅ Wrap with HomeCmsCubit BlocBuilder for dynamic background color
+    return BlocBuilder<HomeCmsCubit, HomeCmsState>(
+      builder: (context, homeState) {
 
-        // ── Extract jobs from state ────────────────────────────────
-        List<JobPostModel> allJobs = [];
-        if (state is JobListingLoaded) {
-          allJobs = state.jobs;
-        } else if (state is JobListingError && state.lastJobs != null) {
-          allJobs = state.lastJobs!;
-        } else {
-          allJobs = context.read<JobListingCubit>().allJobs;
-        }
+        final Color backgroundColor = switch (homeState) {
+          HomeCmsLoaded(:final data) => _parseColor(
+              data.branding.backgroundColor,
+              fallback: AppColors.background),
+          HomeCmsSaved(:final data) => _parseColor(
+              data.branding.backgroundColor,
+              fallback: AppColors.background),
+          _ => AppColors.background,
+        };
 
-        final activeJobs  = _getActiveJobs(allJobs);
-        final filterTabs  = _buildFilterTabs(activeJobs);
-        final filteredJobs = _applyFilter(activeJobs);
+        return BlocBuilder<LanguageCubit, LanguageState>(
+          builder: (context, langState) {
+            final l = _L(langState.isArabic);
 
-        // ── If selected filter no longer exists in data, reset to All ──
-        if (!filterTabs.contains(_selectedFilter)) {
-          _selectedFilter = 'All';
-        }
+            return BlocBuilder<JobListingCubit, JobListingState>(
+              builder: (context, state) {
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: SingleChildScrollView(
-            child: SizedBox(
-              width: double.infinity,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AppNavbar(currentRoute: '/careers'),
-                  SizedBox(height: 48.h),
-
-                  // ── Constrained content column ──────────────────────
-                  SizedBox(
-                    width: 1000.w,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                // ── Loading ──────────────────────────────────────────────────
+                if (state is JobListingInitial || state is JobListingLoading) {
+                  return Scaffold(
+                    backgroundColor: backgroundColor,
+                    body: Column(
                       children: [
-
-                        // ── Hero heading ──────────────────────────────
-                        Center(
-                          child: SizedBox(
-                            width: contentW,
-                            child: Text(
-                              'Unlock Your Potential in the Digital World',
-                              style: TextStyle(
-                                fontFamily: 'Cairo',
-                                fontSize: 40.sp,
-                                fontWeight: FontWeight.w700,
-                                color: _kGreen,
-                              ),
-                            ),
+                        Material(
+                          color: backgroundColor,
+                          elevation: 0,
+                          child: AppNavbar(currentRoute: '/careers'),
+                        ),
+                        const Expanded(
+                          child: Center(
+                            child: CircularProgressIndicator(color: _kGreen),
                           ),
                         ),
-                        SizedBox(height: 32.h),
+                        const AppFooter(),
+                      ],
+                    ),
+                  );
+                }
 
-                        // ── Filter tabs (dynamic from departments) ────
-                        Center(
-                          child: SizedBox(
-                            width: contentW,
-                            child: Container(
-                              padding: EdgeInsets.all(6.r),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10.r),
-                                border: Border.all(color: _kDivider),
-                              ),
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: filterTabs.map((f) {
-                                    final bool selected = _selectedFilter == f;
-                                    return GestureDetector(
-                                      onTap: () => setState(() => _selectedFilter = f),
-                                      child: MouseRegion(
-                                        cursor: SystemMouseCursors.click,
-                                        child: AnimatedContainer(
-                                          duration: const Duration(milliseconds: 200),
-                                          margin: EdgeInsets.only(right: 4.w),
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 20.w,
-                                            vertical: 8.h,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: selected ? _kGreen : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(7.r),
-                                          ),
-                                          child: Text(
-                                            f,
-                                            style: TextStyle(
-                                              fontFamily: 'Cairo',
-                                              fontSize: 13.sp,
-                                              fontWeight: FontWeight.w600,
-                                              color: selected ? Colors.white : Colors.black54,
+                // ── Extract jobs ─────────────────────────────────────────────
+                List<JobPostModel> allJobs = [];
+                if (state is JobListingLoaded) {
+                  allJobs = state.jobs;
+                } else if (state is JobListingError && state.lastJobs != null) {
+                  allJobs = state.lastJobs!;
+                } else {
+                  allJobs = context.read<JobListingCubit>().allJobs;
+                }
+
+                final activeJobs  = _getActiveJobs(allJobs);
+                final departments = _departments(activeJobs, l.isAr);
+
+                // Reset stale selection
+                if (_selectedDept != null &&
+                    !departments.any((d) => d.key == _selectedDept)) {
+                  _selectedDept = null;
+                }
+
+                final filteredJobs = _applyFilter(activeJobs);
+
+                return Directionality(
+                  textDirection: l.dir,
+                  child: Scaffold(
+                    backgroundColor: backgroundColor,
+                    body: Column(
+                      children: [
+                        Material(
+                          color: backgroundColor,
+                          elevation: 0,
+                          child: AppNavbar(currentRoute: '/careers'),
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(height: 48.h),
+                                  SizedBox(
+                                    width: 1000.w,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Center(
+                                          child: SizedBox(
+                                            width: contentW,
+                                            child: Text(
+                                              l.heroTitle,
+                                              textAlign: l.isAr ? TextAlign.right : TextAlign.left,
+                                              style: TextStyle(
+                                                fontSize: 40.sp,
+                                                fontWeight: FontWeight.w700,
+                                                color: _kGreen,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 28.h),
-
-                        // ── Section title ─────────────────────────────
-                        Center(
-                          child: SizedBox(
-                            width: contentW,
-                            child: Text(
-                              'Job Listings at Bayanatz',
-                              style: TextStyle(
-                                fontFamily: 'Cairo',
-                                fontSize: 22.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black45,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 16.h),
-
-                        // ── Error banner ──────────────────────────────
-                        if (state is JobListingError)
-                          Center(
-                            child: SizedBox(
-                              width: contentW,
-                              child: Container(
-                                margin: EdgeInsets.only(bottom: 16.h),
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w, vertical: 12.h),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFEBEE),
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.error_outline,
-                                        color: const Color(0xFFE53935),
-                                        size: 18.sp),
-                                    SizedBox(width: 10.w),
-                                    Expanded(
-                                      child: Text(
-                                        'Failed to load jobs. Showing cached data.',
-                                        style: TextStyle(
-                                            fontSize: 12.sp,
-                                            color: const Color(0xFFE53935)),
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () => context
-                                          .read<JobListingCubit>()
-                                          .loadJobs(),
-                                      child: Text(
-                                        'Retry',
-                                        style: TextStyle(
-                                          fontSize: 12.sp,
-                                          fontWeight: FontWeight.w600,
-                                          color: _kGreen,
-                                          decoration: TextDecoration.underline,
-                                          decorationColor: _kGreen,
+                                        SizedBox(height: 32.h),
+                                        Center(
+                                          child: SizedBox(
+                                            width: contentW,
+                                            child: Container(
+                                              padding: EdgeInsets.all(6.r),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(10.r),
+                                              ),
+                                              child: SingleChildScrollView(
+                                                scrollDirection: Axis.horizontal,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    _FilterTab(
+                                                      label: l.allLabel,
+                                                      isSelected: _selectedDept == null,
+                                                      onTap: () => setState(() => _selectedDept = null),
+                                                    ),
+                                                    ...departments.map(
+                                                          (dept) => _FilterTab(
+                                                        label: dept.display,
+                                                        isSelected: _selectedDept == dept.key,
+                                                        onTap: () => setState(() => _selectedDept = dept.key),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        // ── Job cards ─────────────────────────────────
-                        Center(
-                          child: SizedBox(
-                            width: contentW,
-                            child: Column(
-                              children: filteredJobs.isEmpty
-                                  ? [
-                                Padding(
-                                  padding:
-                                  EdgeInsets.symmetric(vertical: 48.h),
-                                  child: Text(
-                                    _selectedFilter == 'All'
-                                        ? 'No job openings available at the moment.'
-                                        : 'No jobs found for "$_selectedFilter"',
-                                    style: TextStyle(
-                                      fontFamily: 'Cairo',
-                                      fontSize: 14.sp,
-                                      color: Colors.black45,
+                                        SizedBox(height: 28.h),
+                                        Center(
+                                          child: SizedBox(
+                                            width: contentW,
+                                            child: Text(
+                                              l.sectionTitle,
+                                              textAlign: l.isAr ? TextAlign.right : TextAlign.left,
+                                              style: TextStyle(
+                                                fontSize: 22.sp,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.black45,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(height: 16.h),
+                                        if (state is JobListingError)
+                                          Center(
+                                            child: SizedBox(
+                                              width: contentW,
+                                              child: Container(
+                                                margin: EdgeInsets.only(bottom: 16.h),
+                                                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFFFEBEE),
+                                                  borderRadius: BorderRadius.circular(8.r),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.error_outline, color: const Color(0xFFE53935), size: 18.sp),
+                                                    SizedBox(width: 10.w),
+                                                    Expanded(
+                                                      child: Text(
+                                                        l.errorMsg,
+                                                        style: TextStyle(fontSize: 12.sp, color: const Color(0xFFE53935)),
+                                                      ),
+                                                    ),
+                                                    GestureDetector(
+                                                      onTap: () => context.read<JobListingCubit>().loadJobs(),
+                                                      child: Text(
+                                                        l.retry,
+                                                        style: TextStyle(
+                                                          fontSize: 12.sp,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: _kGreen,
+                                                          decoration: TextDecoration.underline,
+                                                          decorationColor: _kGreen,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        Center(
+                                          child: SizedBox(
+                                            width: contentW,
+                                            child: Column(
+                                              children: filteredJobs.isEmpty
+                                                  ? [
+                                                Padding(
+                                                  padding: EdgeInsets.symmetric(vertical: 48.h),
+                                                  child: Text(
+                                                    _selectedDept == null
+                                                        ? l.noJobsAll
+                                                        : l.noJobsDept(
+                                                      departments
+                                                          .firstWhere(
+                                                            (d) => d.key == _selectedDept,
+                                                        orElse: () => (display: _selectedDept!, key: _selectedDept!),
+                                                      )
+                                                          .display,
+                                                    ),
+                                                    style: TextStyle(fontSize: 14.sp, color: Colors.black45),
+                                                  ),
+                                                ),
+                                              ]
+                                                  : filteredJobs
+                                                  .map((job) => Padding(
+                                                padding: EdgeInsets.only(bottom: 16.h),
+                                                child: _JobCard(job: job, l: l),
+                                              ))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(height: 64.h),
+                                      ],
                                     ),
                                   ),
-                                ),
-                              ]
-                                  : filteredJobs
-                                  .map((job) => Padding(
-                                padding:
-                                EdgeInsets.only(bottom: 16.h),
-                                child: _JobCard(job: job),
-                              ))
-                                  .toList(),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-
-                        SizedBox(height: 64.h),
+                        const AppFooter(),
                       ],
                     ),
                   ),
-
-                  // ── Footer ──────────────────────────────────────────
-                  const AppFooter(),
-                ],
-              ),
-            ),
-          ),
+                );
+              },
+            );
+          },
         );
       },
+    );
+  }
+}
+
+// ─── Filter Tab ───────────────────────────────────────────────────────────────
+
+class _FilterTab extends StatefulWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  const _FilterTab(
+      {required this.label, required this.isSelected, required this.onTap});
+
+  @override
+  State<_FilterTab> createState() => _FilterTabState();
+}
+
+class _FilterTabState extends State<_FilterTab> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color hoverBg = Color.lerp(Colors.white, _kGreen, 0.10)!;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit:  (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          margin: EdgeInsets.only(right: 4.w),
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+          decoration: BoxDecoration(
+            color: widget.isSelected
+                ? _kGreen
+                : (_hovered ? hoverBg : Colors.transparent),
+            borderRadius: BorderRadius.circular(7.r),
+          ),
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w600,
+              color: widget.isSelected
+                  ? Colors.white
+                  : (_hovered ? _kGreen : Colors.black54),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -316,7 +437,9 @@ class _JobListingsPageState extends State<JobListingsPage> {
 
 class _JobCard extends StatefulWidget {
   final JobPostModel job;
-  const _JobCard({required this.job});
+  final _L l;
+  const _JobCard({required this.job, required this.l});
+
   @override
   State<_JobCard> createState() => _JobCardState();
 }
@@ -328,18 +451,22 @@ class _JobCardState extends State<_JobCard> {
     if (dt == null) return '—';
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
   }
 
+  String _pick(String en, String ar) {
+    if (widget.l.isAr) return ar.isNotEmpty ? ar : en;
+    return en.isNotEmpty ? en : ar;
+  }
+
   String get _salaryDisplay {
-    if (widget.job.salaryMax > 0) {
-      return '${widget.job.salaryMin.toInt()} - ${widget.job.salaryMax.toInt()} ${widget.job.salaryCurrency}';
+    final j = widget.job;
+    if (j.salaryMax > 0) {
+      return '${j.salaryMin.toInt()} - ${j.salaryMax.toInt()} ${j.salaryCurrency}';
     }
-    if (widget.job.salaryMin > 0) {
-      return '${widget.job.salaryMin.toInt()} ${widget.job.salaryCurrency}';
-    }
+    if (j.salaryMin > 0) return '${j.salaryMin.toInt()} ${j.salaryCurrency}';
     return '—';
   }
 
@@ -352,7 +479,11 @@ class _JobCardState extends State<_JobCard> {
 
   @override
   Widget build(BuildContext context) {
-    final job = widget.job;
+    final job   = widget.job;
+    final l     = widget.l;
+    final title = _pick(job.title.en, job.title.ar);
+    final qual  = _pick(
+        job.requiredQualification.en, job.requiredQualification.ar);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -368,15 +499,16 @@ class _JobCardState extends State<_JobCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Title row ──────────────────────────────────────────────
+
+            // ── Title + share ────────────────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Text(
-                    job.title.en.isEmpty ? 'Untitled' : job.title.en,
+                    title.isEmpty ? l.untitled : title,
+                    textAlign: l.isAr ? TextAlign.right : TextAlign.left,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
                       fontSize: 20.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.black87,
@@ -386,33 +518,76 @@ class _JobCardState extends State<_JobCard> {
                   ),
                 ),
                 SizedBox(width: 12.w),
-                Container(
-                  width: 36.w,
-                  height: 36.h,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF008037),
-                    borderRadius: BorderRadius.circular(8.r),
+                GestureDetector(
+                  onTap: () {
+                    final ts   = DateTime.now().millisecondsSinceEpoch;
+                    final base = Uri.base.origin;
+                    final slug = title.toLowerCase().replaceAll(' ', '-');
+                    final url  = '$base/jobs/${job.id}?title=$slug&t=$ts';
+                    Clipboard.setData(ClipboardData(text: url));
+                    showDialog(
+                      context: context,
+                      barrierDismissible: true,
+                      builder: (_) => Directionality(
+                        textDirection: l.dir,
+                        child: AlertDialog(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r)),
+                          title: Text(
+                            l.linkCopied,
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w700,
+                              color: _kGreen,
+                            ),
+                          ),
+                          content: Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12.w, vertical: 10.h),
+                            decoration: BoxDecoration(
+                              color: _kGreenLight,
+                              borderRadius: BorderRadius.circular(8.r),
+                              border: Border.all(color: _kDivider),
+                            ),
+                            child: Text(
+                              url,
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 36.w,
+                    height: 36.h,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF008037),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Icon(Icons.share_outlined,
+                        size: 18.sp, color: Colors.white),
                   ),
-                  child: Icon(Icons.share_outlined,
-                      size: 18.sp, color: Colors.white),
                 ),
               ],
             ),
             SizedBox(height: 10.h),
-
             Divider(color: _kDivider, height: 1),
             SizedBox(height: 14.h),
 
-            // ── Info rows ──────────────────────────────────────────────
+            // ── Info rows ────────────────────────────────────────────────
             Row(
               children: [
                 Expanded(
                     child: _InfoItem(
-                        label: 'Expected Hire Date',
+                        label: l.hireDate,
                         value: _formatDate(job.hiringStartDate))),
                 Expanded(
                     child: _InfoItem(
-                        label: 'Year Of Experience',
+                        label: l.experience,
                         value: _experienceDisplay)),
               ],
             ),
@@ -421,32 +596,30 @@ class _JobCardState extends State<_JobCard> {
               children: [
                 Expanded(
                     child: _InfoItem(
-                        label: 'Employment Type',
+                        label: l.employmentType,
                         value: job.workType.label)),
                 Expanded(
                     child: _InfoItem(
-                        label: 'Compensation Range',
+                        label: l.compensation,
                         value: _salaryDisplay)),
               ],
             ),
             SizedBox(height: 10.h),
 
             _InfoItem(
-                label: 'Required Qualification',
-                value: job.requiredQualification.en.isEmpty
-                    ? '—'
-                    : job.requiredQualification.en),
+              label: l.qualification,
+              value: qual.isEmpty ? '—' : qual,
+            ),
             SizedBox(height: 14.h),
 
-            // ── Skills ─────────────────────────────────────────────────
+            // ── Skills ───────────────────────────────────────────────────
             if (job.requiredSkills.isNotEmpty) ...[
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    'Skills:',
+                    l.skillsLabel,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
@@ -466,9 +639,8 @@ class _JobCardState extends State<_JobCard> {
                           borderRadius: BorderRadius.circular(6.r),
                         ),
                         child: Text(
-                          s.name.en.isEmpty ? s.name.ar : s.name.en,
+                          _pick(s.name.en, s.name.ar),
                           style: TextStyle(
-                            fontFamily: 'Cairo',
                             fontSize: 13.sp,
                             color: Colors.black87,
                           ),
@@ -482,7 +654,7 @@ class _JobCardState extends State<_JobCard> {
               SizedBox(height: 16.h),
             ],
 
-            // ── Location + View button ─────────────────────────────────
+            // ── Location + View button ───────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -496,16 +668,15 @@ class _JobCardState extends State<_JobCard> {
                     ),
                     SizedBox(width: 4.w),
                     Text(
-                      'Cairo, Egypt', // TODO: add location field to JobPostModel if needed
+                      l.locationLabel,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
                         fontSize: 15.sp,
                         color: Colors.black45,
                       ),
                     ),
                   ],
                 ),
-                _ViewJobBtn(jobId: job.id),
+                _ViewJobBtn(jobId: job.id, label: l.viewJob),
               ],
             ),
           ],
@@ -530,7 +701,6 @@ class _InfoItem extends StatelessWidget {
           TextSpan(
             text: '$label: ',
             style: TextStyle(
-              fontFamily: 'Cairo',
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: Colors.black87,
@@ -539,7 +709,6 @@ class _InfoItem extends StatelessWidget {
           TextSpan(
             text: value,
             style: TextStyle(
-              fontFamily: 'Cairo',
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: _kGreen,
@@ -555,7 +724,9 @@ class _InfoItem extends StatelessWidget {
 
 class _ViewJobBtn extends StatefulWidget {
   final String jobId;
-  const _ViewJobBtn({required this.jobId});
+  final String label;
+  const _ViewJobBtn({required this.jobId, required this.label});
+
   @override
   State<_ViewJobBtn> createState() => _ViewJobBtnState();
 }
@@ -579,7 +750,7 @@ class _ViewJobBtnState extends State<_ViewJobBtn> {
             borderRadius: BorderRadius.circular(8.r),
           ),
           child: Text(
-            'VIEW JOB',
+            widget.label,
             style: TextStyle(
               fontFamily: 'Cairo',
               fontSize: 13.sp,

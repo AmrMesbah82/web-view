@@ -15,6 +15,7 @@
 //      switches to real primaryColor once HomeCmsLoaded fires.
 // FIX: Desktop layout now fully responsive — Flexible wrappers prevent
 //      overflow when window is resized/minimized.
+// FIX: Navigation now uses GoRouter consistently to prevent GoRouterState errors
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -500,66 +501,57 @@ class _ServicesPageState extends State<ServicesPage> {
                       child: Scaffold(
                         backgroundColor: backgroundColor,
                         body: _RevealCoordinatorWidget(
-                          child: Stack(
+                          child: Column(
                             children: [
-                              SingleChildScrollView(
-                                child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.stretch,
-                                  children: [
-                                    SizedBox(height: _navbarHeight),
-
-                                    _Reveal(
-                                      delay:     const Duration(
-                                          milliseconds: 80),
-                                      direction:
-                                      _SlideDirection.fromLeft,
-                                      duration: const Duration(
-                                          milliseconds: 650),
-                                      child: w < _BP.mobile
-                                          ? _ServicesHeaderMobile(
-                                          model:        model,
-                                          isRtl:        isRtl,
-                                          primaryColor: primaryColor)
-                                          : _ServicesHeaderDesktop(
-                                          model:        model,
-                                          isRtl:        isRtl,
-                                          primaryColor: primaryColor),
-                                    ),
-
-                                    _ServicesBody(
-                                      model:          model,
-                                      blogs:          blogs,
-                                      isRtl:          isRtl,
-                                      primaryColor:   primaryColor,
-                                      secondaryColor: secondaryColor,
-                                    ),
-
-                                    _Reveal(
-                                      delay:     const Duration(
-                                          milliseconds: 100),
-                                      direction:
-                                      _SlideDirection.fromBottom,
-                                      duration: const Duration(
-                                          milliseconds: 600),
-                                      child: const AppFooter(),
-                                    ),
-                                  ],
+                              // ✅ Navbar — always visible at top
+                              Material(
+                                color: backgroundColor,
+                                elevation: 0,
+                                child: AppNavbar(
+                                  key: _navbarKey,
+                                  currentRoute: '/services',
                                 ),
                               ),
 
-                              Positioned(
-                                top:   0,
-                                left:  0,
-                                right: 0,
-                                child: Material(
-                                  color:     backgroundColor,
-                                  elevation: 0,
-                                  child: AppNavbar(
-                                    key:          _navbarKey,
-                                    currentRoute: '/services',
+                              // ✅ Middle content — scrolls, takes all remaining space
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      _Reveal(
+                                        delay: const Duration(milliseconds: 80),
+                                        direction: _SlideDirection.fromLeft,
+                                        duration: const Duration(milliseconds: 650),
+                                        child: w < _BP.mobile
+                                            ? _ServicesHeaderMobile(
+                                            model: model,
+                                            isRtl: isRtl,
+                                            primaryColor: primaryColor)
+                                            : _ServicesHeaderDesktop(
+                                            model: model,
+                                            isRtl: isRtl,
+                                            primaryColor: primaryColor),
+                                      ),
+
+                                      _ServicesBody(
+                                        model: model,
+                                        blogs: blogs,
+                                        isRtl: isRtl,
+                                        primaryColor: primaryColor,
+                                        secondaryColor: secondaryColor,
+                                      ),
+                                    ],
                                   ),
                                 ),
+                              ),
+
+                              // ✅ Footer — always visible at bottom
+                              _Reveal(
+                                delay: const Duration(milliseconds: 100),
+                                direction: _SlideDirection.fromBottom,
+                                duration: const Duration(milliseconds: 600),
+                                child: const AppFooter(),
                               ),
                             ],
                           ),
@@ -875,36 +867,36 @@ class _ServicesBodyDesktopState extends State<_ServicesBodyDesktop> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         mainAxisSize:       MainAxisSize.max,
-                    children: rowEntry.value
-                        .asMap()
-                        .entries
-                        .map((e) {
-                      final int  cardIdx = e.key;
-                      final bool isLast  = cardIdx == rowEntry.value.length - 1;
-                      final int  delayMs = 120 + rowIdx * 60 + cardIdx * 80;
-                      return Flexible( // ← was no Flexible
-                        flex: 1,
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.only(
-                              end: isLast ? 0 : gap),
-                          child: _Reveal(
-                            delay:     Duration(milliseconds: delayMs),
-                            direction: _SlideDirection.fromBottom,
-                            duration:  const Duration(milliseconds: 650),
-                            child: SizedBox(
-                              width: double.infinity, // ← was cardW
-                              child: _ServiceCardDesktop(
-                                  item:           e.value,
-                                  isRtl:          widget.isRtl,
-                                  primaryColor:   widget.primaryColor,
-                                  secondaryColor: widget.secondaryColor),
+                        children: rowEntry.value
+                            .asMap()
+                            .entries
+                            .map((e) {
+                          final int  cardIdx = e.key;
+                          final bool isLast  = cardIdx == rowEntry.value.length - 1;
+                          final int  delayMs = 120 + rowIdx * 60 + cardIdx * 80;
+                          return Flexible( // ← was no Flexible
+                            flex: 1,
+                            child: Padding(
+                              padding: EdgeInsetsDirectional.only(
+                                  end: isLast ? 0 : gap),
+                              child: _Reveal(
+                                delay:     Duration(milliseconds: delayMs),
+                                direction: _SlideDirection.fromBottom,
+                                duration:  const Duration(milliseconds: 650),
+                                child: SizedBox(
+                                  width: double.infinity, // ← was cardW
+                                  child: _ServiceCardDesktop(
+                                      item:           e.value,
+                                      isRtl:          widget.isRtl,
+                                      primaryColor:   widget.primaryColor,
+                                      secondaryColor: widget.secondaryColor),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ));
+                          );
+                        }).toList(),
+                      ),
+                    ));
               }).toList(),
             ),
           ),
@@ -1026,37 +1018,37 @@ class _ServicesBodyTablet extends StatelessWidget {
             final int  rowIdx    = rowEntry.key;
             final bool isLastRow = rowIdx == rows.length - 1;
             return Padding(
-              padding: EdgeInsets.only(bottom: isLastRow ? 0 : gap),
+                padding: EdgeInsets.only(bottom: isLastRow ? 0 : gap),
                 child: IntrinsicHeight(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize:       MainAxisSize.max,
-                children: rowEntry.value.asMap().entries.map((e) {
-                  final int  cardIdx = e.key;
-                  final bool isLast  = cardIdx == rowEntry.value.length - 1;
-                  final int  delayMs = 100 + rowIdx * 60 + cardIdx * 90;
-                  return Flexible(
-                    flex: 1,
-                    child: Padding(
-                      padding: EdgeInsetsDirectional.only(end: isLast ? 0 : gap),
-                      child: _Reveal(
-                        delay:     Duration(milliseconds: delayMs),
-                        direction: _SlideDirection.fromBottom,
-                        duration:  const Duration(milliseconds: 650),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: _ServiceCardMobile(
-                              item:           e.value,
-                              isRtl:          isRtl,
-                              primaryColor:   primaryColor,
-                              secondaryColor: secondaryColor),
+                    children: rowEntry.value.asMap().entries.map((e) {
+                      final int  cardIdx = e.key;
+                      final bool isLast  = cardIdx == rowEntry.value.length - 1;
+                      final int  delayMs = 100 + rowIdx * 60 + cardIdx * 90;
+                      return Flexible(
+                        flex: 1,
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.only(end: isLast ? 0 : gap),
+                          child: _Reveal(
+                            delay:     Duration(milliseconds: delayMs),
+                            direction: _SlideDirection.fromBottom,
+                            duration:  const Duration(milliseconds: 650),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: _ServiceCardMobile(
+                                  item:           e.value,
+                                  isRtl:          isRtl,
+                                  primaryColor:   primaryColor,
+                                  secondaryColor: secondaryColor),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ));
+                      );
+                    }).toList(),
+                  ),
+                ));
           }),
           SizedBox(height: 30.h),
 
@@ -1468,7 +1460,7 @@ class _BlogCardMobile extends StatelessWidget {
                 const Spacer(),
                 _ReadMoreBtnMobile(
                   label:        isRtl ? 'اقرأ المزيد' : 'Read More',
-                  onTap:        () => context.goNamed('blog-list'),
+                  onTap:        () => context.go('/blog/${post.id}'),
                   primaryColor: primaryColor,
                 ),
               ],
@@ -1565,7 +1557,8 @@ class _BlogCardDesktopState extends State<_BlogCardDesktop> {
                   const Spacer(),
                   _ReadMoreBtnDesktop(
                       isRtl:        widget.isRtl,
-                      primaryColor: widget.primaryColor),
+                      primaryColor: widget.primaryColor,
+                      postId: widget.post.id),
                 ],
               ),
             ],
@@ -1612,9 +1605,11 @@ class _ReadMoreBtnMobile extends StatelessWidget {
 class _ReadMoreBtnDesktop extends StatefulWidget {
   final bool  isRtl;
   final Color primaryColor;
+  final String postId;
   const _ReadMoreBtnDesktop({
     this.isRtl = false,
     required this.primaryColor,
+    required this.postId,
   });
   @override
   State<_ReadMoreBtnDesktop> createState() => _ReadMoreBtnDesktopState();
@@ -1633,8 +1628,7 @@ class _ReadMoreBtnDesktopState extends State<_ReadMoreBtnDesktop> {
       onExit:  (_) => setState(() => _hovered = false),
       cursor:  SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => BlogDetailPage())),
+        onTap: () => context.go('/blog/${widget.postId}'),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           width:    88.w,

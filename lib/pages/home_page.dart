@@ -10,6 +10,8 @@
 // FIX: Hero text constrained to page width — no overflow outside page bounds.
 // FIX: Image/icon layout is FIXED (not mirrored) for both AR and EN.
 // FIX: _SvgPulseLoader background is now branding.primaryColor from Firebase.
+// FIXED: Public page now respects publishStatus — draft / future-scheduled
+//        pages show "Coming Soon" placeholder instead of full content.
 // Description: Public-facing Home Page — reads HomeCmsCubit and renders
 //              all content driven by the CMS model. Zero hardcoded strings.
 //              Full AR / EN bilingual support via LanguageCubit.
@@ -94,6 +96,32 @@ Widget _smartImage({
     fit:       fit,
     color:     colorFilter,
   );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ✅ PUBLISH STATUS HELPER
+// Determines if the page should be publicly visible
+// ═══════════════════════════════════════════════════════════════════════════════
+
+bool _isPageVisible(HomePageModel data) {
+  // ✅ Published → always visible
+  if (data.publishStatus == 'published') return true;
+
+  // ✅ Scheduled → visible only if the scheduled date has passed
+  if (data.publishStatus == 'scheduled' && data.scheduledPublishDate != null) {
+    final now = DateTime.now();
+    final scheduledDate = data.scheduledPublishDate!;
+    // Compare date only (ignore time) — page goes live at start of scheduled day
+    final scheduledStart = DateTime(
+      scheduledDate.year,
+      scheduledDate.month,
+      scheduledDate.day,
+    );
+    return now.isAfter(scheduledStart) || now.isAtSameMomentAs(scheduledStart);
+  }
+
+  // ✅ Draft or scheduled without date → not visible
+  return false;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -266,11 +294,11 @@ class _RevealState extends State<_Reveal> with SingleTickerProviderStateMixin {
 
 class _SvgPulseLoader extends StatefulWidget {
   final String? logoUrl;
-  final Color   backgroundColor; // ← NEW: driven by Firebase primaryColor
+  final Color   backgroundColor;
 
   const _SvgPulseLoader({
     this.logoUrl,
-    this.backgroundColor = _kDefaultPrimary, // fallback until Firebase loads
+    this.backgroundColor = _kDefaultPrimary,
   });
 
   @override
@@ -317,7 +345,6 @@ class _SvgPulseLoaderState extends State<_SvgPulseLoader>
 
   @override
   Widget build(BuildContext context) {
-    // Both branches now use widget.backgroundColor instead of AppColors.background
     if (_resolvedUrl == null) {
       return Scaffold(
         backgroundColor: widget.backgroundColor,
@@ -337,6 +364,143 @@ class _SvgPulseLoaderState extends State<_SvgPulseLoader>
             fit:    BoxFit.contain,
             placeholderBuilder: (_) => SizedBox(width: 88.w, height: 88.w),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ✅ COMING SOON PLACEHOLDER — shown when page is draft or future-scheduled
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _ComingSoonPage extends StatelessWidget {
+  final HomePageModel data;
+  final GlobalKey      navbarKey;
+
+  const _ComingSoonPage({
+    required this.data,
+    required this.navbarKey,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color primary = _hexColor(
+      data.branding.primaryColor,
+      fallback: _kDefaultPrimary,
+    );
+    final Color bgColor = _hexColor(
+      data.branding.backgroundColor,
+      fallback: _kDefaultBackground,
+    );
+    final isAr = context.read<LanguageCubit>().state.isArabic;
+
+    // ✅ Build scheduled date text if applicable
+    String? scheduledText;
+    if (data.publishStatus == 'scheduled' && data.scheduledPublishDate != null) {
+      final d = data.scheduledPublishDate!;
+      final months = [
+        '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ];
+      scheduledText = isAr
+          ? 'سيتم النشر في ${d.day}/${d.month}/${d.year}'
+          : 'Launching on ${months[d.month]} ${d.day}, ${d.year}';
+    }
+
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: bgColor,
+        body: Stack(
+          children: [
+            // ✅ Main content — centered "Coming Soon"
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Logo
+                  if (data.branding.logoUrl.isNotEmpty) ...[
+                    SvgPicture.network(
+                      data.branding.logoUrl,
+                      width:  80.w,
+                      height: 80.w,
+                      fit:    BoxFit.contain,
+                      colorFilter: ColorFilter.mode(primary, BlendMode.srcIn),
+                      placeholderBuilder: (_) =>
+                          SizedBox(width: 80.w, height: 80.w),
+                    ),
+                    SizedBox(height: 24.h),
+                  ],
+
+                  // Title
+                  Text(
+                    isAr ? 'قريباً' : 'Coming Soon',
+                    style: GoogleFonts.cairo(
+                      fontSize:   36.sp,
+                      fontWeight: FontWeight.w700,
+                      color:      primary,
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+
+                  // Subtitle
+                  Text(
+                    isAr
+                        ? 'نحن نعمل على شيء مميز. ترقبوا!'
+                        : 'We\'re working on something great. Stay tuned!',
+                    style: GoogleFonts.cairo(
+                      fontSize:   16.sp,
+                      fontWeight: FontWeight.w400,
+                      color:      primary.withOpacity(0.7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  // Scheduled date
+                  if (scheduledText != null) ...[
+                    SizedBox(height: 20.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.w,
+                        vertical:   10.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color:        primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(
+                          color: primary.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Text(
+                        scheduledText,
+                        style: GoogleFonts.cairo(
+                          fontSize:   14.sp,
+                          fontWeight: FontWeight.w500,
+                          color:      primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // ✅ Navbar stays on top
+            Positioned(
+              top:   0,
+              left:  0,
+              right: 0,
+              child: Material(
+                color:     Colors.transparent,
+                elevation: 0,
+                child: AppNavbar(
+                  key:          navbarKey,
+                  currentRoute: '/',
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -416,7 +580,6 @@ class _HomePageState extends State<HomePage> {
           _ => null,
         };
 
-        // ── Loader background = branding.primaryColor from Firebase ──────────
         final Color loaderBg = switch (state) {
           HomeCmsLoaded(:final data) => _hexColor(
               data.branding.primaryColor,
@@ -459,16 +622,7 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
-        final Color resolvedLoaderBg = switch (state) {
-          HomeCmsLoaded(:final data) => _hexColor(
-              data.branding.primaryColor, fallback: _kDefaultPrimary),
-          HomeCmsSaved(:final data)  => _hexColor(
-              data.branding.primaryColor, fallback: _kDefaultPrimary),
-          _ => _kDefaultBackground, // neutral background while Firebase hasn't responded yet
-        };
-
         if (readyData == null) {
-          // Firebase hasn't loaded yet — show nothing, no color flash
           return Scaffold(backgroundColor: AppColors.background);
         }
 
@@ -480,6 +634,18 @@ class _HomePageState extends State<HomePage> {
               readyData.branding.backgroundColor,
               fallback: _kDefaultPrimary,
             ),
+          );
+        }
+
+        // ✅ PUBLISH STATUS GATE — check if page should be publicly visible
+        if (!_isPageVisible(readyData)) {
+          return BlocBuilder<LanguageCubit, LanguageState>(
+            builder: (context, langState) {
+              return _ComingSoonPage(
+                data:      readyData,
+                navbarKey: _navbarKey,
+              );
+            },
           );
         }
 
@@ -527,53 +693,43 @@ class _HomeBody extends StatelessWidget {
       child: Scaffold(
         backgroundColor: bgColor,
         body: _RevealCoordinatorWidget(
-          child: Stack(
+          child: Column(
             children: [
-              SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(height: navbarHeight),
+              // ✅ Navbar — always visible at top
+              AppNavbar(
+                key:          navbarKey,
+                currentRoute: '/',
+              ),
 
-                    _Reveal(
-                      delay:     const Duration(milliseconds: 80),
-                      direction: _SlideDirection.fromLeft,
-                      duration:  const Duration(milliseconds: 650),
-                      child: _HeroSection(data: data, bgColor: bgColor),
-                    ),
-
-                    _Reveal(
-                      delay:     const Duration(milliseconds: 200),
-                      direction: _SlideDirection.fromBottom,
-                      duration:  const Duration(milliseconds: 700),
-                      child:
-                      _HeroCardsSection(data: data, bgColor: bgColor),
-                    ),
-
-                    SizedBox(height: 32.h),
-
-                    _Reveal(
-                      delay:     const Duration(milliseconds: 100),
-                      direction: _SlideDirection.fromBottom,
-                      duration:  const Duration(milliseconds: 600),
-                      child: const AppFooter(),
-                    ),
-                  ],
+              // ✅ Middle content — scrolls, takes all remaining space
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _Reveal(
+                        delay:     const Duration(milliseconds: 80),
+                        direction: _SlideDirection.fromLeft,
+                        duration:  const Duration(milliseconds: 650),
+                        child: _HeroSection(data: data, bgColor: bgColor),
+                      ),
+                      _Reveal(
+                        delay:     const Duration(milliseconds: 200),
+                        direction: _SlideDirection.fromBottom,
+                        duration:  const Duration(milliseconds: 700),
+                        child: _HeroCardsSection(data: data, bgColor: bgColor),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
-              Positioned(
-                top:   0,
-                left:  0,
-                right: 0,
-                child: Material(
-                  color:     Colors.transparent,
-                  elevation: 0,
-                  child: AppNavbar(
-                    key:          navbarKey,
-                    currentRoute: '/',
-                  ),
-                ),
+              // ✅ Footer — always visible at bottom
+              _Reveal(
+                delay:     const Duration(milliseconds: 100),
+                direction: _SlideDirection.fromBottom,
+                duration:  const Duration(milliseconds: 600),
+                child: const AppFooter(),
               ),
             ],
           ),
@@ -765,6 +921,9 @@ class _DesktopCards extends StatelessWidget {
         : sec[i].description.en)
         : '';
 
+    // ✅ Check section visibility from Firestore
+    bool secVisible(int i) => i < sec.length ? sec[i].visibility : true;
+
     return Container(
       color:   bgColor,
       padding: EdgeInsets.symmetric(horizontal: 36.w),
@@ -772,59 +931,74 @@ class _DesktopCards extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment:  MainAxisAlignment.center,
         children: [
+          // ✅ Section 0 — Left outer card
           Flexible(
             flex: 2,
-            child: _Reveal(
-              delay:     const Duration(milliseconds: 100),
-              direction: _SlideDirection.fromLeft,
-              duration:  const Duration(milliseconds: 700),
-              child: _OuterCard(
-                iconUrl:     sec.isNotEmpty ? sec[0].iconUrl  : '',
-                imageUrl:    sec.isNotEmpty ? sec[0].imageUrl : '',
-                text:        secDesc(0),
-                cardColor:   primary,
-                iconOnRight: true,
-                isRtl:       isRtl,
-              ),
-            ),
-          ),
-          SizedBox(width: 10.w),
-
-          Flexible(
-            flex: 1,
-            child: _Reveal(
-              delay:     const Duration(milliseconds: 180),
-              direction: _SlideDirection.fromBottom,
-              duration:  const Duration(milliseconds: 700),
-              child: SizedBox(
-                width: 160.w,
-                child: Column(
-                  mainAxisSize:       MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: innerOffset),
-                    _CircleIcon(
-                        iconUrl:   sec.length > 1 ? sec[1].iconUrl : '',
-                        iconColor: primary),
-                    SizedBox(height: 10.h),
-                    _SectionImage(
-                        imageUrl: sec.length > 1 ? sec[1].imageUrl : '',
-                        width:    160.w,
-                        height:   180.h),
-                    SizedBox(height: 10.h),
-                    _GreenCard(
-                      width: 160.w,
-                      text:  secDesc(1),
-                      color: primary,
-                      isRtl: isRtl,
-                    ),
-                  ],
+            child: Visibility(
+              visible: secVisible(0),
+              maintainSize: true,
+              maintainAnimation: true,
+              maintainState: true,
+              child: _Reveal(
+                delay:     const Duration(milliseconds: 100),
+                direction: _SlideDirection.fromLeft,
+                duration:  const Duration(milliseconds: 700),
+                child: _OuterCard(
+                  iconUrl:     sec.isNotEmpty ? sec[0].iconUrl  : '',
+                  imageUrl:    sec.isNotEmpty ? sec[0].imageUrl : '',
+                  text:        secDesc(0),
+                  cardColor:   primary,
+                  iconOnRight: true,
+                  isRtl:       isRtl,
                 ),
               ),
             ),
           ),
           SizedBox(width: 10.w),
 
+          // ✅ Section 1 — Left inner column
+          Flexible(
+            flex: 1,
+            child: Visibility(
+              visible: secVisible(1),
+              maintainSize: true,
+              maintainAnimation: true,
+              maintainState: true,
+              child: _Reveal(
+                delay:     const Duration(milliseconds: 180),
+                direction: _SlideDirection.fromBottom,
+                duration:  const Duration(milliseconds: 700),
+                child: SizedBox(
+                  width: 160.w,
+                  child: Column(
+                    mainAxisSize:       MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: innerOffset),
+                      _CircleIcon(
+                          iconUrl:   sec.length > 1 ? sec[1].iconUrl : '',
+                          iconColor: primary),
+                      SizedBox(height: 10.h),
+                      _SectionImage(
+                          imageUrl: sec.length > 1 ? sec[1].imageUrl : '',
+                          width:    160.w,
+                          height:   180.h),
+                      SizedBox(height: 10.h),
+                      _GreenCard(
+                        width: 160.w,
+                        text:  secDesc(1),
+                        color: primary,
+                        isRtl: isRtl,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 10.w),
+
+          // Nav buttons column (no visibility toggle — always visible)
           Flexible(
             flex: 2,
             child: SizedBox(
@@ -884,54 +1058,68 @@ class _DesktopCards extends StatelessWidget {
           ),
           SizedBox(width: 10.w),
 
+          // ✅ Section 2 — Right inner column
           Flexible(
             flex: 1,
-            child: _Reveal(
-              delay:     const Duration(milliseconds: 180),
-              direction: _SlideDirection.fromBottom,
-              duration:  const Duration(milliseconds: 700),
-              child: SizedBox(
-                width: 160.w,
-                child: Column(
-                  mainAxisSize:       MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    SizedBox(height: innerOffset),
-                    _CircleIcon(
-                        iconUrl:   sec.length > 2 ? sec[2].iconUrl : '',
-                        iconColor: primary),
-                    SizedBox(height: 10.h),
-                    _SectionImage(
-                        imageUrl: sec.length > 2 ? sec[2].imageUrl : '',
-                        width:    160.w,
-                        height:   180.h),
-                    SizedBox(height: 10.h),
-                    _GreenCard(
-                      width: 160.w,
-                      text:  secDesc(2),
-                      color: primary,
-                      isRtl: isRtl,
-                    ),
-                  ],
+            child: Visibility(
+              visible: secVisible(2),
+              maintainSize: true,
+              maintainAnimation: true,
+              maintainState: true,
+              child: _Reveal(
+                delay:     const Duration(milliseconds: 180),
+                direction: _SlideDirection.fromBottom,
+                duration:  const Duration(milliseconds: 700),
+                child: SizedBox(
+                  width: 160.w,
+                  child: Column(
+                    mainAxisSize:       MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      SizedBox(height: innerOffset),
+                      _CircleIcon(
+                          iconUrl:   sec.length > 2 ? sec[2].iconUrl : '',
+                          iconColor: primary),
+                      SizedBox(height: 10.h),
+                      _SectionImage(
+                          imageUrl: sec.length > 2 ? sec[2].imageUrl : '',
+                          width:    160.w,
+                          height:   180.h),
+                      SizedBox(height: 10.h),
+                      _GreenCard(
+                        width: 160.w,
+                        text:  secDesc(2),
+                        color: primary,
+                        isRtl: isRtl,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
           SizedBox(width: 10.w),
 
+          // ✅ Section 3 — Right outer card
           Flexible(
             flex: 2,
-            child: _Reveal(
-              delay:     const Duration(milliseconds: 100),
-              direction: _SlideDirection.fromRight,
-              duration:  const Duration(milliseconds: 700),
-              child: _OuterCard(
-                iconUrl:     sec.length > 3 ? sec[3].iconUrl  : '',
-                imageUrl:    sec.length > 3 ? sec[3].imageUrl : '',
-                text:        secDesc(3),
-                cardColor:   primary,
-                iconOnRight: false,
-                isRtl:       isRtl,
+            child: Visibility(
+              visible: secVisible(3),
+              maintainSize: true,
+              maintainAnimation: true,
+              maintainState: true,
+              child: _Reveal(
+                delay:     const Duration(milliseconds: 100),
+                direction: _SlideDirection.fromRight,
+                duration:  const Duration(milliseconds: 700),
+                child: _OuterCard(
+                  iconUrl:     sec.length > 3 ? sec[3].iconUrl  : '',
+                  imageUrl:    sec.length > 3 ? sec[3].imageUrl : '',
+                  text:        secDesc(3),
+                  cardColor:   primary,
+                  iconOnRight: false,
+                  isRtl:       isRtl,
+                ),
               ),
             ),
           ),
@@ -1037,6 +1225,9 @@ class _TabletCards extends StatelessWidget {
         : sec[i].description.en)
         : '';
 
+    // ✅ Check section visibility from Firestore
+    bool secVisible(int i) => i < sec.length ? sec[i].visibility : true;
+
     return Container(
       color:   bgColor,
       padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -1046,30 +1237,35 @@ class _TabletCards extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Reveal(
-                delay:     const Duration(milliseconds: 100),
-                direction: _SlideDirection.fromLeft,
-                duration:  const Duration(milliseconds: 650),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: cardW,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: _CircleIcon(
-                            iconUrl:   sec.isNotEmpty ? sec[0].iconUrl : '',
-                            iconColor: primary),
+              // ✅ Section 0 image+icon (top-left)
+              Visibility(
+                visible: secVisible(0),
+                maintainSize: true, maintainAnimation: true, maintainState: true,
+                child: _Reveal(
+                  delay:     const Duration(milliseconds: 100),
+                  direction: _SlideDirection.fromLeft,
+                  duration:  const Duration(milliseconds: 650),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: cardW,
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: _CircleIcon(
+                              iconUrl:   sec.isNotEmpty ? sec[0].iconUrl : '',
+                              iconColor: primary),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 6.h),
-                    _SectionImage(
-                        imageUrl: sec.isNotEmpty ? sec[0].imageUrl : '',
-                        width:    cardW,
-                        height:   imageH),
-                  ],
+                      SizedBox(height: 6.h),
+                      _SectionImage(
+                          imageUrl: sec.isNotEmpty ? sec[0].imageUrl : '',
+                          width:    cardW,
+                          height:   imageH),
+                    ],
+                  ),
                 ),
-              ),
+              ), // ✅ closes Visibility for section 0
               SizedBox(width: 10.w),
               Expanded(
                 child: Column(
@@ -1110,28 +1306,33 @@ class _TabletCards extends StatelessWidget {
                 ),
               ),
               SizedBox(width: 10.w),
-              _Reveal(
-                delay:     const Duration(milliseconds: 100),
-                direction: _SlideDirection.fromRight,
-                duration:  const Duration(milliseconds: 650),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: cardW,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: _CircleIcon(
-                            iconUrl:   sec.length > 3 ? sec[3].iconUrl : '',
-                            iconColor: primary),
+              // ✅ Section 3 image+icon (top-right)
+              Visibility(
+                visible: secVisible(3),
+                maintainSize: true, maintainAnimation: true, maintainState: true,
+                child: _Reveal(
+                  delay:     const Duration(milliseconds: 100),
+                  direction: _SlideDirection.fromRight,
+                  duration:  const Duration(milliseconds: 650),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: cardW,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _CircleIcon(
+                              iconUrl:   sec.length > 3 ? sec[3].iconUrl : '',
+                              iconColor: primary),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 6.h),
-                    _SectionImage(
-                        imageUrl: sec.length > 3 ? sec[3].imageUrl : '',
-                        width:    cardW,
-                        height:   imageH),
-                  ],
+                      SizedBox(height: 6.h),
+                      _SectionImage(
+                          imageUrl: sec.length > 3 ? sec[3].imageUrl : '',
+                          width:    cardW,
+                          height:   imageH),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1142,83 +1343,103 @@ class _TabletCards extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _Reveal(
-                  delay:     const Duration(milliseconds: 120),
-                  direction: _SlideDirection.fromBottom,
-                  duration:  const Duration(milliseconds: 650),
-                  child: _GreenCard(
-                    width:    cardW,
-                    text:     secDesc(0),
-                    color:    primary,
-                    fontSize: 11.sp,
-                    isRtl:    isRtl,
-                  ),
-                ),
-                SizedBox(width: 10.w),
-                _Reveal(
-                  delay:     const Duration(milliseconds: 200),
-                  direction: _SlideDirection.fromBottom,
-                  duration:  const Duration(milliseconds: 650),
-                  child: Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _CircleIcon(
-                            iconUrl:   sec.length > 1 ? sec[1].iconUrl : '',
-                            iconColor: primary),
-                        SizedBox(height: 6.h),
-                        _SectionImage(
-                            imageUrl: sec.length > 1 ? sec[1].imageUrl : '',
-                            height:   imageH * 0.6),
-                        SizedBox(height: 6.h),
-                        _GreenCard(
-                          text:     secDesc(1),
-                          color:    primary,
-                          fontSize: 11.sp,
-                          isRtl:    isRtl,
-                        ),
-                      ],
+                // ✅ Section 0 green card
+                Visibility(
+                  visible: secVisible(0),
+                  maintainSize: true, maintainAnimation: true, maintainState: true,
+                  child: _Reveal(
+                    delay:     const Duration(milliseconds: 120),
+                    direction: _SlideDirection.fromBottom,
+                    duration:  const Duration(milliseconds: 650),
+                    child: _GreenCard(
+                      width:    cardW,
+                      text:     secDesc(0),
+                      color:    primary,
+                      fontSize: 11.sp,
+                      isRtl:    isRtl,
                     ),
                   ),
                 ),
                 SizedBox(width: 10.w),
-                _Reveal(
-                  delay:     const Duration(milliseconds: 280),
-                  direction: _SlideDirection.fromBottom,
-                  duration:  const Duration(milliseconds: 650),
-                  child: Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _CircleIcon(
-                            iconUrl:   sec.length > 2 ? sec[2].iconUrl : '',
-                            iconColor: primary),
-                        SizedBox(height: 6.h),
-                        _SectionImage(
-                            imageUrl: sec.length > 2 ? sec[2].imageUrl : '',
-                            height:   imageH * 0.6),
-                        SizedBox(height: 6.h),
-                        _GreenCard(
-                          text:     secDesc(2),
-                          color:    primary,
-                          fontSize: 11.sp,
-                          isRtl:    isRtl,
-                        ),
-                      ],
+                // ✅ Section 1 column
+                Expanded(
+                  child: Visibility(
+                    visible: secVisible(1),
+                    maintainSize: true, maintainAnimation: true, maintainState: true,
+                    child: _Reveal(
+                      delay:     const Duration(milliseconds: 200),
+                      direction: _SlideDirection.fromBottom,
+                      duration:  const Duration(milliseconds: 650),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _CircleIcon(
+                              iconUrl:   sec.length > 1 ? sec[1].iconUrl : '',
+                              iconColor: primary),
+                          SizedBox(height: 6.h),
+                          _SectionImage(
+                              imageUrl: sec.length > 1 ? sec[1].imageUrl : '',
+                              height:   imageH * 0.6),
+                          SizedBox(height: 6.h),
+                          _GreenCard(
+                            text:     secDesc(1),
+                            color:    primary,
+                            fontSize: 11.sp,
+                            isRtl:    isRtl,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
                 SizedBox(width: 10.w),
-                _Reveal(
-                  delay:     const Duration(milliseconds: 120),
-                  direction: _SlideDirection.fromBottom,
-                  duration:  const Duration(milliseconds: 650),
-                  child: _GreenCard(
-                    width:    cardW,
-                    text:     secDesc(3),
-                    color:    primary,
-                    fontSize: 11.sp,
-                    isRtl:    isRtl,
+                // ✅ Section 2 column
+                Expanded(
+                  child: Visibility(
+                    visible: secVisible(2),
+                    maintainSize: true, maintainAnimation: true, maintainState: true,
+                    child: _Reveal(
+                      delay:     const Duration(milliseconds: 280),
+                      direction: _SlideDirection.fromBottom,
+                      duration:  const Duration(milliseconds: 650),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _CircleIcon(
+                              iconUrl:   sec.length > 2 ? sec[2].iconUrl : '',
+                              iconColor: primary),
+                          SizedBox(height: 6.h),
+                          _SectionImage(
+                              imageUrl: sec.length > 2 ? sec[2].imageUrl : '',
+                              height:   imageH * 0.6),
+                          SizedBox(height: 6.h),
+                          _GreenCard(
+                            text:     secDesc(2),
+                            color:    primary,
+                            fontSize: 11.sp,
+                            isRtl:    isRtl,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                // ✅ Section 3 green card
+                Visibility(
+                  visible: secVisible(3),
+                  maintainSize: true, maintainAnimation: true, maintainState: true,
+                  child: _Reveal(
+                    delay:     const Duration(milliseconds: 120),
+                    direction: _SlideDirection.fromBottom,
+                    duration:  const Duration(milliseconds: 650),
+                    child: _GreenCard(
+                      width:    cardW,
+                      text:     secDesc(3),
+                      color:    primary,
+                      fontSize: 11.sp,
+                      isRtl:    isRtl,
+                    ),
                   ),
                 ),
               ],
@@ -1262,6 +1483,9 @@ class _MobileCards extends StatelessWidget {
         : '';
     String secIcon(int i)  => i < sec.length ? sec[i].iconUrl  : '';
     String secImage(int i) => i < sec.length ? sec[i].imageUrl : '';
+
+    // ✅ Check section visibility from Firestore
+    bool secVisible(int i) => i < sec.length ? sec[i].visibility : true;
 
     Widget imageIconCard({
       required double width,
@@ -1340,7 +1564,6 @@ class _MobileCards extends StatelessWidget {
       required Color  color,
     }) {
       final double iconSize = 36.w;
-      // ← match exactly the same total height as imageIconCard rows
       return SizedBox(
         height: imageCardH,
         child: Row(
@@ -1420,91 +1643,111 @@ class _MobileCards extends StatelessWidget {
 
           SizedBox(height: 12.h),
 
-          _Reveal(
-            delay:     const Duration(milliseconds: 200),
-            direction: _SlideDirection.fromLeft,
-            duration:  const Duration(milliseconds: 650),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  imageIconCard(
-                      width:     colWidth,
-                      imageUrl:  secImage(0),
-                      iconUrl:   secIcon(0),
-                      iconOnLeft: true),
-                  SizedBox(width: gap),
-                  statCard(
-                      width: colWidth,
-                      text:  secDesc(0),
-                      color: primary),
-                ],
+          // ✅ Section 0
+          Visibility(
+            visible: secVisible(0),
+            maintainSize: true, maintainAnimation: true, maintainState: true,
+            child: _Reveal(
+              delay:     const Duration(milliseconds: 200),
+              direction: _SlideDirection.fromLeft,
+              duration:  const Duration(milliseconds: 650),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    imageIconCard(
+                        width:     colWidth,
+                        imageUrl:  secImage(0),
+                        iconUrl:   secIcon(0),
+                        iconOnLeft: true),
+                    SizedBox(width: gap),
+                    statCard(
+                        width: colWidth,
+                        text:  secDesc(0),
+                        color: primary),
+                  ],
+                ),
               ),
             ),
           ),
 
           SizedBox(height: gap),
 
-          _Reveal(
-            delay:     const Duration(milliseconds: 280),
-            direction: _SlideDirection.fromRight,
-            duration:  const Duration(milliseconds: 650),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  statCard(
-                      width: colWidth,
-                      text:  secDesc(1),
-                      color: primary),
-                  SizedBox(width: gap),
-                  imageIconCard(
-                      width:     colWidth,
-                      imageUrl:  secImage(1),
-                      iconUrl:   secIcon(1),
-                      iconOnLeft: false),
-                ],
+          // ✅ Section 1
+          Visibility(
+            visible: secVisible(1),
+            maintainSize: true, maintainAnimation: true, maintainState: true,
+            child: _Reveal(
+              delay:     const Duration(milliseconds: 280),
+              direction: _SlideDirection.fromRight,
+              duration:  const Duration(milliseconds: 650),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    statCard(
+                        width: colWidth,
+                        text:  secDesc(1),
+                        color: primary),
+                    SizedBox(width: gap),
+                    imageIconCard(
+                        width:     colWidth,
+                        imageUrl:  secImage(1),
+                        iconUrl:   secIcon(1),
+                        iconOnLeft: false),
+                  ],
+                ),
               ),
             ),
           ),
 
           SizedBox(height: gap),
 
-          _Reveal(
-            delay:     const Duration(milliseconds: 360),
-            direction: _SlideDirection.fromBottom,
-            duration:  const Duration(milliseconds: 650),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  imageIconCard(
-                      width:     colWidth,
-                      imageUrl:  secImage(2),
-                      iconUrl:   secIcon(2),
-                      iconOnLeft: true),
-                  SizedBox(width: gap),
-                  statCard(
-                      width: colWidth,
-                      text:  secDesc(2),
-                      color: primary),
-                ],
+          // ✅ Section 2
+          Visibility(
+            visible: secVisible(2),
+            maintainSize: true, maintainAnimation: true, maintainState: true,
+            child: _Reveal(
+              delay:     const Duration(milliseconds: 360),
+              direction: _SlideDirection.fromBottom,
+              duration:  const Duration(milliseconds: 650),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    imageIconCard(
+                        width:     colWidth,
+                        imageUrl:  secImage(2),
+                        iconUrl:   secIcon(2),
+                        iconOnLeft: true),
+                    SizedBox(width: gap),
+                    statCard(
+                        width: colWidth,
+                        text:  secDesc(2),
+                        color: primary),
+                  ],
+                ),
               ),
             ),
           ),
 
           SizedBox(height: gap),
 
-          _Reveal(
-            delay:     const Duration(milliseconds: 440),
-            direction: _SlideDirection.fromBottom,
-            duration:  const Duration(milliseconds: 650),
-            child: fullWidthCard(
-              width:    sw - hPad * 2,
-              imageUrl: secImage(3),
-              iconUrl:  secIcon(3),
-              text:     secDesc(3),
-              color:    primary,
+          // ✅ Section 3
+          Visibility(
+            visible: secVisible(3),
+            maintainSize: true, maintainAnimation: true, maintainState: true,
+            child: _Reveal(
+              delay:     const Duration(milliseconds: 440),
+              direction: _SlideDirection.fromBottom,
+              duration:  const Duration(milliseconds: 650),
+              child: fullWidthCard(
+                width:    sw - hPad * 2,
+                imageUrl: secImage(3),
+                iconUrl:  secIcon(3),
+                text:     secDesc(3),
+                color:    primary,
+              ),
             ),
           ),
         ],

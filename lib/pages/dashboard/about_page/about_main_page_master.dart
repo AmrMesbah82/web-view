@@ -33,6 +33,8 @@ import 'package:website_app/widgets/admin_sub_navbar.dart';
 import 'package:website_app/widgets/app_navbar.dart';
 
 import '../../../core/widget/svg_image.dart';
+import '../../../repo/application/application_repo_imp.dart';
+import '../../../repo/job_list/job_listing_repo_imp.dart';
 import 'strategy_page/strategy_main_page.dart';
 import 'strategy_page/strategy_preview_page.dart';
 
@@ -351,7 +353,10 @@ class _AboutMainPageMasterDashboardState
               case 5:
                 Navigator.push(context, MaterialPageRoute(
                   builder: (_) => BlocProvider(
-                    create: (_) => CareersCmsCubit()..load(),
+                    create: (_) => CareersCmsCubit(
+                      jobRepo: JobListingRepoImp(),
+                      appRepo: ApplicationRepoImp(), //
+                    )..load(),
                     child: const CareersMainPageMaster(),
                   ),
                 ));

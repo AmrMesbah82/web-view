@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:website_app/controller/application/application_state.dart';
 import 'package:website_app/model/application_model.dart';
 import 'package:website_app/repo/application/application_repo.dart';
+import 'package:website_app/widgets/application_filter_dialog.dart';
 
 class ApplicationCubit extends Cubit<ApplicationState> {
   final ApplicationRepo _repo;
@@ -16,8 +17,9 @@ class ApplicationCubit extends Cubit<ApplicationState> {
         super(ApplicationInitial());
 
   List<ApplicationModel> _allApps = [];
-  String _activeDeptFilter = 'All';
+  String _activeJobTitleFilter = 'All';   // ← was _activeDeptFilter
   String _searchQuery = '';
+  ApplicationFilterData? _activeFilter;
 
   List<ApplicationModel> get allApps => _allApps;
 
@@ -34,8 +36,19 @@ class ApplicationCubit extends Cubit<ApplicationState> {
     }
   }
 
-  void setDeptFilter(String dept) {
-    _activeDeptFilter = dept;
+  /// Filter by Job Title (was setDeptFilter)
+  void setJobTitleFilter(String jobTitle) {
+    _activeJobTitleFilter = jobTitle;
+    _emitLoaded();
+  }
+
+  void setFilter(ApplicationFilterData filter) {
+    _activeFilter = filter.isEmpty ? null : filter;
+    _emitLoaded();
+  }
+
+  void clearFilter() {
+    _activeFilter = null;
     _emitLoaded();
   }
 
@@ -115,9 +128,10 @@ class ApplicationCubit extends Cubit<ApplicationState> {
 
   void _emitLoaded() {
     emit(ApplicationLoaded(
-      applications: _allApps,
-      activeDeptFilter: _activeDeptFilter,
-      searchQuery: _searchQuery,
+      applications:       _allApps,
+      activeJobTitleFilter: _activeJobTitleFilter,  // ← was activeDeptFilter
+      searchQuery:        _searchQuery,
+      filterData:         _activeFilter,
     ));
   }
 }

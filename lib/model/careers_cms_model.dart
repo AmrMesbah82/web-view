@@ -5,6 +5,9 @@
 
 // ── Bilingual text ────────────────────────────────────────────────────────────
 
+import 'package:website_app/model/application_model.dart';
+import 'package:website_app/model/job_listing_model.dart';
+
 class BilingualText {
   final String en;
   final String ar;
@@ -119,7 +122,7 @@ class CareersOverview {
 class DashboardStatCard {
   final String label;
   final int value;
-  final String iconAsset; // e.g. 'assets/icons/ic_all_jobs.svg'
+  final String iconAsset;
 
   const DashboardStatCard({
     required this.label,
@@ -205,7 +208,7 @@ class CareersDashboardData {
   final List<HiringStageItem> hiringStages;
 
   // Job Status — pie chart
-  final Map<String, double> jobStatus; // e.g. {'Active': 30, 'Scheduled': 20, ...}
+  final Map<String, double> jobStatus;
   final int jobStatusTotal;
 
   // Candidate Quality — pie chart
@@ -228,7 +231,7 @@ class CareersDashboardData {
   final List<ScoreDistributionItem> scoreDistribution;
 
   // Employment Types — horizontal bar + pie
-  final Map<String, double> employmentTypes; // e.g. {'Intern': 40, 'Junior': 30, ...}
+  final Map<String, double> employmentTypes;
 
   // Candidate Gender — pie chart
   final double malePercent;
@@ -262,7 +265,199 @@ class CareersDashboardData {
     required this.femalePercent,
   });
 
-  /// Static hardcoded data matching the Figma design
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  REAL DATA FACTORY — computed from Firestore jobs + applications
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  factory CareersDashboardData.fromRealData({
+    required List<JobPostModel> jobs,
+    required List<ApplicationModel> apps,
+  }) {
+    // ── Stat Cards ────────────────────────────────────────────────────────────
+    final totalJobs     = jobs.length;
+    final officeJobs    = jobs.where((j) => j.workType == WorkType.onSite).length;
+    final remoteJobs    = jobs.where((j) => j.workType == WorkType.remote).length;
+    final activeJobs    = jobs.where((j) => j.status == JobStatus.active).length;
+    final endedJobs     = jobs.where((j) => j.status == JobStatus.ended).length;
+    final draftedJobs   = jobs.where((j) => j.status == JobStatus.drafted).length;
+
+    final statCards = [
+      DashboardStatCard(label: 'All Jobs',          value: totalJobs,   iconAsset: 'assets/images/job_list/all_job.svg'),
+      DashboardStatCard(label: 'Office Jobs',       value: officeJobs,  iconAsset: 'assets/images/job_list/office_job.svg'),
+      DashboardStatCard(label: 'Remote Jobs',       value: remoteJobs,  iconAsset: 'assets/images/job_list/remote_job.svg'),
+      DashboardStatCard(label: 'Active Job',        value: activeJobs,  iconAsset: 'assets/images/job_list/active_job.svg'),
+      DashboardStatCard(label: 'Recruitment Ended', value: endedJobs,   iconAsset: 'assets/images/job_list/requiement_end.svg'),
+      DashboardStatCard(label: 'Drafted',           value: draftedJobs, iconAsset: 'assets/images/job_list/dradt.svg'),
+    ];
+
+    // ── Applications Received — group by month of applicationDate ─────────────
+    final monthLabels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final monthCounts = List<double>.filled(12, 0);
+    for (final app in apps) {
+      if (app.applicationDate != null) {
+        monthCounts[app.applicationDate!.month - 1]++;
+      }
+    }
+
+    // ── Job Posting Status — group jobs by status, bucketed by quarter ────────
+    // X-axis: 4 quarters (Q1–Q4). Each bar group has 4 series (active/closed/scheduled/draft).
+    final qActive    = List<double>.filled(4, 0);
+    final qClosed    = List<double>.filled(4, 0);
+    final qScheduled = List<double>.filled(4, 0);
+    final qDraft     = List<double>.filled(4, 0);
+
+    for (final job in jobs) {
+      final date = job.postedDate ?? job.endedDate;
+      final quarter = date != null ? ((date.month - 1) ~/ 3).clamp(0, 3) : 0;
+      switch (job.status) {
+        case JobStatus.active:    qActive[quarter]++;    break;
+        case JobStatus.ended:
+        case JobStatus.removed:
+        case JobStatus.inactive:  qClosed[quarter]++;    break;
+        case JobStatus.scheduled: qScheduled[quarter]++; break;
+        case JobStatus.drafted:   qDraft[quarter]++;     break;
+      }
+    }
+
+    // ── Hiring Stage — funnel from application statuses ───────────────────────
+    final shortlisted = apps.where((a) =>
+    a.status == ApplicationStatus.qualified).length;
+    final interviewed = apps.where((a) =>
+    a.status == ApplicationStatus.interviewPassed ||
+        a.status == ApplicationStatus.interviewFailed ||
+        a.status == ApplicationStatus.interviewWithdrew).length;
+    final offerSent = apps.where((a) =>
+    a.status == ApplicationStatus.offerApproved ||
+        a.status == ApplicationStatus.offerPending ||
+        a.status == ApplicationStatus.offerRejected).length;
+    final hired     = apps.where((a) => a.status == ApplicationStatus.hired).length;
+
+    final hiringStages = [
+      HiringStageItem(label: 'Applied',  value: shortlisted),
+      HiringStageItem(label: 'Interview',  value: interviewed),
+      HiringStageItem(label: 'Offer Sent', value: offerSent),
+      HiringStageItem(label: 'Hired',      value: hired),
+    ];
+
+    // ── Job Status — pie chart ────────────────────────────────────────────────
+    final statusCounts = <String, double>{
+      'Active':    jobs.where((j) => j.status == JobStatus.active).length.toDouble(),
+      'Scheduled': jobs.where((j) => j.status == JobStatus.scheduled).length.toDouble(),
+      'Closed':    jobs.where((j) => j.status == JobStatus.ended || j.status == JobStatus.inactive || j.status == JobStatus.removed).length.toDouble(),
+      'Draft':     jobs.where((j) => j.status == JobStatus.drafted).length.toDouble(),
+    }..removeWhere((_, v) => v == 0);
+
+    // Total unique departments
+    final uniqueDepts = jobs.map((j) => j.department).where((d) => d.isNotEmpty).toSet().length;
+
+    // ── Candidate Quality ─────────────────────────────────────────────────────
+    final totalApps      = apps.length;
+    final qualifiedCount = apps.where((a) =>
+    a.status != ApplicationStatus.applied &&
+        a.status != ApplicationStatus.unqualified).length;
+    final unqualifiedCount = totalApps - qualifiedCount;
+    final qualifiedPct   = totalApps > 0 ? (qualifiedCount / totalApps * 100) : 0.0;
+    final unqualifiedPct = totalApps > 0 ? (unqualifiedCount / totalApps * 100) : 0.0;
+
+    // ── Jobs Performance — top 4 job titles by application count ─────────────
+    final jobAppMap = <String, List<ApplicationModel>>{};
+    for (final app in apps) {
+      final title = app.jobTitle.isNotEmpty ? app.jobTitle : app.jobId;
+      jobAppMap.putIfAbsent(title, () => []).add(app);
+    }
+
+    // Sort by app count, take top 4
+    final sortedEntries = jobAppMap.entries.toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+    final top4 = sortedEntries.take(4).toList();
+
+    final perfRoles = top4.map((e) => e.key).toList();
+    final perfApps  = top4.map((e) => e.value.length.toDouble()).toList();
+    final perfInterviews = top4.map((e) => e.value.where((a) =>
+    a.status == ApplicationStatus.interviewPassed ||
+        a.status == ApplicationStatus.interviewFailed ||
+        a.status == ApplicationStatus.interviewWithdrew).length.toDouble()).toList();
+    final perfHires = top4.map((e) => e.value.where((a) =>
+    a.status == ApplicationStatus.hired).length.toDouble()).toList();
+
+    // ── Job Offer ─────────────────────────────────────────────────────────────
+    final offerApproved = apps.where((a) => a.status == ApplicationStatus.offerApproved).length;
+    final offerPending  = apps.where((a) => a.status == ApplicationStatus.offerPending).length;
+    final offerRejected = apps.where((a) => a.status == ApplicationStatus.offerRejected).length;
+
+    // ── Score Distribution ────────────────────────────────────────────────────
+    // Average score per applicant = mean of all 5 scoring fields (each 0–10 or 0–100)
+    // Bucket: Poor(0–20), Weak(21–40), Good(41–60), Very Good(61–80), Excellent(81–100)
+    int poor = 0, weak = 0, good = 0, veryGood = 0, excellent = 0;
+    for (final app in apps) {
+      final avg = (app.technicalSkills +
+          app.communicationSkills +
+          app.experienceBackground +
+          app.cultureFit +
+          app.leadershipPotential) / 5.0;
+      if (avg <= 20)       poor++;
+      else if (avg <= 40)  weak++;
+      else if (avg <= 60)  good++;
+      else if (avg <= 80)  veryGood++;
+      else                  excellent++;
+    }
+
+    final scoreDistribution = [
+      ScoreDistributionItem(label: 'Poor',      value: poor,      colorHex: '#D32F2F'),
+      ScoreDistributionItem(label: 'Weak',      value: weak,      colorHex: '#F44336'),
+      ScoreDistributionItem(label: 'Good',      value: good,      colorHex: '#FF9800'),
+      ScoreDistributionItem(label: 'Very Good', value: veryGood,  colorHex: '#E91E63'),
+      ScoreDistributionItem(label: 'Excellent', value: excellent, colorHex: '#2E7D32'),
+    ];
+
+    // ── Employment Types — from applicant experienceLevel ─────────────────────
+    final internCount     = apps.where((a) => a.experienceLevel.toLowerCase() == 'intern').length.toDouble();
+    final juniorCount     = apps.where((a) => a.experienceLevel.toLowerCase() == 'junior').length.toDouble();
+    final seniorCount     = apps.where((a) => a.experienceLevel.toLowerCase() == 'senior').length.toDouble();
+    final leaderCount     = apps.where((a) => a.experienceLevel.toLowerCase() == 'leadership').length.toDouble();
+
+    final employmentTypes = <String, double>{
+      if (internCount  > 0) 'Intern':     internCount,
+      if (juniorCount  > 0) 'Junior':     juniorCount,
+      if (seniorCount  > 0) 'Senior':     seniorCount,
+      if (leaderCount  > 0) 'Leadership': leaderCount,
+    };
+
+    // ── Candidate Gender — no gender field in model; show 50/50 placeholder ──
+    // TODO: Add gender field to ApplicationModel to make this dynamic.
+    const malePercent   = 50.0;
+    const femalePercent = 50.0;
+
+    return CareersDashboardData(
+      statCards: statCards,
+      appReceivedLabels: monthLabels,
+      appReceivedValues: monthCounts,
+      jobPostingLabels:    ['Q1', 'Q2', 'Q3', 'Q4'],
+      jobPostingActive:    qActive,
+      jobPostingClosed:    qClosed,
+      jobPostingScheduled: qScheduled,
+      jobPostingDraft:     qDraft,
+      hiringStages:        hiringStages,
+      jobStatus:           statusCounts.isEmpty ? {'No Data': 1} : statusCounts,
+      jobStatusTotal:      uniqueDepts,
+      qualifiedPercent:    qualifiedPct,
+      unqualifiedPercent:  unqualifiedPct,
+      totalApplications:   totalApps,
+      performanceRoles:        perfRoles,
+      performanceApplications: perfApps,
+      performanceInterviews:   perfInterviews,
+      performanceHires:        perfHires,
+      jobOfferApproved: offerApproved,
+      jobOfferPending:  offerPending,
+      jobOfferRejected: offerRejected,
+      scoreDistribution: scoreDistribution,
+      employmentTypes:   employmentTypes.isEmpty ? {'No Data': 1} : employmentTypes,
+      malePercent:   malePercent,
+      femalePercent: femalePercent,
+    );
+  }
+
+  // ── Static hardcoded demo (kept as fallback) ──────────────────────────────
   factory CareersDashboardData.demo() => CareersDashboardData(
     statCards: const [
       DashboardStatCard(label: 'All Jobs',          value: 1000, iconAsset: 'assets/images/job_list/all_job.svg'),
@@ -272,45 +467,28 @@ class CareersDashboardData {
       DashboardStatCard(label: 'Recruitment Ended', value: 3,    iconAsset: 'assets/images/job_list/requiement_end.svg'),
       DashboardStatCard(label: 'Drafted',           value: 3,    iconAsset: 'assets/images/job_list/dradt.svg'),
     ],
-    appReceivedLabels: const [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ],
-    appReceivedValues: const [
-      320, 280, 350, 300, 420, 380,
-      450, 400, 360, 300, 340, 390,
-    ],
-    jobPostingLabels: const ['Active', 'Closed', 'Scheduled', 'Draft'],
-    jobPostingActive:    const [400, 100, 200, 50],
-    jobPostingClosed:    const [300, 80, 150, 30],
-    jobPostingScheduled: const [200, 60, 100, 20],
-    jobPostingDraft:     const [100, 40, 50, 10],
+    appReceivedLabels: const ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    appReceivedValues: const [320,280,350,300,420,380,450,400,360,300,340,390],
+    jobPostingLabels: const ['Active','Closed','Scheduled','Draft'],
+    jobPostingActive:    const [400,100,200,50],
+    jobPostingClosed:    const [300,80,150,30],
+    jobPostingScheduled: const [200,60,100,20],
+    jobPostingDraft:     const [100,40,50,10],
     hiringStages: const [
-      HiringStageItem(label: 'Shortlist', value: 500),
-      HiringStageItem(label: 'Interview', value: 350),
+      HiringStageItem(label: 'Applied',  value: 500),
+      HiringStageItem(label: 'Interview',  value: 350),
       HiringStageItem(label: 'Offer Sent', value: 200),
-      HiringStageItem(label: 'Hired', value: 120),
-      HiringStageItem(label: 'Joined', value: 80),
+      HiringStageItem(label: 'Hired',      value: 120),
     ],
-    jobStatus: const {
-      'Active': 35,
-      'Scheduled': 25,
-      'Closed': 20,
-      'Draft': 20,
-    },
+    jobStatus: const {'Active': 35, 'Scheduled': 25, 'Closed': 20, 'Draft': 20},
     jobStatusTotal: 9,
     qualifiedPercent: 72,
     unqualifiedPercent: 28,
     totalApplications: 114765,
-    performanceRoles: const [
-      'Frontend Developer',
-      'Backend Developer',
-      'UI/UX Designer',
-      'Backend Developer',
-    ],
-    performanceApplications: const [90, 75, 60, 80],
-    performanceInterviews:   const [50, 40, 35, 45],
-    performanceHires:        const [20, 15, 12, 18],
+    performanceRoles: const ['Frontend Developer','Backend Developer','UI/UX Designer','Backend Developer'],
+    performanceApplications: const [90,75,60,80],
+    performanceInterviews:   const [50,40,35,45],
+    performanceHires:        const [20,15,12,18],
     jobOfferApproved: 59091,
     jobOfferPending:  31760,
     jobOfferRejected: 23510,
@@ -321,14 +499,9 @@ class CareersDashboardData {
       ScoreDistributionItem(label: 'Very Good', value: 2113, colorHex: '#E91E63'),
       ScoreDistributionItem(label: 'Excellent', value: 45,   colorHex: '#2E7D32'),
     ],
-    employmentTypes: const {
-      'Intern': 40,
-      'Junior': 30,
-      'Senior': 20,
-      'Leadership': 10,
-    },
+    employmentTypes: const {'Intern': 40, 'Junior': 30, 'Senior': 20, 'Leadership': 10},
     malePercent:   72,
-    femalePercent:  28,
+    femalePercent: 28,
   );
 }
 
@@ -358,8 +531,7 @@ class CareersCmsModel {
     final stats = rawStats
         .whereType<Map<String, dynamic>>()
         .map((s) => CareerStatItem.fromMap(
-      s['id'] as String? ??
-          DateTime.now().millisecondsSinceEpoch.toString(),
+      s['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
       s,
     ))
         .toList();
@@ -375,15 +547,14 @@ class CareersCmsModel {
       overview: CareersOverview.fromMap(
           (map['overview'] as Map<String, dynamic>?) ?? {}),
       statistics: stats,
-      dashboard: CareersDashboardData.demo(), // TODO: parse from Firestore
+      dashboard: CareersDashboardData.demo(), // replaced at runtime via fromRealData
       lastUpdated: lastUpdated,
     );
   }
 
   Map<String, dynamic> toMap() => {
     'overview': overview.toMap(),
-    'statistics':
-    statistics.map((s) => {'id': s.id, ...s.toMap()}).toList(),
+    'statistics': statistics.map((s) => {'id': s.id, ...s.toMap()}).toList(),
     'lastUpdated': DateTime.now().toIso8601String(),
   };
 

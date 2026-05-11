@@ -127,49 +127,63 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
               textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
               child: BlocBuilder<BlogCubit, BlogState>(
                 builder: (context, blogState) {
-                  // ── Loading ─────────────────────────────────────────
+                  // ── Loading ─────────────────────────────────────
                   if (blogState is BlogLoading) {
                     return Scaffold(
                       backgroundColor: AppColors.background,
-                      body: Center(
-                        child: CircularProgressIndicator(color: primary),
+                      body: Column(
+                        children: [
+                          AppNavbar(currentRoute: '/services'),
+                          Expanded(child: Center(child: CircularProgressIndicator(color: primary))),
+                          const AppFooter(),
+                        ],
                       ),
                     );
                   }
 
-                  // ── Error ───────────────────────────────────────────
+                  // ── Error ───────────────────────────────────────
                   if (blogState is BlogError) {
                     return Scaffold(
-                      backgroundColor: AppColors.background,
-                      body: Center(
-                        child: Text(
-                          blogState.message,
-                          style: const TextStyle(
-                              fontFamily: 'Cairo', color: Colors.red),
-                        ),
+                      backgroundColor: Color(0xFFF1F2ED),
+                      body: Column(
+                        children: [
+                          AppNavbar(currentRoute: '/services'),
+                          Expanded(
+                            child: Center(
+                              child: Text(
+                                blogState.message,
+                                style: const TextStyle(fontFamily: 'Cairo', color: Colors.red),
+                              ),
+                            ),
+                          ),
+                          const AppFooter(),
+                        ],
                       ),
                     );
                   }
 
-                  // ── Data ready ──────────────────────────────────────
+                  // ── Data ready ──────────────────────────────────
                   final List<BlogPostModel> posts =
                   blogState is BlogLoaded
-                      ? blogState.posts
-                      .where((p) => p.status == 'published')
-                      .toList()
+                      ? blogState.posts.where((p) => p.status == 'published').toList()
                       : [];
 
                   if (posts.isEmpty) {
                     return Scaffold(
-                      backgroundColor: AppColors.background,
-                      body: Center(
-                        child: Text(
-                          isRtl
-                              ? 'لا توجد مقالات منشورة.'
-                              : 'No published posts.',
-                          style: const TextStyle(
-                              fontFamily: 'Cairo', color: Colors.black54),
-                        ),
+                      backgroundColor: Color(0xFFF1F2ED),
+                      body: Column(
+                        children: [
+                          AppNavbar(currentRoute: '/services'),
+                          Expanded(
+                            child: Center(
+                              child: Text(
+                                isRtl ? 'لا توجد مقالات منشورة.' : 'No published posts.',
+                                style: const TextStyle(fontFamily: 'Cairo', color: Colors.black54),
+                              ),
+                            ),
+                          ),
+                          const AppFooter(),
+                        ],
                       ),
                     );
                   }
@@ -180,50 +194,57 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
                     orElse: () => posts.first,
                   );
 
-                  final double w       = MediaQuery.of(context).size.width;
-                  final bool   isMobile = w < _BP.mobile;
+                  final double w = MediaQuery.of(context).size.width;
+                  final bool isMobile = w < _BP.mobile;
 
                   return Scaffold(
-                    backgroundColor: AppColors.background,
-                    body: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          AppNavbar(currentRoute: '/services'),
+                    backgroundColor: Color(0xFFF1F2ED),
+                    body: Column(
+                      children: [
+                        // ✅ Navbar — fixed at top
+                        AppNavbar(currentRoute: '/services'),
 
-                          isMobile
-                              ? _MobileBody(
-                            posts:     posts,
-                            selected:  selectedPost,
-                            expanded:  _expanded,
-                            isRtl:     isRtl,
-                            primary:   primary,
-                            secondary: secondary,
-                            onTabChange: (id) => setState(() {
-                              _selectedPostId = id;
-                              _expanded       = false;
-                            }),
-                            onToggleExpand: () => setState(
-                                    () => _expanded = !_expanded),
-                          )
-                              : _DesktopBody(
-                            posts:     posts,
-                            selected:  selectedPost,
-                            expanded:  _expanded,
-                            isRtl:     isRtl,
-                            primary:   primary,
-                            secondary: secondary,
-                            onTabChange: (id) => setState(() {
-                              _selectedPostId = id;
-                              _expanded       = false;
-                            }),
-                            onToggleExpand: () => setState(
-                                    () => _expanded = !_expanded),
+                        // ✅ Content — scrolls
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                isMobile
+                                    ? _MobileBody(
+                                  posts: posts,
+                                  selected: selectedPost,
+                                  expanded: _expanded,
+                                  isRtl: isRtl,
+                                  primary: primary,
+                                  secondary: secondary,
+                                  onTabChange: (id) => setState(() {
+                                    _selectedPostId = id;
+                                    _expanded = false;
+                                  }),
+                                  onToggleExpand: () => setState(() => _expanded = !_expanded),
+                                )
+                                    : _DesktopBody(
+                                  posts: posts,
+                                  selected: selectedPost,
+                                  expanded: _expanded,
+                                  isRtl: isRtl,
+                                  primary: primary,
+                                  secondary: secondary,
+                                  onTabChange: (id) => setState(() {
+                                    _selectedPostId = id;
+                                    _expanded = false;
+                                  }),
+                                  onToggleExpand: () => setState(() => _expanded = !_expanded),
+                                ),
+                              ],
+                            ),
                           ),
+                        ),
 
-                          const AppFooter(),
-                        ],
-                      ),
+                        // ✅ Footer — fixed at bottom
+                        const AppFooter(),
+                      ],
                     ),
                   );
                 },
@@ -279,9 +300,9 @@ class _MobileBody extends StatelessWidget {
                 return Padding(
                   padding: EdgeInsets.only(right: isLast ? 0 : 10),
                   child: _BlogNavButton(
-                    label: _tb(e.value.buttonLabel, isRtl).isNotEmpty
-                        ? _tb(e.value.buttonLabel, isRtl)
-                        : _tb(e.value.question, isRtl),
+                    label: _tb(e.value.descriptionTitle, isRtl).isNotEmpty
+                        ? _tb(e.value.descriptionTitle, isRtl)
+                        : _tb(e.value.question, isRtl),  // ← new:
                     isSelected: selected.id == e.value.id,
                     onTap:      () => onTabChange(e.value.id),
                     isMobile:   true,
@@ -460,11 +481,11 @@ class _DesktopBody extends StatelessWidget {
                 children: posts.asMap().entries.map((e) {
                   final bool isLast = e.key == posts.length - 1;
                   return Padding(
-                    padding: EdgeInsets.only(right: isLast ? 0 : 12.w),
+                    padding: EdgeInsets.only(right: isLast ? 0 : 12.w, left: isLast ? 0 : 12.w,),
                     child: _BlogNavButton(
-                      label: _tb(e.value.buttonLabel, isRtl).isNotEmpty
-                          ? _tb(e.value.buttonLabel, isRtl)
-                          : _tb(e.value.question, isRtl),
+                      label: _tb(e.value.descriptionTitle, isRtl).isNotEmpty
+                          ? _tb(e.value.descriptionTitle, isRtl)
+                          : _tb(e.value.question, isRtl),  // ← new:
                       isSelected: selected.id == e.value.id,
                       onTap:      () => onTabChange(e.value.id),
                       isMobile:   false,
@@ -810,7 +831,16 @@ class _BlogNavButtonState extends State<_BlogNavButton> {
 
   @override
   Widget build(BuildContext context) {
-    final bool active = widget.isSelected || _hovered;
+    // Derive a soft tinted hover background using Color.lerp instead of opacity
+    final Color hoverBg = Color.lerp(Colors.white, widget.primary, 0.10)!;
+
+    final Color bgColor = widget.isSelected
+        ? widget.primary
+        : (_hovered ? hoverBg : Colors.white);
+
+    final Color textColor = widget.isSelected
+        ? Colors.white
+        : (_hovered ? widget.primary : AppColors.text);
 
     return MouseRegion(
       cursor:  SystemMouseCursors.click,
@@ -819,14 +849,12 @@ class _BlogNavButtonState extends State<_BlogNavButton> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 180),
           padding: widget.isMobile
               ? const EdgeInsets.symmetric(horizontal: 16, vertical: 10)
               : EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
           decoration: BoxDecoration(
-            color: widget.isSelected
-                ? widget.primary
-                : (active ? widget.secondary : Colors.white),
+            color: bgColor,
             borderRadius:
             BorderRadius.circular(widget.isMobile ? 10 : 10.r),
           ),
@@ -836,7 +864,7 @@ class _BlogNavButtonState extends State<_BlogNavButton> {
               fontFamily: 'Cairo',
               fontSize:   widget.isMobile ? 12 : 13.sp,
               fontWeight: FontWeight.w600,
-              color:      widget.isSelected ? Colors.white : widget.primary,
+              color: textColor,
             ),
           ),
         ),

@@ -12,6 +12,7 @@
 //          NEW: Form fields updated — firstName/lastName split, preferredLanguage
 //               radio, location country picker, entityName, entityType, entitySize
 //          NEW: SendGrid sends 2 emails (client thank-you + sales notification)
+//          NEW: "Other" language radio option shows custom text field ✅
 // FIX: _SvgPulseLoader backgroundColor now uses branding.backgroundColor from
 //      Firebase. Shows neutral background before Firebase responds, then
 //      switches to real backgroundColor once HomeCmsLoaded fires.
@@ -58,6 +59,9 @@ const Color _kGreenLight    = Color(0xFFE8F5EE);
 const Color _kDivider       = Color(0xFFDDE8DD);
 // Neutral loader background shown before Firebase responds
 const Color _kLoaderNeutral = Color(0xFFF5F5F5);
+
+// Sentinel value used to identify "Other" language selection
+const String _kOtherLanguage = 'other';
 
 class _BP {
   static const double mobile = 600;
@@ -405,14 +409,16 @@ class _ContactPageView extends StatefulWidget {
 }
 
 class _ContactPageViewState extends State<_ContactPageView> {
-  // ── NEW: Split name controllers ──
-  final _firstNameCtrl  = TextEditingController();
-  final _lastNameCtrl   = TextEditingController();
-  final _emailCtrl      = TextEditingController();
-  final _phoneCtrl      = TextEditingController();
-  final _entityNameCtrl = TextEditingController();
-  final _subjectCtrl    = TextEditingController();
-  final _messageCtrl    = TextEditingController();
+  // ── Name / contact controllers ──
+  final _firstNameCtrl        = TextEditingController();
+  final _lastNameCtrl         = TextEditingController();
+  final _emailCtrl            = TextEditingController();
+  final _phoneCtrl            = TextEditingController();
+  final _entityNameCtrl       = TextEditingController();
+  final _subjectCtrl          = TextEditingController();
+  final _messageCtrl          = TextEditingController();
+  // ── NEW: "Other" language free-text controller ──
+  final _otherLanguageCtrl    = TextEditingController();
 
   String _phoneCode          = '+20';
   String _preferredLanguage  = 'ar';     // Default: Arabic (matches Figma)
@@ -444,6 +450,7 @@ class _ContactPageViewState extends State<_ContactPageView> {
     _entityNameCtrl.dispose();
     _subjectCtrl.dispose();
     _messageCtrl.dispose();
+    _otherLanguageCtrl.dispose(); // ← NEW
     super.dispose();
   }
 
@@ -480,17 +487,27 @@ class _ContactPageViewState extends State<_ContactPageView> {
       _subjectCtrl, _messageCtrl,
     ].every((c) => c.text.trim().isNotEmpty);
 
+    // If "Other" is selected, the custom language field is also required
+    final otherLangFilled = _preferredLanguage != _kOtherLanguage ||
+        _otherLanguageCtrl.text.trim().isNotEmpty;
+
     final dropdownsFilled = _selectedLocation != null &&
         _selectedEntityType != null &&
         _selectedEntitySize != null;
 
-    if (!requiredTextFilled || !dropdownsFilled) return;
+    if (!requiredTextFilled || !dropdownsFilled || !otherLangFilled) return;
 
     String phoneNumber = _phoneCtrl.text.trim();
     if (phoneNumber.startsWith('0')) phoneNumber = phoneNumber.substring(1);
 
     final fullPhone = '$_phoneCode$phoneNumber';
-    final locale    = _preferredLanguage == 'ar' ? 'ar' : 'en';
+
+    // Resolve actual locale string: use custom text when "Other" selected
+    final locale = _preferredLanguage == _kOtherLanguage
+        ? _otherLanguageCtrl.text.trim()
+        : _preferredLanguage == 'ar'
+        ? 'ar'
+        : 'en';
 
     context.read<ContactOtpCubit>().sendOtp(
       phoneNumber: fullPhone,
@@ -499,6 +516,18 @@ class _ContactPageViewState extends State<_ContactPageView> {
   }
 
   void _submitContactForm() async {
+    print('🟡 location=$_selectedLocation entityType=$_selectedEntityType entitySize=$_selectedEntitySize');
+
+
+
+
+
+
+    // Resolve the final preferredLanguage value saved to Firestore
+    final resolvedLanguage = _preferredLanguage == _kOtherLanguage
+        ? _otherLanguageCtrl.text.trim()
+        : _preferredLanguage;
+
     final submission = ContactSubmission(
       id:                '',
       firstName:         _firstNameCtrl.text.trim(),
@@ -506,7 +535,7 @@ class _ContactPageViewState extends State<_ContactPageView> {
       email:             _emailCtrl.text.trim(),
       countryCode:       _phoneCode,
       phoneNumber:       _phoneCtrl.text.trim(),
-      preferredLanguage: _preferredLanguage,
+      preferredLanguage: resolvedLanguage,
       location:          _selectedLocation ?? '',
       entityName:        _entityNameCtrl.text.trim(),
       entityType:        _selectedEntityType ?? '',
@@ -515,8 +544,9 @@ class _ContactPageViewState extends State<_ContactPageView> {
       message:           _messageCtrl.text.trim(),
       submissionDate:    DateTime.now(),
     );
-
-    // ContactCubit now handles both Firestore save + email sending
+    print('🔴 DEBUG preferredLanguage: $_preferredLanguage');
+    print('🔴 DEBUG resolvedLanguage: $resolvedLanguage');
+    print('🔴 DEBUG isArabic: ${resolvedLanguage == 'ar'}');
     context.read<ContactCubit>().submitContact(submission);
   }
 
@@ -621,6 +651,7 @@ class _ContactPageViewState extends State<_ContactPageView> {
                         _entityNameCtrl.clear();
                         _subjectCtrl.clear();
                         _messageCtrl.clear();
+                        _otherLanguageCtrl.clear(); // ← NEW: clear on success
                         setState(() {
                           _submitted          = false;
                           _preferredLanguage   = 'ar';
@@ -689,147 +720,125 @@ class _ContactPageViewState extends State<_ContactPageView> {
 
                         return Scaffold(
                           backgroundColor: backgroundColor,
-                          body: Stack(children: [
-                            _RevealCoordinatorWidget(
-                              child: SingleChildScrollView(
+                          body: Stack(
+                            children: [
+                              _RevealCoordinatorWidget(
                                 child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.center,
                                   children: [
-                                    SizedBox(height: 80.h),
-                                    _Reveal(
-                                      delay: const Duration(
-                                          milliseconds: 80),
-                                      direction:
-                                      _SlideDirection.fromLeft,
-                                      duration: const Duration(
-                                          milliseconds: 650),
-                                      child: isMobile
-                                          ? _MobileBody(
-                                        firstNameCtrl:       _firstNameCtrl,
-                                        lastNameCtrl:        _lastNameCtrl,
-                                        emailCtrl:           _emailCtrl,
-                                        phoneCtrl:           _phoneCtrl,
-                                        entityNameCtrl:      _entityNameCtrl,
-                                        subjectCtrl:         _subjectCtrl,
-                                        messageCtrl:         _messageCtrl,
-                                        submitted:           _submitted,
-                                        phoneCode:           _phoneCode,
-                                        preferredLanguage:   _preferredLanguage,
-                                        selectedLocation:    _selectedLocation,
-                                        selectedEntityType:  _selectedEntityType,
-                                        selectedEntitySize:  _selectedEntitySize,
-                                        isRtl:               isRtl,
-                                        primaryColor:        primaryColor,
-                                        onCodeChanged:       (v) =>
-                                            setState(() =>
-                                            _phoneCode = v ?? _phoneCode),
-                                        onLanguageChanged:   (v) =>
-                                            setState(() =>
-                                            _preferredLanguage = v),
-                                        onLocationChanged:   (v) =>
-                                            setState(() =>
-                                            _selectedLocation = v),
-                                        onEntityTypeChanged: (v) =>
-                                            setState(() =>
-                                            _selectedEntityType = v),
-                                        onEntitySizeChanged: (v) =>
-                                            setState(() =>
-                                            _selectedEntitySize = v),
-                                        onSend:  _onSend,
-                                        cmsData: cmsData,
-                                      )
-                                          : _DesktopBody(
-                                        firstNameCtrl:       _firstNameCtrl,
-                                        lastNameCtrl:        _lastNameCtrl,
-                                        emailCtrl:           _emailCtrl,
-                                        phoneCtrl:           _phoneCtrl,
-                                        entityNameCtrl:      _entityNameCtrl,
-                                        subjectCtrl:         _subjectCtrl,
-                                        messageCtrl:         _messageCtrl,
-                                        submitted:           _submitted,
-                                        phoneCode:           _phoneCode,
-                                        preferredLanguage:   _preferredLanguage,
-                                        selectedLocation:    _selectedLocation,
-                                        selectedEntityType:  _selectedEntityType,
-                                        selectedEntitySize:  _selectedEntitySize,
-                                        isRtl:               isRtl,
-                                        primaryColor:        primaryColor,
-                                        onCodeChanged:       (v) =>
-                                            setState(() =>
-                                            _phoneCode = v ?? _phoneCode),
-                                        onLanguageChanged:   (v) =>
-                                            setState(() =>
-                                            _preferredLanguage = v),
-                                        onLocationChanged:   (v) =>
-                                            setState(() =>
-                                            _selectedLocation = v),
-                                        onEntityTypeChanged: (v) =>
-                                            setState(() =>
-                                            _selectedEntityType = v),
-                                        onEntitySizeChanged: (v) =>
-                                            setState(() =>
-                                            _selectedEntitySize = v),
-                                        onSend:  _onSend,
-                                        cmsData: cmsData,
+                                    // ✅ Navbar — always visible at top
+                                    Material(
+                                      color: backgroundColor,
+                                      elevation: 0,
+                                      child: AppNavbar(currentRoute: '/contact'),
+                                    ),
+
+                                    // ✅ Middle content — scrolls, takes all remaining space
+                                    Expanded(
+                                      child: SingleChildScrollView(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            _Reveal(
+                                              delay: const Duration(milliseconds: 80),
+                                              direction: _SlideDirection.fromLeft,
+                                              duration: const Duration(milliseconds: 650),
+                                              child: isMobile
+                                                  ? _MobileBody(
+                                                firstNameCtrl:       _firstNameCtrl,
+                                                lastNameCtrl:        _lastNameCtrl,
+                                                emailCtrl:           _emailCtrl,
+                                                phoneCtrl:           _phoneCtrl,
+                                                entityNameCtrl:      _entityNameCtrl,
+                                                subjectCtrl:         _subjectCtrl,
+                                                messageCtrl:         _messageCtrl,
+                                                otherLanguageCtrl:   _otherLanguageCtrl,
+                                                submitted:           _submitted,
+                                                phoneCode:           _phoneCode,
+                                                preferredLanguage:   _preferredLanguage,
+                                                selectedLocation:    _selectedLocation,
+                                                selectedEntityType:  _selectedEntityType,
+                                                selectedEntitySize:  _selectedEntitySize,
+                                                isRtl:               isRtl,
+                                                primaryColor:        primaryColor,
+                                                onCodeChanged:       (v) => setState(() => _phoneCode = v ?? _phoneCode),
+                                                onLanguageChanged:   (v) => setState(() => _preferredLanguage = v),
+                                                onLocationChanged:   (v) => setState(() => _selectedLocation = v),
+                                                onEntityTypeChanged: (v) => setState(() => _selectedEntityType = v),
+                                                onEntitySizeChanged: (v) => setState(() => _selectedEntitySize = v),
+                                                onSend:              _onSend,
+                                                cmsData:             cmsData,
+                                              )
+                                                  : _DesktopBody(
+                                                firstNameCtrl:       _firstNameCtrl,
+                                                lastNameCtrl:        _lastNameCtrl,
+                                                emailCtrl:           _emailCtrl,
+                                                phoneCtrl:           _phoneCtrl,
+                                                entityNameCtrl:      _entityNameCtrl,
+                                                subjectCtrl:         _subjectCtrl,
+                                                messageCtrl:         _messageCtrl,
+                                                otherLanguageCtrl:   _otherLanguageCtrl,
+                                                submitted:           _submitted,
+                                                phoneCode:           _phoneCode,
+                                                preferredLanguage:   _preferredLanguage,
+                                                selectedLocation:    _selectedLocation,
+                                                selectedEntityType:  _selectedEntityType,
+                                                selectedEntitySize:  _selectedEntitySize,
+                                                isRtl:               isRtl,
+                                                primaryColor:        primaryColor,
+                                                onCodeChanged:       (v) => setState(() => _phoneCode = v ?? _phoneCode),
+                                                onLanguageChanged:   (v) => setState(() => _preferredLanguage = v),
+                                                onLocationChanged:   (v) => setState(() => _selectedLocation = v),
+                                                onEntityTypeChanged: (v) => setState(() => _selectedEntityType = v),
+                                                onEntitySizeChanged: (v) => setState(() => _selectedEntitySize = v),
+                                                onSend:              _onSend,
+                                                cmsData:             cmsData,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
+
+                                    // ✅ Footer — always visible at bottom
                                     _Reveal(
-                                      delay: const Duration(
-                                          milliseconds: 100),
-                                      direction:
-                                      _SlideDirection.fromBottom,
-                                      duration: const Duration(
-                                          milliseconds: 600),
+                                      delay: const Duration(milliseconds: 100),
+                                      direction: _SlideDirection.fromBottom,
+                                      duration: const Duration(milliseconds: 600),
                                       child: const AppFooter(),
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
 
-                            Positioned(
-                              top: 0, left: 0, right: 0,
-                              child: Material(
-                                color:     backgroundColor,
-                                elevation: 0,
-                                child: AppNavbar(
-                                    currentRoute: '/contact'),
-                              ),
-                            ),
-
-                            if (isSending)
-                              Container(
-                                color: Colors.black45,
-                                child: Center(
-                                  child: Container(
-                                    width: isMobile
-                                        ? double.infinity
-                                        : 600.w,
-                                    decoration: BoxDecoration(
+                              // ✅ Loading overlay
+                              if (isSending)
+                                Container(
+                                  color: Colors.black45,
+                                  child: Center(
+                                    child: Container(
+                                      width: isMobile ? double.infinity : 600.w,
+                                      decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius:
-                                        BorderRadius.circular(
-                                            10.r)),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                      children: [
-                                        CircleProgressMaster(),
-                                        SizedBox(height: 8.h),
-                                        Text(
-                                          isRtl
-                                              ? 'جاري ارسال البيانات التي قد ملتها وسيتم الرد عليك بعد اتمما العملية...'
-                                              : 'The information you have filled out is being sent, and you will be answered after you complete the process…',
-                                          style: StyleText
-                                              .fontSize13Weight400,
-                                        ),
-                                      ],
+                                        borderRadius: BorderRadius.circular(10.r),
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          CircleProgressMaster(),
+                                          SizedBox(height: 8.h),
+                                          Text(
+                                            isRtl
+                                                ? 'جاري ارسال البيانات التي قد ملتها وسيتم الرد عليك بعد اتمما العملية...'
+                                                : 'The information you have filled out is being sent, and you will be answered after you complete the process…',
+                                            style: StyleText.fontSize13Weight400,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                          ]),
+                            ],
+                          ),
                         );
                       },
                     );
@@ -843,10 +852,6 @@ class _ContactPageViewState extends State<_ContactPageView> {
     );
   }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// OTP VERIFICATION DIALOG
-// ═══════════════════════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // OTP VERIFICATION DIALOG — Figma-accurate design
@@ -932,7 +937,6 @@ class _OtpDialogState extends State<_OtpDialog> {
   }
 
   void _resendOtp() {
-    // Clear digits
     for (final c in _digitCtrls) c.clear();
     setState(() {
       _submitted = false;
@@ -954,7 +958,6 @@ class _OtpDialogState extends State<_OtpDialog> {
     if (value.length == 1 && index < 5) {
       _focusNodes[index + 1].requestFocus();
     }
-    // Auto-verify when all 6 digits entered
     if (value.length == 1 && index == 5 && _otpCode.length == 6) {
       _verifyOtp();
     }
@@ -1023,209 +1026,209 @@ class _OtpDialogState extends State<_OtpDialog> {
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                    // ── SVG Illustration ──
-                    SvgPicture.asset(
-                    'assets/images/mobile_code_dialog.svg',
-                    width:  isMobile ? 120 : 140.w,
-                    height: isMobile ? 100 : 120.h,
-                    fit:    BoxFit.contain,
-                  ),
-                  SizedBox(height: isMobile ? 20 : 24.h),
-
-                  // ── Title ──
-                  Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: StyleText.fontSize22Weight700.copyWith(
-                  fontSize:      isMobile ? 18.0 : 20.sp,
-                  color:         Colors.black,
-                  letterSpacing: 1.0,
-                  ),
-                  ),
-                  SizedBox(height: isMobile ? 8 : 10.h),
-
-                  // ── Description ──
-                  Text(
-                  desc,
-                  textAlign: TextAlign.center,
-                  style: StyleText.fontSize13Weight400.copyWith(
-                  fontSize: isMobile ? 12.0 : 13.sp,
-                  color:    Colors.grey.shade600,
-                  height:   1.5,
-                  ),
-                  ),
-                  SizedBox(height: isMobile ? 24 : 28.h),
-
-                  // ── 6-Digit OTP Boxes ──
-                  Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(6, (i) {
-                  final bool filled =
-                  _digitCtrls[i].text.isNotEmpty;
-                  return Container(
-                    width:  isMobile ? 44 : 48.w,
-                    height: isMobile ? 50 : 54.h,
-                    margin: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 3 : 4.w),
-                    child: KeyboardListener(
-                      focusNode: FocusNode(),
-                      onKeyEvent: (e) => _onDigitKey(i, e),
-                      child: TextField(
-                        controller:   _digitCtrls[i],
-                        focusNode:    _focusNodes[i],
-                        keyboardType: TextInputType.number,
-                        textAlign:    TextAlign.center,
-                        maxLength:    1,
-                        style: StyleText.fontSize22Weight700
-                            .copyWith(
-                          fontSize: isMobile ? 18.0 : 20.sp,
-                          color:    _hasError
-                              ? Colors.red
-                              : Colors.black,
-                        ),
-                        decoration: InputDecoration(
-                          counterText: '',
-                          filled:      true,
-                          fillColor: _hasError
-                              ? Colors.red.withOpacity(0.05)
-                              : filled
-                              ? widget.primaryColor
-                              .withOpacity(0.05)
-                              : Colors.grey.shade50,
-                          contentPadding:
-                          EdgeInsets.symmetric(
-                              vertical: isMobile ? 12 : 14.h),
-                          border: OutlineInputBorder(
-                            borderRadius:
-                            BorderRadius.circular(8.r),
-                            borderSide: BorderSide(
-                              color: _hasError
-                                  ? Colors.red
-                                  : Colors.grey.shade300,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius:
-                            BorderRadius.circular(8.r),
-                            borderSide: BorderSide(
-                              color: _hasError
-                                  ? Colors.red
-                                  : filled
-                                  ? widget.primaryColor
-                                  : Colors.grey.shade300,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius:
-                            BorderRadius.circular(8.r),
-                            borderSide: BorderSide(
-                              color: _hasError
-                                  ? Colors.red
-                                  : widget.primaryColor,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                        onChanged: (v) =>
-                            _onDigitChanged(v, i),
+                      // ── SVG Illustration ──
+                      SvgPicture.asset(
+                        'assets/images/mobile_code_dialog.svg',
+                        width:  isMobile ? 120 : 140.w,
+                        height: isMobile ? 100 : 120.h,
+                        fit:    BoxFit.contain,
                       ),
-                    ),
-                  );
-                  }),
-                  ),
-                  ),
-                  SizedBox(height: isMobile ? 14 : 16.h),
+                      SizedBox(height: isMobile ? 20 : 24.h),
 
-                  // ── Error Message ──
-                  if (_hasError)
-                  Padding(
-                  padding: EdgeInsets.only(
-                  bottom: isMobile ? 8 : 10.h),
-                  child: Text(
-                  errorMsg,
-                  textAlign: TextAlign.center,
-                  style: StyleText.fontSize12Weight400.copyWith(
-                  color:    Colors.red,
-                  fontSize: isMobile ? 11.0 : 12.sp,
-                  ),
-                  ),
-                  ),
+                      // ── Title ──
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: StyleText.fontSize22Weight700.copyWith(
+                          fontSize:      isMobile ? 18.0 : 20.sp,
+                          color:         Colors.black,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      SizedBox(height: isMobile ? 8 : 10.h),
 
-                  // ── Timer ──
-                  if (!_canResend)
-                  Text(
-                  _formatTime(_countdown),
-                  style: StyleText.fontSize13Weight400.copyWith(
-                  color:    widget.primaryColor,
-                  fontSize: isMobile ? 13.0 : 14.sp,
-                  fontWeight: FontWeight.w600,
-                  ),
-                  ),
-                  SizedBox(height: isMobile ? 18 : 20.h),
+                      // ── Description ──
+                      Text(
+                        desc,
+                        textAlign: TextAlign.center,
+                        style: StyleText.fontSize13Weight400.copyWith(
+                          fontSize: isMobile ? 12.0 : 13.sp,
+                          color:    Colors.grey.shade600,
+                          height:   1.5,
+                        ),
+                      ),
+                      SizedBox(height: isMobile ? 24 : 28.h),
 
-                  // ── Action Button ──
-                  SizedBox(
-                  width:  double.infinity,
-                  height: isMobile ? 46 : 44.h,
-                  child: _canResend
-                  ? ElevatedButton(
-                  onPressed: _resendOtp,
-                  style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.primaryColor,
-                  shape: RoundedRectangleBorder(
-                  borderRadius:
-                  BorderRadius.circular(8.r),
-                  ),
-                  elevation: 0,
-                  ),
-                  child: Text(
-                  resendBtn,
-                  style: StyleText.fontSize16Weight600
-                      .copyWith(
-                  color:    Colors.white,
-                  fontSize: isMobile ? 14.0 : 15.sp,
-                  ),
-                  ),
-                  )
-                      : ElevatedButton(
-                  onPressed:
-                  isVerifying ? null : _verifyOtp,
-                  style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.primaryColor,
-                  disabledBackgroundColor:
-                  widget.primaryColor
-                      .withOpacity(0.6),
-                  shape: RoundedRectangleBorder(
-                  borderRadius:
-                  BorderRadius.circular(8.r),
-                  ),
-                  elevation: 0,
-                  ),
-                  child: isVerifying
-                  ? const SizedBox(
-                  height: 18,
-                  width:  18,
-                  child:
-                  CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                  )
-                      : Text(
-                  verifyBtn,
-                  style: StyleText
-                      .fontSize16Weight600
-                      .copyWith(
-                  color: Colors.white,
-                  fontSize:
-                  isMobile ? 14.0 : 15.sp,
-                  ),
-                  ),
-                  ),
-                  ),
-                  ],
+                      // ── 6-Digit OTP Boxes ──
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(6, (i) {
+                            final bool filled =
+                                _digitCtrls[i].text.isNotEmpty;
+                            return Container(
+                              width:  isMobile ? 44 : 48.w,
+                              height: isMobile ? 50 : 54.h,
+                              margin: EdgeInsets.symmetric(
+                                  horizontal: isMobile ? 3 : 4.w),
+                              child: KeyboardListener(
+                                focusNode: FocusNode(),
+                                onKeyEvent: (e) => _onDigitKey(i, e),
+                                child: TextField(
+                                  controller:   _digitCtrls[i],
+                                  focusNode:    _focusNodes[i],
+                                  keyboardType: TextInputType.number,
+                                  textAlign:    TextAlign.center,
+                                  maxLength:    1,
+                                  style: StyleText.fontSize22Weight700
+                                      .copyWith(
+                                    fontSize: isMobile ? 18.0 : 20.sp,
+                                    color:    _hasError
+                                        ? Colors.red
+                                        : Colors.black,
+                                  ),
+                                  decoration: InputDecoration(
+                                    counterText: '',
+                                    filled:      true,
+                                    fillColor: _hasError
+                                        ? Colors.red.withOpacity(0.05)
+                                        : filled
+                                        ? widget.primaryColor
+                                        .withOpacity(0.05)
+                                        : Colors.grey.shade50,
+                                    contentPadding:
+                                    EdgeInsets.symmetric(
+                                        vertical: isMobile ? 12 : 14.h),
+                                    border: OutlineInputBorder(
+                                      borderRadius:
+                                      BorderRadius.circular(8.r),
+                                      borderSide: BorderSide(
+                                        color: _hasError
+                                            ? Colors.red
+                                            : Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius:
+                                      BorderRadius.circular(8.r),
+                                      borderSide: BorderSide(
+                                        color: _hasError
+                                            ? Colors.red
+                                            : filled
+                                            ? widget.primaryColor
+                                            : Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius:
+                                      BorderRadius.circular(8.r),
+                                      borderSide: BorderSide(
+                                        color: _hasError
+                                            ? Colors.red
+                                            : widget.primaryColor,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                  onChanged: (v) =>
+                                      _onDigitChanged(v, i),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                      SizedBox(height: isMobile ? 14 : 16.h),
+
+                      // ── Error Message ──
+                      if (_hasError)
+                        Padding(
+                          padding: EdgeInsets.only(
+                              bottom: isMobile ? 8 : 10.h),
+                          child: Text(
+                            errorMsg,
+                            textAlign: TextAlign.center,
+                            style: StyleText.fontSize12Weight400.copyWith(
+                              color:    Colors.red,
+                              fontSize: isMobile ? 11.0 : 12.sp,
+                            ),
+                          ),
+                        ),
+
+                      // ── Timer ──
+                      if (!_canResend)
+                        Text(
+                          _formatTime(_countdown),
+                          style: StyleText.fontSize13Weight400.copyWith(
+                            color:    widget.primaryColor,
+                            fontSize: isMobile ? 13.0 : 14.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      SizedBox(height: isMobile ? 18 : 20.h),
+
+                      // ── Action Button ──
+                      SizedBox(
+                        width:  double.infinity,
+                        height: isMobile ? 46 : 44.h,
+                        child: _canResend
+                            ? ElevatedButton(
+                          onPressed: _resendOtp,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(8.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            resendBtn,
+                            style: StyleText.fontSize16Weight600
+                                .copyWith(
+                              color:    Colors.white,
+                              fontSize: isMobile ? 14.0 : 15.sp,
+                            ),
+                          ),
+                        )
+                            : ElevatedButton(
+                          onPressed:
+                          isVerifying ? null : _verifyOtp,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: widget.primaryColor,
+                            disabledBackgroundColor:
+                            widget.primaryColor
+                                .withOpacity(0.6),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(8.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: isVerifying
+                              ? const SizedBox(
+                            height: 18,
+                            width:  18,
+                            child:
+                            CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                              : Text(
+                            verifyBtn,
+                            style: StyleText
+                                .fontSize16Weight600
+                                .copyWith(
+                              color: Colors.white,
+                              fontSize:
+                              isMobile ? 14.0 : 15.sp,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -1243,7 +1246,8 @@ class _OtpDialogState extends State<_OtpDialog> {
 
 class _DesktopBody extends StatelessWidget {
   final TextEditingController firstNameCtrl, lastNameCtrl, emailCtrl,
-      phoneCtrl, entityNameCtrl, subjectCtrl, messageCtrl;
+      phoneCtrl, entityNameCtrl, subjectCtrl, messageCtrl,
+      otherLanguageCtrl; // ← NEW
   final bool   submitted, isRtl;
   final String phoneCode, preferredLanguage;
   final String? selectedLocation, selectedEntityType, selectedEntitySize;
@@ -1260,7 +1264,8 @@ class _DesktopBody extends StatelessWidget {
     required this.firstNameCtrl,    required this.lastNameCtrl,
     required this.emailCtrl,        required this.phoneCtrl,
     required this.entityNameCtrl,   required this.subjectCtrl,
-    required this.messageCtrl,      required this.submitted,
+    required this.messageCtrl,      required this.otherLanguageCtrl,
+    required this.submitted,
     required this.phoneCode,        required this.preferredLanguage,
     required this.selectedLocation, required this.selectedEntityType,
     required this.selectedEntitySize,
@@ -1322,6 +1327,7 @@ class _DesktopBody extends StatelessWidget {
                         entityNameCtrl:      entityNameCtrl,
                         subjectCtrl:         subjectCtrl,
                         messageCtrl:         messageCtrl,
+                        otherLanguageCtrl:   otherLanguageCtrl, // ← NEW
                         submitted:           submitted,
                         phoneCode:           phoneCode,
                         preferredLanguage:   preferredLanguage,
@@ -1396,7 +1402,8 @@ class _DesktopBody extends StatelessWidget {
 
 class _MobileBody extends StatelessWidget {
   final TextEditingController firstNameCtrl, lastNameCtrl, emailCtrl,
-      phoneCtrl, entityNameCtrl, subjectCtrl, messageCtrl;
+      phoneCtrl, entityNameCtrl, subjectCtrl, messageCtrl,
+      otherLanguageCtrl; // ← NEW
   final bool   submitted, isRtl;
   final String phoneCode, preferredLanguage;
   final String? selectedLocation, selectedEntityType, selectedEntitySize;
@@ -1413,7 +1420,8 @@ class _MobileBody extends StatelessWidget {
     required this.firstNameCtrl,    required this.lastNameCtrl,
     required this.emailCtrl,        required this.phoneCtrl,
     required this.entityNameCtrl,   required this.subjectCtrl,
-    required this.messageCtrl,      required this.submitted,
+    required this.messageCtrl,      required this.otherLanguageCtrl,
+    required this.submitted,
     required this.phoneCode,        required this.preferredLanguage,
     required this.selectedLocation, required this.selectedEntityType,
     required this.selectedEntitySize,
@@ -1461,6 +1469,7 @@ class _MobileBody extends StatelessWidget {
               entityNameCtrl:      entityNameCtrl,
               subjectCtrl:         subjectCtrl,
               messageCtrl:         messageCtrl,
+              otherLanguageCtrl:   otherLanguageCtrl, // ← NEW
               submitted:           submitted,
               phoneCode:           phoneCode,
               preferredLanguage:   preferredLanguage,
@@ -1644,12 +1653,13 @@ class _LeftInfoCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FORM CARD — UPDATED WITH ALL NEW FIELDS
+// FORM CARD — UPDATED WITH "OTHER" LANGUAGE OPTION + CUSTOM TEXT FIELD
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _FormCard extends StatelessWidget {
   final TextEditingController firstNameCtrl, lastNameCtrl, emailCtrl,
-      phoneCtrl, entityNameCtrl, subjectCtrl, messageCtrl;
+      phoneCtrl, entityNameCtrl, subjectCtrl, messageCtrl,
+      otherLanguageCtrl; // ← NEW
   final bool   submitted, isMobile, isRtl;
   final String phoneCode, preferredLanguage;
   final String? selectedLocation, selectedEntityType, selectedEntitySize;
@@ -1665,7 +1675,8 @@ class _FormCard extends StatelessWidget {
     required this.firstNameCtrl,    required this.lastNameCtrl,
     required this.emailCtrl,        required this.phoneCtrl,
     required this.entityNameCtrl,   required this.subjectCtrl,
-    required this.messageCtrl,      required this.submitted,
+    required this.messageCtrl,      required this.otherLanguageCtrl,
+    required this.submitted,
     required this.phoneCode,        required this.preferredLanguage,
     required this.selectedLocation, required this.selectedEntityType,
     required this.selectedEntitySize,
@@ -1675,6 +1686,60 @@ class _FormCard extends StatelessWidget {
     required this.onSend,           required this.isRtl,
     required this.primaryColor,     this.isMobile = false,
   });
+
+  // ── Helper: builds one custom radio dot + label widget ──
+  Widget _radioItem({
+    required String lang,
+    required String displayLabel,
+    required String preferredLanguage,
+    required Color  primaryColor,
+    required bool   isMobile,
+    required ValueChanged<String> onLanguageChanged,
+  }) {
+    final bool selected = preferredLanguage == lang;
+    return GestureDetector(
+      onTap: () => onLanguageChanged(lang),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width:  isMobile ? 18 : 18.w,
+              height: isMobile ? 18 : 18.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? primaryColor : Colors.grey.shade400,
+                  width: 2,
+                ),
+              ),
+              child: selected
+                  ? Center(
+                child: Container(
+                  width:  isMobile ? 10 : 10.w,
+                  height: isMobile ? 10 : 10.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: primaryColor,
+                  ),
+                ),
+              )
+                  : null,
+            ),
+            SizedBox(width: 6.w),
+            Text(
+              displayLabel,
+              style: StyleText.fontSize13Weight400.copyWith(
+                color:    selected ? Colors.black87 : Colors.black54,
+                fontSize: isMobile ? 12.sp : 13.sp,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1697,6 +1762,8 @@ class _FormCard extends StatelessWidget {
     final String selectLocation    = _t(context, en: 'Select Location',    ar: 'اختر الموقع');
     final String selectType        = _t(context, en: 'Select Type',        ar: 'اختر النوع');
     final String selectSize        = _t(context, en: 'Select Size',        ar: 'اختر الحجم');
+    final String otherLangHint     = _t(context, en: 'e.g. French, Spanish…', ar: 'مثال: الفرنسية، الإسبانية…');
+    final String otherLangRequired = _t(context, en: 'Please enter your preferred language', ar: 'يرجى إدخال لغتك المفضلة');
 
     final TextDirection dir   = isRtl ? TextDirection.rtl : TextDirection.ltr;
     final TextAlign     align = isRtl ? TextAlign.right   : TextAlign.left;
@@ -1725,10 +1792,21 @@ class _FormCard extends StatelessWidget {
         .map((c) => {'key': c, 'value': c})
         .toList();
 
-    // ── Language radio labels ──
+    // ── Standard language keys (ar / en) — whatever ContactFormConstants provides,
+    //    but strip any pre-existing "other" key so we never duplicate it ──
+    final List<String> standardLanguageKeys = ContactFormConstants
+        .preferredLanguages
+        .where((k) => k != _kOtherLanguage)
+        .toList();
+
     final langLabels = isRtl
         ? ContactFormConstants.preferredLanguageLabelsAr
         : ContactFormConstants.preferredLanguageLabelsEn;
+
+    final String otherRadioLabel = isRtl ? 'أخرى' : 'Other';
+    final bool showOtherField    = preferredLanguage == _kOtherLanguage;
+    final bool otherFieldError   =
+        showOtherField && submitted && otherLanguageCtrl.text.trim().isEmpty;
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -1749,59 +1827,120 @@ class _FormCard extends StatelessWidget {
                   letterSpacing: 1.2)),
           SizedBox(height: isMobile ? 8.h : 8.h),
 
-          // ── Preferred Language (Radio) ──
+          // ─────────────────────────────────────────────────────────
+          // Preferred Language
+          //   Row 1: standard radios (ar / en …)
+          //   Row 2: "Other" radio  +  inline text field (same row)
+          // ─────────────────────────────────────────────────────────
           _FormLabel(label: prefLangLabel),
           SizedBox(height: 10.h),
+
+          // Row — all language radios + "Other" radio + inline text field in ONE flat Row
           Row(
-            children: ContactFormConstants.preferredLanguages.map((lang) {
-              final bool selected = preferredLanguage == lang;
-              return Padding(
-                padding: EdgeInsetsDirectional.only(end: isMobile ? 16.w : 20.w),
-                child: GestureDetector(
-                  onTap: () => onLanguageChanged(lang),
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: isMobile ? 18 : 18.w,
-                          height: isMobile ? 18 : 18.w,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: selected ? primaryColor : Colors.grey.shade400,
-                              width: 2,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (final lang in standardLanguageKeys) ...[
+                _radioItem(
+                  lang:              lang,
+                  displayLabel:      langLabels[lang] ?? lang,
+                  preferredLanguage: preferredLanguage,
+                  primaryColor:      primaryColor,
+                  isMobile:          isMobile,
+                  onLanguageChanged: onLanguageChanged,
+                ),
+                SizedBox(width: isMobile ? 14.w : 20.w),
+              ],
+              // "Other" radio
+              _radioItem(
+                lang:              _kOtherLanguage,
+                displayLabel:      otherRadioLabel,
+                preferredLanguage: preferredLanguage,
+                primaryColor:      primaryColor,
+                isMobile:          isMobile,
+                onLanguageChanged: onLanguageChanged,
+              ),
+              SizedBox(width: 10.w),
+              // Inline text field — only takes remaining space when visible
+              Expanded(
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve:    Curves.easeInOut,
+                  child: showOtherField
+                      ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller:    otherLanguageCtrl,
+                        textDirection: dir,
+                        textAlign:     align,
+                        style: StyleText.fontSize13Weight400.copyWith(
+                          color:    AppColors.text,
+                          fontSize: isMobile ? 12.sp : 13.sp,
+                        ),
+                        decoration: InputDecoration(
+                          hoverColor: Colors.transparent,
+                          hintText:  otherLangHint,
+                          hintStyle: StyleText.fontSize12Weight400.copyWith(
+                            color: Colors.grey.shade400,
+                          ),
+                          isDense:        true,
+                          filled:         true,
+                          fillColor:      otherFieldError
+                              ? Colors.red.withOpacity(0.04)
+                              : const Color(0xFFF1F2ED),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10.w,
+                            vertical:   isMobile ? 10 : 9.h,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4.r),
+                            borderSide: BorderSide(
+                              color: otherFieldError
+                                  ? Colors.red
+                                  : Colors.transparent,
                             ),
                           ),
-                          child: selected
-                              ? Center(
-                            child: Container(
-                              width:  isMobile ? 10 : 10.w,
-                              height: isMobile ? 10 : 10.w,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: primaryColor,
-                              ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4.r),
+                            borderSide: BorderSide(
+                              color: otherFieldError
+                                  ? Colors.red
+                                  : Colors.transparent,
                             ),
-                          )
-                              : null,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4.r),
+                            borderSide: BorderSide(
+                              color: otherFieldError
+                                  ? Colors.red
+                                  : primaryColor,
+                              width: 1.5,
+                            ),
+                          ),
                         ),
-                        SizedBox(width: 6.w),
+                      ),
+                      if (otherFieldError) ...[
+                        SizedBox(height: 3.h),
                         Text(
-                          langLabels[lang] ?? lang,
-                          style: StyleText.fontSize13Weight400.copyWith(
-                            color:    selected ? Colors.black87 : Colors.black54,
-                            fontSize: isMobile ? 12.sp : 13.sp,
+                          otherLangRequired,
+                          style: StyleText.fontSize12Weight400.copyWith(
+                            color:    Colors.red,
+                            fontSize: isMobile ? 11.sp : 11.sp,
                           ),
                         ),
                       ],
-                    ),
-                  ),
+                    ],
+                  )
+                      : const SizedBox.shrink(),
                 ),
-              );
-            }).toList(),
+              ),
+            ],
           ),
+          SizedBox(height: 8.h),
+
+
+
           SizedBox(height: isMobile ? 8.h : 10.h),
 
           // ── First Name / Last Name (side by side) ──
@@ -1846,7 +1985,7 @@ class _FormCard extends StatelessWidget {
                   primaryColor: primaryColor,
                   hint: _t(context,
                       en: 'Enter your email',
-                      ar: 'أدخل بريدك الإلكتروني'),
+                      ar: 'أدخل البريد الإلكتروني'),
                   controller:    emailCtrl,
                   submitted:     submitted,
                   height:        32,
@@ -1894,7 +2033,7 @@ class _FormCard extends StatelessWidget {
                   label:         entityNameLabel,
                   hint:          hint,
                   controller:    entityNameCtrl,
-                  submitted:     false, // Entity name is optional
+                  submitted:     false, // optional
                   height:        32,
                   primaryColor:  primaryColor,
                   textDirection: dir,
@@ -1915,7 +2054,7 @@ class _FormCard extends StatelessWidget {
                   value:        selectedEntityType,
                   items:        entityTypeItems,
                   onChanged:    onEntityTypeChanged,
-                  submitted:    submitted,
+                  submitted:    false,
                   isRtl:        isRtl,
                   isMobile:     isMobile,
                   primaryColor: primaryColor,
@@ -1929,7 +2068,7 @@ class _FormCard extends StatelessWidget {
                   value:        selectedEntitySize,
                   items:        entitySizeItems,
                   onChanged:    onEntitySizeChanged,
-                  submitted:    submitted,
+                  submitted:    false,
                   isRtl:        isRtl,
                   isMobile:     isMobile,
                   primaryColor: primaryColor,
@@ -1937,6 +2076,8 @@ class _FormCard extends StatelessWidget {
               ),
             ],
           ),
+
+          SizedBox(height: 15.h),
 
           // ── Subject (full width) ──
           CustomValidatedTextFieldMaster(
@@ -2053,6 +2194,7 @@ class _DropdownField extends StatelessWidget {
             selectedValue: value,
             items:         items,
             onChanged:     onChanged,
+            primaryColor: primaryColor,
             width:         double.infinity,
             height:        32,
             borderRadius:  4,
@@ -2075,7 +2217,6 @@ class _DropdownField extends StatelessWidget {
 }
 
 /// Searchable dropdown for country selection (long list)
-/// Styled to match [CustomDropdownFormFieldInvMaster]
 class _SearchableDropdown extends StatefulWidget {
   final String  hint;
   final String? value;
@@ -2125,7 +2266,6 @@ class _SearchableDropdownState extends State<_SearchableDropdown> {
     _overlayEntry = null;
   }
 
-  /// Resolve the display label from key → value
   String _resolveDisplayLabel() {
     final key = widget.value ?? '';
     if (key.isEmpty) return '';
@@ -2147,7 +2287,6 @@ class _SearchableDropdownState extends State<_SearchableDropdown> {
     _overlayEntry = OverlayEntry(
       builder: (context) => Stack(
         children: [
-          // Tap outside to close
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -2155,7 +2294,6 @@ class _SearchableDropdownState extends State<_SearchableDropdown> {
               child: const SizedBox.expand(),
             ),
           ),
-          // Dropdown content
           Positioned(
             width: size.width,
             child: CompositedTransformFollower(
@@ -2189,7 +2327,6 @@ class _SearchableDropdownState extends State<_SearchableDropdown> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // ── Search input ───────────────────────────────
                           Padding(
                             padding: const EdgeInsets.all(8),
                             child: TextField(
@@ -2247,7 +2384,6 @@ class _SearchableDropdownState extends State<_SearchableDropdown> {
                               },
                             ),
                           ),
-                          // ── Items list ─────────────────────────────────
                           Flexible(
                             child: ScrollbarTheme(
                               data: ScrollbarThemeData(
@@ -2397,6 +2533,7 @@ class _PhoneField extends StatelessWidget {
     final Widget dropdown = CustomDropdownFormFieldInvMaster(
       selectedValue: selectedCode,
       items:         _phoneCodes,
+      primaryColor:  primaryColor,
       onChanged:     onCodeChanged,
       widthIcon:  16,
       heightIcon: 16,
@@ -2411,7 +2548,7 @@ class _PhoneField extends StatelessWidget {
 
     final Widget input = Expanded(
       child: CustomValidatedTextFieldMaster(
-        hint:          isRtl ? 'أدخل رقم هاتفك' : 'Enter your number',
+        hint:          isRtl ? 'أدخل رقم الهاتف' : 'Enter your number',
         controller:    controller,
         submitted:     submitted,
         primaryColor:  primaryColor,
@@ -2470,7 +2607,8 @@ class _OfficeCard extends StatelessWidget {
         hasLink ? SystemMouseCursors.click : MouseCursor.defer,
         child: Container(
           width:  double.infinity,
-          height: 200.h,
+          padding: EdgeInsets.symmetric(
+              vertical: 12.h),
           decoration: BoxDecoration(
               color:        const Color(0xFFF1F2ED),
               borderRadius: BorderRadius.circular(14.r)),

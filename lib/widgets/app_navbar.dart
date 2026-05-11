@@ -139,7 +139,7 @@ class AppNavbar extends StatelessWidget {
             onItemTap:    onItemTap,
           );
         if (w >= _BP.mobile)
-          return _NavbarTablet(
+          return _NavbarDesktop(
             currentRoute: currentRoute,
             primary:      primary,
             navbarBg:     navbarBg,
@@ -229,72 +229,7 @@ class _NavbarDesktop extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TABLET  (600 – 1023px) — design size 1024×768
-// ═══════════════════════════════════════════════════════════════════════════════
 
-class _NavbarTablet extends StatelessWidget {
-  final String                       currentRoute;
-  final Color                        primary;
-  final Color                        navbarBg; // ✅
-  final HomeCmsState                 cmsState;
-  final void Function(String route)? onItemTap;
-
-  const _NavbarTablet({
-    required this.currentRoute,
-    required this.primary,
-    required this.navbarBg,
-    required this.cmsState,
-    this.onItemTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<LanguageCubit, LanguageState>(
-      builder: (context, langState) {
-        final navItems = _getVisibleNavItems(langState.locale.languageCode, cmsState);
-        final isRtl    = langState.isArabic;
-
-        return Directionality(
-          textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-              decoration: BoxDecoration(
-                color:        navbarBg, // ✅ CMS-driven background
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const _BayanatzLogo(),
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: navItems
-                          .map((e) => _NavItem(
-                        key:          ValueKey('${e.route}_${langState.locale.languageCode}'),
-                        label:        e.label,
-                        route:        e.route,
-                        currentRoute: currentRoute,
-                        primary:      primary,
-                        compact:      true,
-                        onItemTap:    onItemTap,
-                      ))
-                          .toList(),
-                    ),
-                  ),
-                  _LanguageToggle(primary: primary),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE  (< 600px) — design size 375×812
@@ -331,7 +266,7 @@ class _NavbarMobile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6.r),
               ),
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                padding: EdgeInsets.symmetric(horizontal: 0.w, vertical: 8.h),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

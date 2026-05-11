@@ -191,11 +191,15 @@ class _CustomValidatedTextFieldMasterState
               ),
             ),
             child: TextFormField(
-              controller:    widget.controller,
-              maxLines:      widget.maxLines,
-              enabled:       widget.enabled,
-              textDirection: widget.textDirection,
-              textAlign:     widget.textAlign,
+              cursorColor: resolvedPrimary,
+              controller:           widget.controller,
+              maxLines:             widget.maxLines,
+              enabled:              widget.enabled,
+              textDirection:        widget.textDirection,
+              textAlign:            widget.textAlign,
+              // ── Drives the red border via errorBorder / focusedErrorBorder ──
+              autovalidateMode:     AutovalidateMode.always,
+              validator:            (_) => showError ? '' : null,
               keyboardType:
               widget.onlyDigits ? TextInputType.number : TextInputType.text,
               style: widget.textStyle ??
@@ -206,6 +210,9 @@ class _CustomValidatedTextFieldMasterState
               maxLengthEnforcement: MaxLengthEnforcement.enforced,
               autofillHints: const [],
               decoration: InputDecoration(
+                // Collapse Flutter's built-in error text to zero — we draw
+                // our own error message in the SizedBox lane below.
+                errorStyle:  const TextStyle(height: 0, fontSize: 0),
                 hoverColor:  Colors.transparent,
                 hintText:    widget.hint,
                 hintStyle: widget.hintStyle ??
@@ -218,7 +225,7 @@ class _CustomValidatedTextFieldMasterState
                 fillColor:   resolvedFill,
                 isDense:     true,
                 counterText: '',
-                contentPadding: EdgeInsets.symmetric(vertical: 13.h,horizontal: 8.w),
+                contentPadding: EdgeInsets.symmetric(vertical: 13.h, horizontal: 8.w),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: borderRadius,
                   borderSide:

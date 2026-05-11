@@ -1,7 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════
-// FILE: application_detail_page.dart (Detail / Edit Page) — FULL UPDATE
+// FILE: application_detail_page.dart (Detail / Edit Page)
 // Path: lib/pages/dashboard/application/application_detail_page.dart
+// UPDATED: Single dynamic dropdown for status pipeline
+// UPDATED: All fields use CustomValidatedTextFieldMaster
+// UPDATED: All dropdowns use CustomDropdownFormFieldInvMaster
+// FIXED: Removed stuck spinner on status change
+// UPDATED: Pipeline aligned to end, dynamic primaryColor from CMS,
+//          grey text for read-only fields, clickable resume/cover letter
 // ═══════════════════════════════════════════════════════════════════
+
+import 'dart:html' as html;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +17,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:website_app/controller/application/application_cubit.dart';
 import 'package:website_app/controller/application/application_state.dart';
+import 'package:website_app/controller/home_cubit.dart';
+import 'package:website_app/controller/home_state.dart';
+import 'package:website_app/core/custom_svg.dart';
+import 'package:website_app/core/widget/custom_dropdwon.dart';
+import 'package:website_app/core/widget/textfield.dart';
 import 'package:website_app/model/application_model.dart';
 import 'package:website_app/theme/appcolors.dart';
 import 'package:website_app/theme/new_theme.dart';
@@ -19,35 +32,67 @@ import '../main_page/home_main_page.dart';
 import '../job_list/job_listing_main_page.dart';
 
 class _C {
-  static const Color primary   = Color(0xFF008037);
-  static const Color back      = Color(0xFFF1F2ED);
-  static const Color cardBg    = Color(0xFFFFFFFF);
-  static const Color border    = Color(0xFFE0E0E0);
+  static const Color primary = Color(0xFF008037);
+  static const Color back = Color(0xFFF1F2ED);
+  static const Color cardBg = Color(0xFFFFFFFF);
+  static const Color border = Color(0xFFE0E0E0);
   static const Color labelText = Color(0xFF333333);
-  static const Color hintText  = Color(0xFFAAAAAA);
-  static const Color red       = Color(0xFFE53935);
+  static const Color hintText = Color(0xFFAAAAAA);
+  static const Color red = Color(0xFFE53935);
+  static const Color fieldValueGrey = Color(0xFF888888);
+}
+
+// ── Tag dropdown items ────────────────────────────────────────────────────────
+const List<Map<String, String>> _kTagItems = [
+  {'key': 'Weak', 'value': 'Weak'},
+  {'key': 'Adequate', 'value': 'Adequate'},
+  {'key': 'Strong', 'value': 'Strong'},
+];
+
+const Map<String, Color> _kTagColors = {
+  'Weak': Color(0xFFD32F2F),
+  'Adequate': Color(0xFFF57F17),
+  'Strong': Color(0xFF2E7D32),
+};
+
+// ── Helper: extract CMS primary color ─────────────────────────────────────────
+Color _primaryFromCmsState(HomeCmsState state) {
+  final String hex = switch (state) {
+    HomeCmsLoaded(:final data) => data.branding.primaryColor,
+    HomeCmsSaved(:final data) => data.branding.primaryColor,
+    _ => '',
+  };
+  try {
+    final clean = hex.replaceAll('#', '');
+    if (clean.length == 6) return Color(int.parse('FF$clean', radix: 16));
+  } catch (_) {}
+  return _C.primary; // fallback to static green
 }
 
 class ApplicationDetailPage extends StatefulWidget {
   final String jobId;
   final String appId;
-  const ApplicationDetailPage({super.key, required this.jobId, required this.appId});
+  const ApplicationDetailPage({
+    super.key,
+    required this.jobId,
+    required this.appId,
+  });
 
   @override
   State<ApplicationDetailPage> createState() => _ApplicationDetailPageState();
 }
 
 class _ApplicationDetailPageState extends State<ApplicationDetailPage> {
-  final _technicalCtrl      = TextEditingController();
-  final _communicationCtrl  = TextEditingController();
-  final _experienceCtrl     = TextEditingController();
-  final _cultureFitCtrl     = TextEditingController();
-  final _leadershipCtrl     = TextEditingController();
-  final _commentsCtrl       = TextEditingController();
+  final _technicalCtrl = TextEditingController();
+  final _communicationCtrl = TextEditingController();
+  final _experienceCtrl = TextEditingController();
+  final _cultureFitCtrl = TextEditingController();
+  final _leadershipCtrl = TextEditingController();
+  final _commentsCtrl = TextEditingController();
 
   String? _selectedTag;
   bool _isSaving = false;
-  bool _didLoad  = false;
+  bool _didLoad = false;
 
   ApplicationModel? _currentApp;
 
@@ -61,13 +106,18 @@ class _ApplicationDetailPageState extends State<ApplicationDetailPage> {
     if (_didLoad) return;
     _didLoad = true;
     _currentApp = app;
-    _technicalCtrl.text     = app.technicalSkills > 0 ? app.technicalSkills.toString() : '';
-    _communicationCtrl.text = app.communicationSkills > 0 ? app.communicationSkills.toString() : '';
-    _experienceCtrl.text    = app.experienceBackground > 0 ? app.experienceBackground.toString() : '';
-    _cultureFitCtrl.text    = app.cultureFit > 0 ? app.cultureFit.toString() : '';
-    _leadershipCtrl.text    = app.leadershipPotential > 0 ? app.leadershipPotential.toString() : '';
-    _commentsCtrl.text      = app.comments;
-    _selectedTag            = app.tag.isNotEmpty ? app.tag : null;
+    _technicalCtrl.text =
+    app.technicalSkills > 0 ? app.technicalSkills.toString() : '';
+    _communicationCtrl.text =
+    app.communicationSkills > 0 ? app.communicationSkills.toString() : '';
+    _experienceCtrl.text =
+    app.experienceBackground > 0 ? app.experienceBackground.toString() : '';
+    _cultureFitCtrl.text =
+    app.cultureFit > 0 ? app.cultureFit.toString() : '';
+    _leadershipCtrl.text =
+    app.leadershipPotential > 0 ? app.leadershipPotential.toString() : '';
+    _commentsCtrl.text = app.comments;
+    _selectedTag = app.tag.isNotEmpty ? app.tag : null;
   }
 
   @override
@@ -86,49 +136,96 @@ class _ApplicationDetailPageState extends State<ApplicationDetailPage> {
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+        ),
         child: Container(
           width: 450.w,
           padding: EdgeInsets.all(30.sp),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SvgPicture.asset('assets/images/dashboard_image.svg', height: 120.h, fit: BoxFit.contain),
+              SvgPicture.asset(
+                'assets/images/dashboard_image.svg',
+                height: 120.h,
+                fit: BoxFit.contain,
+              ),
               SizedBox(height: 20.h),
-              Text('CHANGE STATUS', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700, color: _C.labelText)),
+              Text(
+                'CHANGE STATUS',
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w700,
+                  color: _C.labelText,
+                ),
+              ),
               SizedBox(height: 12.h),
               Text(
                 'Are you sure you want to change this Submissions status from ${app.status.label} to ${newStatus.label}?',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13.sp, color: _C.hintText, height: 1.5),
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: _C.hintText,
+                  height: 1.5,
+                ),
               ),
               SizedBox(height: 24.h),
-              Row(children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(ctx).pop(),
-                    child: Container(
-                      height: 44.h,
-                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(6.r)),
-                      child: Center(child: Text('Back', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600, color: _C.labelText))),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(ctx).pop(),
+                      child: Container(
+                        height: 44.h,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Back',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: _C.labelText,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      context.read<ApplicationCubit>().updateStatus(app.jobId, app.id, newStatus);
-                    },
-                    child: Container(
-                      height: 44.h,
-                      decoration: BoxDecoration(color: _C.primary, borderRadius: BorderRadius.circular(6.r)),
-                      child: Center(child: Text('Confirm', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.white))),
+                  SizedBox(width: 16.w),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        context.read<ApplicationCubit>().updateStatus(
+                          app.jobId,
+                          app.id,
+                          newStatus,
+                        );
+                      },
+                      child: Container(
+                        height: 44.h,
+                        decoration: BoxDecoration(
+                          color: _C.primary,
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Confirm',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ],
           ),
         ),
@@ -161,468 +258,12 @@ class _ApplicationDetailPageState extends State<ApplicationDetailPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<ApplicationCubit, ApplicationState>(
-      builder: (context, state) {
-        ApplicationModel? app;
-        if (state is ApplicationDetailLoaded) app = state.application;
-        if (state is ApplicationUpdated) app = state.application;
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  DYNAMIC STATUS DROPDOWN HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
 
-        if (app == null) {
-          return const Scaffold(
-            backgroundColor: _C.back,
-            body: Center(child: CircularProgressIndicator(color: _C.primary)),
-          );
-        }
-
-        _seedControllers(app);
-        _currentApp = app;
-
-        return Scaffold(
-          backgroundColor: _C.back,
-          body: Stack(
-            children: [
-              SingleChildScrollView(
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Column(
-                    children: [
-                      AppAdminNavbar(
-                        activeLabel: 'Applications',
-                        homePage: CareersMainPageDashboard(),
-                        webPage: HomeMainPage(),
-                        jobListingPage: JobListingMainPage(),
-                      ),
-
-                      SingleChildScrollView(
-                        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-                        child: SizedBox(
-                          width: 1000.w,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // ── Title ──
-                              Text('Applications',
-                                  style: StyleText.fontSize45Weight600.copyWith(
-                                      color: _C.primary, fontWeight: FontWeight.w700)),
-                              SizedBox(height: 12.h),
-
-                              // ── Status Pipeline ──
-                              Row(
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {},
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                                      decoration: BoxDecoration(
-                                        color: _C.primary,
-                                        borderRadius: BorderRadius.circular(6.r),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.update, size: 14.sp, color: Colors.white),
-                                          SizedBox(width: 6.w),
-                                          Text('Update Status',
-                                              style: TextStyle(
-                                                  fontSize: 12.sp,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 16.w),
-                                  Expanded(
-                                    child: _StatusPipeline(
-                                      currentStatus: app.status,
-                                      onStatusChange: (newStatus) =>
-                                          _onStatusChange(app!, newStatus),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 24.h),
-
-                              // ── Personal Information ──
-                              _sectionTitle('Personal Information'),
-                              SizedBox(height: 12.h),
-                              _readOnlyCard([
-                                _readRow('First Name', app.firstName),
-                                _readRow('Last Name', app.lastName),
-                                _readRow('Email', app.email),
-                                _readRow('Phone', '${app.countryCode} ${app.phone}'),
-                                _readRow('Year Of Graduation', app.yearOfGraduation),
-                              ]),
-                              SizedBox(height: 24.h),
-
-                              // ── Profile Information ──
-                              _sectionTitle('Profile Information'),
-                              SizedBox(height: 12.h),
-                              Row(
-                                children: [
-                                  Expanded(child: _fileCard('Resume*', app.resumeName, app.resumeUrl)),
-                                  SizedBox(width: 16.w),
-                                  Expanded(child: _fileCard('Cover Letter*', app.coverLetterName, app.coverLetterUrl)),
-                                ],
-                              ),
-                              SizedBox(height: 24.h),
-
-                              // ── Tags ──
-                              _sectionTitle('Personal Information'),
-                              SizedBox(height: 12.h),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SizedBox(
-                                    width: 200.w,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Tags',
-                                            style: TextStyle(
-                                                fontSize: 12.sp,
-                                                fontWeight: FontWeight.w500,
-                                                color: _C.labelText)),
-                                        SizedBox(height: 6.h),
-                                        Container(
-                                          height: 36.h,
-                                          padding: EdgeInsets.symmetric(horizontal: 10.w),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.card,
-                                            borderRadius: BorderRadius.circular(4.r),
-                                          ),
-                                          child: DropdownButtonHideUnderline(
-                                            child: DropdownButton<String>(
-                                              value: _selectedTag,
-                                              isExpanded: true,
-                                              hint: Text('Select Tag',
-                                                  style: TextStyle(
-                                                      fontSize: 12.sp, color: _C.hintText)),
-                                              items: ['Weak', 'Adequate', 'Strong']
-                                                  .map((t) => DropdownMenuItem(
-                                                  value: t,
-                                                  child: Text(t,
-                                                      style:
-                                                      TextStyle(fontSize: 12.sp))))
-                                                  .toList(),
-                                              onChanged: (v) =>
-                                                  setState(() => _selectedTag = v),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(width: 16.w),
-                                  Expanded(
-                                    child: Container(
-                                      padding: EdgeInsets.all(12.sp),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.card,
-                                        borderRadius: BorderRadius.circular(6.r),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: ['Weak', 'Adequate', 'Strong']
-                                            .map((t) => Padding(
-                                          padding: EdgeInsets.only(bottom: 6.h),
-                                          child: Text(t,
-                                              style: TextStyle(
-                                                  fontSize: 12.sp,
-                                                  color: _C.labelText)),
-                                        ))
-                                            .toList(),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 24.h),
-
-                              // ── Scoring Interview ──
-                              _sectionTitle('Scoring Interview'),
-                              SizedBox(height: 12.h),
-                              Row(children: [
-                                Expanded(
-                                    child: _scoreField(
-                                        'Technical Skills', _technicalCtrl)),
-                                SizedBox(width: 16.w),
-                                Expanded(
-                                    child: _scoreField(
-                                        'Communication Skills', _communicationCtrl)),
-                              ]),
-                              SizedBox(height: 12.h),
-                              Row(children: [
-                                Expanded(
-                                    child: _scoreField(
-                                        'Experience & Background', _experienceCtrl)),
-                                SizedBox(width: 16.w),
-                                Expanded(
-                                    child:
-                                    _scoreField('Culture Fit', _cultureFitCtrl)),
-                              ]),
-                              SizedBox(height: 12.h),
-                              Row(children: [
-                                Expanded(
-                                    child: _scoreField(
-                                        'Leadership Potential', _leadershipCtrl)),
-                                SizedBox(width: 16.w),
-                                const Expanded(child: SizedBox()),
-                              ]),
-                              SizedBox(height: 12.h),
-
-                              // Comments
-                              Text('Comments',
-                                  style: TextStyle(
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: _C.labelText)),
-                              SizedBox(height: 6.h),
-                              SizedBox(
-                                height: 100.h,
-                                child: TextFormField(
-                                  controller: _commentsCtrl,
-                                  maxLines: 5,
-                                  style: TextStyle(
-                                      fontSize: 12.sp, color: _C.labelText),
-                                  decoration: InputDecoration(
-                                    hintText: 'Text Here',
-                                    hintStyle: TextStyle(
-                                        fontSize: 12.sp, color: _C.hintText),
-                                    filled: true,
-                                    fillColor: AppColors.card,
-                                    isDense: true,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(4.r),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 24.h),
-
-                              // ── Save button ──
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: GestureDetector(
-                                  onTap: _isSaving ? null : _saveScoring,
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: 30.w, vertical: 12.h),
-                                    decoration: BoxDecoration(
-                                      color: _C.primary,
-                                      borderRadius: BorderRadius.circular(6.r),
-                                    ),
-                                    child: _isSaving
-                                        ? SizedBox(
-                                        width: 16.sp,
-                                        height: 16.sp,
-                                        child:
-                                        const CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2))
-                                        : Text('Save Scoring',
-                                        style: TextStyle(
-                                            fontSize: 14.sp,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white)),
-                                  ),
-                                ),
-                              ),
-
-                              SizedBox(height: 40.h),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              if (_isSaving)
-                Container(
-                  color: Colors.black26,
-                  child: const Center(
-                      child: CircularProgressIndicator(color: _C.primary)),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
-
-  Widget _sectionTitle(String title) => Text(
-    title,
-    style: TextStyle(
-        fontSize: 18.sp, fontWeight: FontWeight.w700, color: _C.primary),
-  );
-
-  Widget _readOnlyCard(List<Widget> children) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(16.sp),
-      decoration: BoxDecoration(
-        color: _C.cardBg,
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: _C.border),
-      ),
-      child: Wrap(
-        spacing: 16.w,
-        runSpacing: 12.h,
-        children: children,
-      ),
-    );
-  }
-
-  Widget _readRow(String label, String value) {
-    return SizedBox(
-      width: 460.w,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w500,
-                  color: _C.labelText)),
-          SizedBox(height: 4.h),
-          Container(
-            width: double.infinity,
-            height: 36.h,
-            padding: EdgeInsets.symmetric(horizontal: 10.w),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(4.r),
-            ),
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value.isEmpty ? 'Text Here' : value,
-              style: StyleText.fontSize12Weight400.copyWith(
-                  color: value.isEmpty ? _C.hintText : _C.labelText),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _fileCard(String label, String fileName, String fileUrl) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w500,
-                color: _C.labelText)),
-        SizedBox(height: 6.h),
-        Container(
-          height: 50.h,
-          padding: EdgeInsets.symmetric(horizontal: 12.w),
-          decoration: BoxDecoration(
-            color: _C.cardBg,
-            borderRadius: BorderRadius.circular(6.r),
-            border: Border.all(color: _C.border),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 28.sp,
-                height: 28.sp,
-                decoration: BoxDecoration(
-                  color: Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(4.r),
-                ),
-                child: Center(
-                  child: Text('PDF',
-                      style: TextStyle(
-                          fontSize: 8.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.red)),
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      fileName.isEmpty ? 'No file' : fileName,
-                      style: TextStyle(fontSize: 11.sp, color: _C.labelText),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (fileName.isNotEmpty)
-                      Text('62 KB',
-                          style:
-                          TextStyle(fontSize: 9.sp, color: _C.hintText)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _scoreField(String label, TextEditingController ctrl) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w500,
-                color: _C.labelText)),
-        SizedBox(height: 6.h),
-        SizedBox(
-          height: 36.h,
-          child: TextFormField(
-            controller: ctrl,
-            style: TextStyle(fontSize: 12.sp, color: _C.labelText),
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              hintText: 'Text Here, 1-5 Scoring',
-              hintStyle: TextStyle(fontSize: 12.sp, color: _C.hintText),
-              filled: true,
-              fillColor: AppColors.card,
-              isDense: true,
-              contentPadding:
-              EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4.r),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-//  STATUS PIPELINE — 4 stage dropdowns that progress left to right
-// ═════════════════════════════════════════════════════════════════════════════
-
-class _StatusPipeline extends StatelessWidget {
-  final ApplicationStatus currentStatus;
-  final ValueChanged<ApplicationStatus> onStatusChange;
-
-  const _StatusPipeline({
-    required this.currentStatus,
-    required this.onStatusChange,
-  });
-
-  int get _currentStageIndex {
-    switch (currentStatus) {
+  int _getStageIndex(ApplicationStatus status) {
+    switch (status) {
       case ApplicationStatus.applied:
       case ApplicationStatus.qualified:
       case ApplicationStatus.unqualified:
@@ -640,274 +281,713 @@ class _StatusPipeline extends StatelessWidget {
     }
   }
 
-  bool get _isStopped {
-    return currentStatus == ApplicationStatus.unqualified ||
-        currentStatus == ApplicationStatus.interviewFailed ||
-        currentStatus == ApplicationStatus.interviewWithdrew ||
-        currentStatus == ApplicationStatus.offerRejected;
+  bool _isStoppedStatus(ApplicationStatus status) {
+    return status == ApplicationStatus.unqualified ||
+        status == ApplicationStatus.interviewFailed ||
+        status == ApplicationStatus.interviewWithdrew ||
+        status == ApplicationStatus.offerRejected;
   }
 
-  bool get _isCompleted => currentStatus == ApplicationStatus.hired;
+  List<Map<String, String>> _getDropdownItems(ApplicationStatus status) {
+    if (_isStoppedStatus(status) || status == ApplicationStatus.hired) {
+      return [];
+    }
 
-  /// What positive label was selected to pass this stage
-  String _getCompletedLabel(int stage) {
-    if (_currentStageIndex <= stage) return '';
-    switch (stage) {
-      case 0: return 'Qualified';
-      case 1: return 'Passed';
-      case 2: return 'Approved';
-      default: return '';
+    switch (status) {
+      case ApplicationStatus.applied:
+        return [
+          {'key': 'qualified', 'value': 'Qualified'},
+          {'key': 'unqualified', 'value': 'Unqualified'},
+        ];
+      case ApplicationStatus.qualified:
+        return [
+          {'key': 'passed', 'value': 'Passed'},
+          {'key': 'failed', 'value': 'Failed'},
+          {'key': 'withdrew', 'value': 'Withdrew'},
+        ];
+      case ApplicationStatus.interviewPassed:
+        return [
+          {'key': 'approved', 'value': 'Approved'},
+          {'key': 'rejected', 'value': 'Rejected'},
+        ];
+      case ApplicationStatus.offerApproved:
+      case ApplicationStatus.offerPending:
+        return [
+          {'key': 'completed', 'value': 'Completed'},
+        ];
+      default:
+        return [];
     }
   }
 
-  /// The short label shown on a stopped stage
-  String _getStoppedLabel() {
-    switch (currentStatus) {
-      case ApplicationStatus.unqualified:       return 'Unqualified';
-      case ApplicationStatus.interviewFailed:   return 'Failed';
-      case ApplicationStatus.interviewWithdrew: return 'Withdrew';
-      case ApplicationStatus.offerRejected:     return 'Rejected';
-      default: return '';
+  ApplicationStatus? _mapKeyToStatus(String key) {
+    switch (key) {
+      case 'qualified':
+        return ApplicationStatus.qualified;
+      case 'unqualified':
+        return ApplicationStatus.unqualified;
+      case 'passed':
+        return ApplicationStatus.interviewPassed;
+      case 'failed':
+        return ApplicationStatus.interviewFailed;
+      case 'withdrew':
+        return ApplicationStatus.interviewWithdrew;
+      case 'approved':
+        return ApplicationStatus.offerApproved;
+      case 'rejected':
+        return ApplicationStatus.offerRejected;
+      case 'completed':
+        return ApplicationStatus.hired;
+      default:
+        return null;
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          // ── Stage 0: Applied ──
-          _StageDropdown(
-            stageLabel: 'Applied',
-            completedLabel: _getCompletedLabel(0),
-            stoppedLabel: (_currentStageIndex == 0 && _isStopped) ? _getStoppedLabel() : null,
-            items: const ['Qualified', 'Unqualified'],
-            isActive: _currentStageIndex == 0 && !_isStopped && currentStatus == ApplicationStatus.applied,
-            isCompleted: _currentStageIndex > 0,
-            isLocked: false,
-            onSelected: (val) {
-              if (val == 'Qualified') onStatusChange(ApplicationStatus.qualified);
-              if (val == 'Unqualified') onStatusChange(ApplicationStatus.unqualified);
-            },
-          ),
-          _arrow(),
-
-          // ── Stage 1: Interview ──
-          _StageDropdown(
-            stageLabel: 'Interview',
-            completedLabel: _getCompletedLabel(1),
-            stoppedLabel: (_currentStageIndex == 1 && _isStopped) ? _getStoppedLabel() : null,
-            items: const ['Passed', 'Failed', 'Withdrew'],
-            isActive: _currentStageIndex == 1 && !_isStopped,
-            isCompleted: _currentStageIndex > 1,
-            isLocked: _currentStageIndex < 1 || (_currentStageIndex == 0 && _isStopped),
-            onSelected: (val) {
-              if (val == 'Passed') onStatusChange(ApplicationStatus.interviewPassed);
-              if (val == 'Failed') onStatusChange(ApplicationStatus.interviewFailed);
-              if (val == 'Withdrew') onStatusChange(ApplicationStatus.interviewWithdrew);
-            },
-          ),
-          _arrow(),
-
-          // ── Stage 2: Offer ──
-          _StageDropdown(
-            stageLabel: 'Offer',
-            completedLabel: _getCompletedLabel(2),
-            stoppedLabel: (_currentStageIndex == 2 && _isStopped) ? _getStoppedLabel() : null,
-            items: const ['Approved', 'Rejected'],
-            isActive: _currentStageIndex == 2 && !_isStopped,
-            isCompleted: _currentStageIndex > 2,
-            isLocked: _currentStageIndex < 2 || (_currentStageIndex <= 1 && _isStopped),
-            onSelected: (val) {
-              if (val == 'Approved') onStatusChange(ApplicationStatus.offerApproved);
-              if (val == 'Rejected') onStatusChange(ApplicationStatus.offerRejected);
-            },
-          ),
-          _arrow(),
-
-          // ── Stage 3: Hired ──
-          _StageDropdown(
-            stageLabel: 'Hired',
-            completedLabel: _isCompleted ? 'Completed' : '',
-            stoppedLabel: null,
-            items: const ['Completed'],
-            isActive: _currentStageIndex == 3 && !_isCompleted,
-            isCompleted: _isCompleted,
-            isLocked: _currentStageIndex < 3 || _isStopped,
-            onSelected: (val) {
-              if (val == 'Completed') onStatusChange(ApplicationStatus.hired);
-            },
-          ),
-        ],
-      ),
-    );
+  String _getDropdownHint(ApplicationStatus status) {
+    if (_isStoppedStatus(status) || status == ApplicationStatus.hired) {
+      return status.label;
+    }
+    switch (status) {
+      case ApplicationStatus.applied:
+        return 'Applied';
+      case ApplicationStatus.qualified:
+        return 'Interview';
+      case ApplicationStatus.interviewPassed:
+        return 'Offer';
+      case ApplicationStatus.offerApproved:
+      case ApplicationStatus.offerPending:
+        return 'Hired';
+      default:
+        return 'Select';
+    }
   }
 
-  Widget _arrow() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4.w),
-      child: Icon(Icons.chevron_right, size: 18.sp, color: _C.hintText),
-    );
+  List<Widget> _buildCompletedStageChips(ApplicationStatus status) {
+    final List<Widget> chips = [];
+    final int currentStage = _getStageIndex(status);
+    final bool isStopped = _isStoppedStatus(status);
+
+    if (currentStage > 0) {
+      chips.add(_completedChip('Applied: Qualified'));
+      chips.add(SizedBox(width: 8.w));
+    }
+    if (currentStage > 1) {
+      chips.add(_completedChip('Interview: Passed'));
+      chips.add(SizedBox(width: 8.w));
+    }
+    if (currentStage > 2) {
+      chips.add(_completedChip('Offer: Approved'));
+      chips.add(SizedBox(width: 8.w));
+    }
+
+    if (isStopped) {
+      String stoppedLabel = '';
+      switch (status) {
+        case ApplicationStatus.unqualified:
+          stoppedLabel = 'Applied: Unqualified';
+          break;
+        case ApplicationStatus.interviewFailed:
+          stoppedLabel = 'Interview: Failed';
+          break;
+        case ApplicationStatus.interviewWithdrew:
+          stoppedLabel = 'Interview: Withdrew';
+          break;
+        case ApplicationStatus.offerRejected:
+          stoppedLabel = 'Offer: Rejected';
+          break;
+        default:
+          break;
+      }
+      if (stoppedLabel.isNotEmpty) {
+        chips.add(_stoppedChip(stoppedLabel));
+        chips.add(SizedBox(width: 8.w));
+      }
+    }
+
+    if (status == ApplicationStatus.hired) {
+      chips.add(_completedChip('Hired: Completed'));
+      chips.add(SizedBox(width: 8.w));
+    }
+
+    return chips;
   }
-}
 
-// ═════════════════════════════════════════════════════════════════════════════
-//  INDIVIDUAL STAGE DROPDOWN
-// ═════════════════════════════════════════════════════════════════════════════
-
-class _StageDropdown extends StatelessWidget {
-  final String stageLabel;
-  final String completedLabel;
-  final String? stoppedLabel;
-  final List<String> items;
-  final bool isActive;
-  final bool isCompleted;
-  final bool isLocked;
-  final ValueChanged<String> onSelected;
-
-  const _StageDropdown({
-    required this.stageLabel,
-    required this.completedLabel,
-    required this.stoppedLabel,
-    required this.items,
-    required this.isActive,
-    required this.isCompleted,
-    required this.isLocked,
-    required this.onSelected,
-  });
-
-  bool get _isStopped => stoppedLabel != null && stoppedLabel!.isNotEmpty;
-
-  @override
-  Widget build(BuildContext context) {
-    // ── LOCKED: future stage, grayed out ──
-    if (isLocked && !isCompleted && !_isStopped) {
-      return Container(
-        height: 36.h,
-        padding: EdgeInsets.symmetric(horizontal: 12.w),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(4.r),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(stageLabel,
-                style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade400)),
-            SizedBox(width: 4.w),
-            Icon(Icons.keyboard_arrow_down,
-                size: 16.sp, color: Colors.grey.shade400),
-          ],
-        ),
-      );
-    }
-
-    // ── COMPLETED: green check ──
-    if (isCompleted) {
-      return Container(
-        height: 36.h,
-        padding: EdgeInsets.symmetric(horizontal: 12.w),
-        decoration: BoxDecoration(
-          color: _C.primary.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(4.r),
-          border: Border.all(color: _C.primary),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.check_circle, size: 14.sp, color: _C.primary),
-            SizedBox(width: 6.w),
-            Text(
-              completedLabel.isNotEmpty ? '$stageLabel: $completedLabel' : stageLabel,
-              style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  color: _C.primary),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // ── STOPPED: red X ──
-    if (_isStopped) {
-      return Container(
-        height: 36.h,
-        padding: EdgeInsets.symmetric(horizontal: 12.w),
-        decoration: BoxDecoration(
-          color: _C.red.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(4.r),
-          border: Border.all(color: _C.red),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.cancel, size: 14.sp, color: _C.red),
-            SizedBox(width: 6.w),
-            Text(
-              '$stageLabel: $stoppedLabel',
-              style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  color: _C.red),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // ── ACTIVE: show dropdown ──
-    if (isActive) {
-      return Container(
-        height: 36.h,
-        padding: EdgeInsets.symmetric(horizontal: 10.w),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(4.r),
-          border: Border.all(color: _C.primary),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: null,
-            hint: Text(stageLabel,
-                style: TextStyle(fontSize: 12.sp, color: _C.labelText)),
-            icon: Icon(Icons.keyboard_arrow_down,
-                size: 16.sp, color: _C.labelText),
-            items: items
-                .map((item) => DropdownMenuItem(
-              value: item,
-              child: Text(item, style: TextStyle(fontSize: 12.sp)),
-            ))
-                .toList(),
-            onChanged: (val) {
-              if (val != null) onSelected(val);
-            },
-          ),
-        ),
-      );
-    }
-
-    // ── WAITING: passed this stage but waiting (e.g. Qualified selected, now showing Interview) ──
+  Widget _completedChip(String label) {
     return Container(
       height: 36.h,
       padding: EdgeInsets.symmetric(horizontal: 12.w),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: _C.primary.withOpacity(0.05),
         borderRadius: BorderRadius.circular(4.r),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: _C.primary),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(stageLabel,
-              style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade400)),
-          SizedBox(width: 4.w),
-          Icon(Icons.keyboard_arrow_down,
-              size: 16.sp, color: Colors.grey.shade400),
+          Icon(Icons.check_circle, size: 14.sp, color: _C.primary),
+          SizedBox(width: 6.w),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w600,
+              color: _C.primary,
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _stoppedChip(String label) {
+    return Container(
+      height: 36.h,
+      padding: EdgeInsets.symmetric(horizontal: 12.w),
+      decoration: BoxDecoration(
+        color: _C.red.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(4.r),
+        border: Border.all(color: _C.red),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cancel, size: 14.sp, color: _C.red),
+          SizedBox(width: 6.w),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w600,
+              color: _C.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ApplicationCubit, ApplicationState>(
+      listener: (context, state) {
+        if (state is ApplicationUpdated) {
+          _didLoad = false;
+          _currentApp = state.application;
+        }
+      },
+      child: BlocBuilder<HomeCmsCubit, HomeCmsState>(
+        builder: (context, cmsState) {
+          // ── Extract dynamic primary color from CMS/Firebase ──
+          final Color cmsPrimary = _primaryFromCmsState(cmsState);
+
+          return BlocBuilder<ApplicationCubit, ApplicationState>(
+            builder: (context, state) {
+              ApplicationModel? app;
+              if (state is ApplicationDetailLoaded) app = state.application;
+              if (state is ApplicationUpdated) app = state.application;
+
+              if (app == null && _currentApp != null) {
+                app = _currentApp;
+              }
+
+              if (app == null) {
+                return Scaffold(
+                  backgroundColor: _C.back,
+                  body: Center(
+                    child: CircularProgressIndicator(color: cmsPrimary),
+                  ),
+                );
+              }
+
+              _seedControllers(app);
+              _currentApp = app;
+
+              final dropdownItems = _getDropdownItems(app.status);
+              final completedChips = _buildCompletedStageChips(app.status);
+              final bool hasNextOptions = dropdownItems.isNotEmpty;
+
+              return Scaffold(
+                backgroundColor: _C.back,
+                body: SingleChildScrollView(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      children: [
+                        AppAdminNavbar(
+                          activeLabel: 'Applications',
+                          homePage: CareersMainPageDashboard(),
+                          webPage: HomeMainPage(),
+                          jobListingPage: JobListingMainPage(),
+                        ),
+
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 20.w,
+                            vertical: 20.h,
+                          ),
+                          child: SizedBox(
+                            width: 1000.w,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // ── Title ──
+                                Text(
+                                  'Applications',
+                                  style: StyleText.fontSize45Weight600.copyWith(
+                                    color: cmsPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                SizedBox(height: 12.h),
+
+                                // ══════════════════════════════════════════
+                                // ── STATUS PIPELINE (aligned to end) ──
+                                // ══════════════════════════════════════════
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        ...completedChips,
+
+                                        if (completedChips.isNotEmpty &&
+                                            hasNextOptions) ...[
+                                          Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 4.w,
+                                            ),
+                                            child: Icon(
+                                              Icons.chevron_right,
+                                              size: 18.sp,
+                                              color: _C.hintText,
+                                            ),
+                                          ),
+                                        ],
+
+                                        if (hasNextOptions)
+                                          SizedBox(
+                                            width: 200.w,
+                                            child:
+                                            CustomDropdownFormFieldInvMaster(
+                                              selectedValue: null,
+                                              items: dropdownItems,
+                                              widthIcon: 18,
+                                              heightIcon: 18,
+                                              height: 36,
+                                              primaryColor: cmsPrimary,
+                                              dropdownColor: Colors.white,
+                                              hint: Text(
+                                                _getDropdownHint(app!.status),
+                                                style: TextStyle(
+                                                  fontSize: 12.sp,
+                                                  color: _C.labelText,
+                                                ),
+                                              ),
+                                              onChanged: (selectedKey) {
+                                                if (selectedKey == null) return;
+                                                final newStatus =
+                                                _mapKeyToStatus(
+                                                    selectedKey);
+                                                if (newStatus != null) {
+                                                  _onStatusChange(
+                                                      app!, newStatus);
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 24.h),
+
+                                // ── Personal Information Card ──
+                                _buildPersonalInfoCard(app),
+                                SizedBox(height: 24.h),
+
+                                // ── Tags + Scoring Card ──
+                                _buildTagsScoringCard(app, cmsPrimary),
+                                SizedBox(height: 24.h),
+
+                                // ── Save button ──
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: GestureDetector(
+                                    onTap: _isSaving ? null : _saveScoring,
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 30.w,
+                                        vertical: 12.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: cmsPrimary,
+                                        borderRadius:
+                                        BorderRadius.circular(6.r),
+                                      ),
+                                      child: _isSaving
+                                          ? SizedBox(
+                                        width: 16.sp,
+                                        height: 16.sp,
+                                        child:
+                                        const CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                          : Text(
+                                        'Save Scoring',
+                                        style: TextStyle(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 40.h),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  PERSONAL INFORMATION + PROFILE INFORMATION CARD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildPersonalInfoCard(ApplicationModel app) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.sp),
+      decoration: BoxDecoration(
+        color: _C.cardBg,
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle('Personal Information'),
+          SizedBox(height: 12.h),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _readOnlyField('First Name', app.firstName)),
+              SizedBox(width: 16.w),
+              Expanded(child: _readOnlyField('Last Name', app.lastName)),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _readOnlyField('Email', app.email)),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: _readOnlyField(
+                  'Phone',
+                  '${app.countryCode} ${app.phone}',
+                ),
+              ),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _readOnlyField(
+                  'Year Of Graduation',
+                  app.yearOfGraduation,
+                ),
+              ),
+              SizedBox(width: 16.w),
+              const Expanded(child: SizedBox()),
+            ],
+          ),
+
+          SizedBox(height: 20.h),
+
+          _sectionTitle('Profile Information'),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _fileCard('Resume', app.resumeName, app.resumeUrl),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: _fileCard(
+                  'Cover Letter',
+                  app.coverLetterName,
+                  app.coverLetterUrl,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  TAGS + SCORING INTERVIEW CARD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildTagsScoringCard(ApplicationModel app, Color cmsPrimary) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.sp),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle('Personal Information'),
+          SizedBox(height: 12.h),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 200.w,
+                child: CustomDropdownFormFieldInvMaster(
+                  label: 'Tags',
+                  selectedValue: _selectedTag,
+                  items: _kTagItems,
+                  widthIcon: 18,
+                  heightIcon: 18,
+                  height: 36,
+                  primaryColor: cmsPrimary,
+                  dropdownColor: Color(0xFFF1F2ED),
+                  itemColors: _kTagColors,
+                  showColorDots: true,
+                  hint: Text(
+                    'Select Tag',
+                    style: TextStyle(fontSize: 12.sp, color: _C.hintText),
+                  ),
+                  onChanged: (v) => setState(() => _selectedTag = v),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 24.h),
+
+          _sectionTitle('Scoring Interview'),
+          SizedBox(height: 12.h),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: CustomValidatedTextFieldMaster(
+                  label: 'Technical Skills',
+                  hint: 'Text Here, 1-5 Scoring',
+                  controller: _technicalCtrl,
+                  height: 36,
+                  onlyDigits: true,
+                  submitted: false,
+                  primaryColor: cmsPrimary,
+                  fillColor: Color(0xFFF1F2ED),
+                ),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: CustomValidatedTextFieldMaster(
+                  label: 'Communication Skills',
+                  hint: 'Text Here, 1-5 Scoring',
+                  controller: _communicationCtrl,
+                  height: 36,
+                  onlyDigits: true,
+                  submitted: false,
+                  primaryColor: cmsPrimary,
+                  fillColor: Color(0xFFF1F2ED),
+                ),
+              ),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: CustomValidatedTextFieldMaster(
+                  label: 'Experience & Background',
+                  hint: 'Text Here, 1-5 Scoring',
+                  controller: _experienceCtrl,
+                  height: 36,
+                  onlyDigits: true,
+                  submitted: false,
+                  primaryColor: cmsPrimary,
+                  fillColor: Color(0xFFF1F2ED),
+                ),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: CustomValidatedTextFieldMaster(
+                  label: 'Culture Fit',
+                  hint: 'Text Here, 1-5 Scoring',
+                  controller: _cultureFitCtrl,
+                  height: 36,
+                  onlyDigits: true,
+                  submitted: false,
+                  primaryColor: cmsPrimary,
+                  fillColor: Color(0xFFF1F2ED),
+                ),
+              ),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: CustomValidatedTextFieldMaster(
+                  label: 'Leadership Potential',
+                  hint: 'Text Here, 1-5 Scoring',
+                  controller: _leadershipCtrl,
+                  height: 36,
+                  onlyDigits: true,
+                  submitted: false,
+                  primaryColor: cmsPrimary,
+                  fillColor: Color(0xFFF1F2ED),
+                ),
+              ),
+              SizedBox(width: 16.w),
+              const Expanded(child: SizedBox()),
+            ],
+          ),
+
+          CustomValidatedTextFieldMaster(
+            label: 'Comments',
+            hint: 'Text Here',
+            controller: _commentsCtrl,
+            height: 100,
+            maxLines: 5,
+            submitted: false,
+            primaryColor: cmsPrimary,
+            fillColor: Color(0xFFF1F2ED),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _sectionTitle(String title) => Text(
+    title,
+    style: TextStyle(
+      fontSize: 18.sp,
+      fontWeight: FontWeight.w700,
+      color: _C.primary,
+    ),
+  );
+
+  // ── Read-only field with GREY value text ──
+  Widget _readOnlyField(String label, String value) {
+    return CustomValidatedTextFieldMaster(
+      label: label,
+      hint: 'Text Here',
+      controller: TextEditingController(text: value),
+      height: 36,
+      enabled: false,
+      submitted: false,
+      primaryColor: _C.primary,
+      fillColor: const Color(0xFFF1F2ED),
+      textStyle: StyleText.fontSize12Weight500.copyWith(
+        color: _C.fieldValueGrey
+      ),
+    );
+  }
+
+  // ── File card: clickable, opens URL in new tab ──
+  Widget _fileCard(String label, String fileName, String fileUrl) {
+    final bool hasFile = fileUrl.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w500,
+            color: _C.labelText,
+          ),
+        ),
+        SizedBox(height: 6.h),
+        MouseRegion(
+          cursor: hasFile ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          child: GestureDetector(
+            onTap: hasFile ? () => html.window.open(fileUrl, '_blank') : null,
+            child: Container(
+              height: 50.h,
+              padding: EdgeInsets.symmetric(horizontal: 12.w),
+              decoration: BoxDecoration(
+                color: _C.cardBg,
+                borderRadius: BorderRadius.circular(6.r),
+                border: Border.all(color: _C.border),
+              ),
+              child: Row(
+                children: [
+                  CustomSvg(
+                    assetPath: "assets/images/pdf 1.svg",
+                    width: 30.w,
+                    height: 30.h,
+                    fit: BoxFit.fill,
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fileName.isEmpty ? 'No file' : fileName,
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color: hasFile ? Colors.blue.shade700 : _C.hintText,
+                            decoration: hasFile
+                                ? TextDecoration.underline
+                                : TextDecoration.none,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (fileName.isNotEmpty)
+                          Text(
+                            'Click to open',
+                            style:
+                            TextStyle(fontSize: 9.sp, color: _C.hintText),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (hasFile)
+                    Icon(
+                      Icons.open_in_new_rounded,
+                      size: 14.sp,
+                      color: _C.hintText,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

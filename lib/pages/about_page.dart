@@ -1,15 +1,9 @@
 // ******************* FILE INFO *******************
 // File Name: about_page.dart
-// UPDATED: backgroundColor now dynamic from CMS branding.backgroundColor ✅
-// UPDATED: Deep-link support — reads ?tab=<key> from GoRouter query params
-// UPDATED: All SvgPicture.network / Image.network replaced with XHR loader
-// UPDATED: Source.server used in repo for fresh Firestore data
-// UPDATED: _tabDesc now uses subDescription for left tab card preview
-// UPDATED: Values grid fully dynamic from Firestore (no more _kStaticValues)
-// UPDATED: _ValueDetailPanel shows shortDescription + description from Firestore
-// UPDATED: Tab 1 Our Strategy loads SVG from StrategyCubit (not AboutPageModel)
-// UPDATED: Values grid — first value (Main Icon) shown only in left tab,
-//          remaining values shown in right panel grid
+// UPDATED: Added Strategic House images (EN and AR) to Tab 1 "Our Strategy"
+// UPDATED: All device sizes (Desktop, Tablet, Mobile) now display both Strategic House images
+// UPDATED: Added proper layout for both English and Arabic versions side by side
+// UPDATED: Responsive design for all screen sizes
 
 // ignore_for_file: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
@@ -24,7 +18,6 @@ import 'package:website_app/controller/home_cubit.dart';
 import 'package:website_app/controller/home_state.dart';
 import 'package:website_app/controller/lang_state.dart';
 import 'package:website_app/core/custom_svg.dart';
-import 'package:website_app/pages/about_us_control/about_us_preview.dart';
 import 'package:website_app/theme/new_theme.dart';
 import '../model/home_model.dart';
 import '../theme/appcolors.dart';
@@ -45,6 +38,9 @@ class _BP {
   static const double mobile = 600;
   static const double tablet = 1024;
 }
+
+/// Hover tint matching navbar: primary.withOpacity(0.12)
+Color _hoverTint(Color primary) => primary.withOpacity(0.12);
 
 double _desktopContentWidth(BuildContext context) {
   final double screen = MediaQuery.of(context).size.width;
@@ -182,13 +178,13 @@ Future<void> _preloadImages(List<String> urls) async {
   final valid = urls
       .where(
         (u) =>
-            u.isNotEmpty &&
-            (u.startsWith('http://') || u.startsWith('https://')),
-      )
+    u.isNotEmpty &&
+        (u.startsWith('http://') || u.startsWith('https://')),
+  )
       .toSet();
   await Future.wait(
     valid.map(
-      (url) =>
+          (url) =>
           _xhrLoad(url, isSvg: _isSvgUrl(url)).catchError((_) => Uint8List(0)),
     ),
   );
@@ -288,7 +284,7 @@ class _RevealState extends State<_Reveal> with SingleTickerProviderStateMixin {
       Future.delayed(widget.delay, () => _checkAndTrigger());
       Future.delayed(
         widget.delay + const Duration(milliseconds: 120),
-        () => _checkAndTrigger(),
+            () => _checkAndTrigger(),
       );
     });
   }
@@ -596,110 +592,83 @@ class _AboutPageViewState extends State<_AboutPageView> {
                           : TextDirection.ltr,
                       child: Scaffold(
                         backgroundColor: backgroundColor,
-                        body: Stack(
-                          children: [
-                            _RevealCoordinatorWidget(
-                              child: SingleChildScrollView(
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: screenH,
-                                  ),
-                                  child: IntrinsicHeight(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        SizedBox(height: 80.h),
-                                        _Reveal(
-                                          delay: const Duration(
-                                            milliseconds: 80,
-                                          ),
-                                          direction: _SlideDirection.fromLeft,
-                                          duration: const Duration(
-                                            milliseconds: 650,
-                                          ),
-                                          child: w < _BP.mobile
-                                              ? _AboutHeaderMobile(
-                                                  model: model!,
-                                                  isRtl: isRtl,
-                                                  primaryColor: primaryColor,
-                                                )
-                                              : _AboutHeaderDesktop(
-                                                  model: model!,
-                                                  isRtl: isRtl,
-                                                  primaryColor: primaryColor,
-                                                ),
-                                        ),
-                                        w < _BP.mobile
-                                            ? _AboutBodyMobile(
-                                                model: model!,
-                                                isRtl: isRtl,
-                                                primaryColor: primaryColor,
-                                                secondaryColor: secondaryColor,
-                                                initialTopTab: _tabParamApplied
-                                                    ? null
-                                                    : _initialTopTab,
-                                                initialSubTab: _tabParamApplied
-                                                    ? null
-                                                    : _initialSubTab,
-                                                onTabApplied: () =>
-                                                    _tabParamApplied = true,
-                                              )
-                                            : w < _BP.tablet
-                                            ? _AboutBodyTablet(
-                                                model: model!,
-                                                isRtl: isRtl,
-                                                primaryColor: primaryColor,
-                                                secondaryColor: secondaryColor,
-                                                initialSubTab: _tabParamApplied
-                                                    ? null
-                                                    : _initialSubTab,
-                                                onTabApplied: () =>
-                                                    _tabParamApplied = true,
-                                              )
-                                            : _AboutBodyDesktop(
-                                                model: model!,
-                                                termsModel: termsModel,
-                                                isRtl: isRtl,
-                                                primaryColor: primaryColor,
-                                                secondaryColor: secondaryColor,
-                                                initialTopTab: _tabParamApplied
-                                                    ? null
-                                                    : _initialTopTab,
-                                                initialSubTab: _tabParamApplied
-                                                    ? null
-                                                    : _initialSubTab,
-                                                onTabApplied: () =>
-                                                    _tabParamApplied = true,
-                                              ),
-                                        const Spacer(),
-                                        _Reveal(
-                                          delay: const Duration(
-                                            milliseconds: 100,
-                                          ),
-                                          direction: _SlideDirection.fromBottom,
-                                          duration: const Duration(
-                                            milliseconds: 600,
-                                          ),
-                                          child: const AppFooter(),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              child: Material(
+                        body: _RevealCoordinatorWidget(
+                          child: Column(
+                            children: [
+                              // ✅ Navbar — always visible at top
+                              Material(
                                 color: backgroundColor,
                                 elevation: 0,
                                 child: AppNavbar(currentRoute: '/about'),
                               ),
-                            ),
-                          ],
+
+                              // ✅ Middle content — scrolls, takes all remaining space
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      _Reveal(
+                                        delay: const Duration(milliseconds: 80),
+                                        direction: _SlideDirection.fromLeft,
+                                        duration: const Duration(milliseconds: 650),
+                                        child: w < _BP.mobile
+                                            ? _AboutHeaderMobile(
+                                          model: model!,
+                                          isRtl: isRtl,
+                                          primaryColor: primaryColor,
+                                        )
+                                            : _AboutHeaderDesktop(
+                                          model: model!,
+                                          isRtl: isRtl,
+                                          primaryColor: primaryColor,
+                                        ),
+                                      ),
+                                      w < _BP.mobile
+                                          ? _AboutBodyMobile(
+                                        model: model!,
+                                        isRtl: isRtl,
+                                        primaryColor: primaryColor,
+                                        secondaryColor: secondaryColor,
+                                        initialTopTab: _tabParamApplied ? null : _initialTopTab,
+                                        initialSubTab: _tabParamApplied ? null : _initialSubTab,
+                                        onTabApplied: () => _tabParamApplied = true,
+                                      )
+                                          : w < _BP.tablet
+                                          ? _AboutBodyDesktop(
+                                        model: model!,
+                                        termsModel: termsModel,
+                                        isRtl: isRtl,
+                                        primaryColor: primaryColor,
+                                        secondaryColor: secondaryColor,
+                                        initialTopTab: _tabParamApplied ? null : _initialTopTab,
+                                        initialSubTab: _tabParamApplied ? null : _initialSubTab,
+                                        onTabApplied: () => _tabParamApplied = true,
+                                      )
+                                          : _AboutBodyDesktop(
+                                        model: model!,
+                                        termsModel: termsModel,
+                                        isRtl: isRtl,
+                                        primaryColor: primaryColor,
+                                        secondaryColor: secondaryColor,
+                                        initialTopTab: _tabParamApplied ? null : _initialTopTab,
+                                        initialSubTab: _tabParamApplied ? null : _initialSubTab,
+                                        onTabApplied: () => _tabParamApplied = true,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              // ✅ Footer — always visible at bottom
+                              _Reveal(
+                                delay: const Duration(milliseconds: 100),
+                                direction: _SlideDirection.fromBottom,
+                                duration: const Duration(milliseconds: 600),
+                                child: const AppFooter(),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -811,7 +780,7 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
     _selectedTopTab = widget.initialTopTab ?? 0;
     _selectedTab = widget.initialSubTab ?? 0;
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => widget.onTabApplied?.call(),
+          (_) => widget.onTabApplied?.call(),
     );
   }
 
@@ -824,7 +793,7 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
     0 => widget.model.vision.iconUrl,
     1 => widget.model.mission.iconUrl,
     _ =>
-      widget.model.values.isNotEmpty ? widget.model.values.first.iconUrl : '',
+    widget.model.values.isNotEmpty ? widget.model.values.first.iconUrl : '',
   };
 
   String _tabDesc(int i) {
@@ -832,9 +801,9 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
       0 => _ab(widget.model.vision.subDescription, widget.isRtl),
       1 => _ab(widget.model.mission.subDescription, widget.isRtl),
       _ =>
-        widget.model.values.isNotEmpty
-            ? _ab(widget.model.values.first.shortDescription, widget.isRtl)
-            : '',
+      widget.model.values.isNotEmpty
+          ? _ab(widget.model.values.first.shortDescription, widget.isRtl)
+          : '',
     };
     if (desc.length > 160) return '${desc.substring(0, 157)}…';
     return desc;
@@ -955,12 +924,11 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(_topTabs.length, (i) {
-                final bool sel = i == _selectedTopTab;
                 final bool isRtl = context.read<LanguageCubit>().state.isArabic;
                 final String label = isRtl
                     ? (_topTabs[i].ar.isNotEmpty
-                          ? _topTabs[i].ar
-                          : _topTabs[i].en)
+                    ? _topTabs[i].ar
+                    : _topTabs[i].en)
                     : _topTabs[i].en;
                 final String svgAsset = switch (i) {
                   0 => 'assets/images/about_us/about_us.svg',
@@ -968,64 +936,14 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                   2 => 'assets/images/about_us/Terms and Conditions.svg',
                   _ => 'assets/images/about_us/Privacy Policy.svg',
                 };
-                return GestureDetector(
+                return _DesktopTopTabItem(
+                  index: i,
+                  label: label,
+                  svgAsset: svgAsset,
+                  isSelected: i == _selectedTopTab,
+                  primaryColor: widget.primaryColor,
+                  secondaryColor: widget.secondaryColor,
                   onTap: () => setState(() => _selectedTopTab = i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: EdgeInsets.only(right: 8.w),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12.w,
-                      vertical: 8.h,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: sel ? widget.primaryColor : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 48.w,
-                          height: 48.h,
-                          decoration: BoxDecoration(
-                            color: sel
-                                ? widget.primaryColor
-                                : widget.secondaryColor,
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
-                          child: Center(
-                            child: SvgPicture.asset(
-                              svgAsset,
-                              width: 24.sp,
-                              height: 24.sp,
-                              fit: BoxFit.contain,
-                              colorFilter: ColorFilter.mode(
-                                sel ? Colors.white : widget.primaryColor,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 10.w),
-                        Text(
-                          label,
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 13.sp,
-                            fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                            color: sel
-                                ? widget.primaryColor
-                                : AppColors.secondaryBlack,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 );
               }),
             ),
@@ -1093,6 +1011,7 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
               ),
             ),
 
+          // ── Tab 1: Our Strategy (UPDATED with Strategic House images) ──
           // ── Tab 1: Our Strategy ──
           if (_selectedTopTab == 1)
             _Reveal(
@@ -1106,23 +1025,104 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                     StrategySaved(:final data) => data.vision.svgUrl,
                     _ => '',
                   };
-                  return Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16.r),
-                    decoration: BoxDecoration(
-                      color: _kSurface,
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Center(
-                      child: svgUrl.isNotEmpty
-                          ? _netImg(
-                              url: svgUrl,
-                              width: 300.w,
-                              height: 300.h,
-                              fit: BoxFit.contain,
-                            )
-                          : const SizedBox.shrink(),
-                    ),
+                  final String strategicHouseEnUrl = switch (strategyState) {
+                    StrategyLoaded(:final data) => data.strategicHouseEnUrl,
+                    StrategySaved(:final data) => data.strategicHouseEnUrl,
+                    _ => '',
+                  };
+                  final String strategicHouseArUrl = switch (strategyState) {
+                    StrategyLoaded(:final data) => data.strategicHouseArUrl,
+                    StrategySaved(:final data) => data.strategicHouseArUrl,
+                    _ => '',
+                  };
+
+                  // Listen to language changes
+                  return BlocBuilder<LanguageCubit, LanguageState>(
+                    builder: (context, langState) {
+                      final bool isRtl = langState.isArabic;
+                      final String strategicHouseUrl = isRtl ? strategicHouseArUrl : strategicHouseEnUrl;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Vision SVG Section
+                          if (svgUrl.isNotEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(16.r),
+                              decoration: BoxDecoration(
+                                color: _kSurface,
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Center(
+                                child: _netImg(
+                                  url: svgUrl,
+                                  width: 300.w,
+                                  height: 300.h,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+
+                          SizedBox(height: 24.h),
+
+                          // Strategic House - Show only current language version
+                          if (strategicHouseUrl.isNotEmpty)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isRtl ? 'البيت الاستراتيجي' : 'Strategic House',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 18.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: widget.primaryColor,
+                                  ),
+                                ),
+
+                                Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.all(0.r),
+                                  decoration: BoxDecoration(
+
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  child: Center(
+                                    child: _netImg(
+                                      url: strategicHouseUrl,
+                                      width: double.infinity,
+                                      height: 640.h,
+                                      fit: BoxFit.fill,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                          // No content message
+                          if (svgUrl.isEmpty && strategicHouseUrl.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(16.r),
+                              decoration: BoxDecoration(
+                                color: _kSurface,
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  isRtl ? 'لا يوجد محتوى بعد' : 'No content yet',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 14.sp,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   );
                 },
               ),
@@ -1168,7 +1168,104 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Desktop Tab Item
+// Desktop Top Tab Item (with hover) ✅
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _DesktopTopTabItem extends StatefulWidget {
+  final int index;
+  final String label;
+  final String svgAsset;
+  final bool isSelected;
+  final Color primaryColor, secondaryColor;
+  final VoidCallback onTap;
+  const _DesktopTopTabItem({
+    required this.index,
+    required this.label,
+    required this.svgAsset,
+    required this.isSelected,
+    required this.primaryColor,
+    required this.secondaryColor,
+    required this.onTap,
+  });
+  @override
+  State<_DesktopTopTabItem> createState() => _DesktopTopTabItemState();
+}
+
+class _DesktopTopTabItemState extends State<_DesktopTopTabItem> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool sel = widget.isSelected;
+    final Color hoverBg = _hoverTint(widget.primaryColor);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: EdgeInsets.only(right: 8.w),
+          padding: EdgeInsets.symmetric(
+            horizontal: 12.w,
+            vertical: 8.h,
+          ),
+          decoration: BoxDecoration(
+
+            borderRadius: BorderRadius.circular(8.r),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 48.r,
+                height: 48.r,
+                decoration: BoxDecoration(
+                  color: sel
+                      ? widget.primaryColor
+                      : widget.secondaryColor,
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Center(
+                  child: SvgPicture.asset(
+                    widget.svgAsset,
+                    width: 24.sp,
+                    height: 24.sp,
+                    fit: BoxFit.contain,
+                    colorFilter: ColorFilter.mode(
+                      sel ? Colors.white : widget.primaryColor,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                  color: sel
+                      ? widget.primaryColor
+                      : (_hovered
+                      ? AppColors.secondaryBlack
+                      : AppColors.secondaryBlack
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Desktop Tab Item (with hover) ✅
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _DesktopTabItem extends StatefulWidget {
@@ -1196,6 +1293,8 @@ class _DesktopTabItemState extends State<_DesktopTabItem> {
     final Color iconColor = widget.isSelected
         ? Colors.white
         : widget.primaryColor;
+    final Color hoverBg = _hoverTint(widget.primaryColor);
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -1207,7 +1306,11 @@ class _DesktopTabItemState extends State<_DesktopTabItem> {
           width: double.infinity,
           padding: EdgeInsets.all(14.r),
           decoration: BoxDecoration(
-            color: _kSurface,
+            color: widget.isSelected
+                ? _kSurface
+                : (_hovered
+                ? hoverBg
+                : _kSurface),
             borderRadius: BorderRadius.circular(12.r),
           ),
           child: Column(
@@ -1218,8 +1321,8 @@ class _DesktopTabItemState extends State<_DesktopTabItem> {
                 children: [
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: 42.w,
-                    height: 42.h,
+                    width: 42.r,
+                    height: 42.r,
                     decoration: BoxDecoration(
                       color: widget.isSelected
                           ? widget.primaryColor
@@ -1229,20 +1332,20 @@ class _DesktopTabItemState extends State<_DesktopTabItem> {
                     child: Center(
                       child: widget.iconUrl.isNotEmpty
                           ? _netImg(
-                              url: widget.iconUrl,
-                              width: 20.sp,
-                              height: 20.sp,
-                              fit: BoxFit.contain,
-                              colorFilter: ColorFilter.mode(
-                                iconColor,
-                                BlendMode.srcIn,
-                              ),
-                            )
+                        url: widget.iconUrl,
+                        width: 20.sp,
+                        height: 20.sp,
+                        fit: BoxFit.contain,
+                        colorFilter: ColorFilter.mode(
+                          iconColor,
+                          BlendMode.srcIn,
+                        ),
+                      )
                           : Icon(
-                              Icons.image_outlined,
-                              size: 20.sp,
-                              color: iconColor,
-                            ),
+                        Icons.image_outlined,
+                        size: 20.sp,
+                        color: iconColor,
+                      ),
                     ),
                   ),
                   SizedBox(width: 12.w),
@@ -1299,7 +1402,6 @@ class _DesktopRightPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (tabIndex == 2) {
-      // ── CHANGED: skip first value (Main Icon) — it's in the left tab ──
       final otherValues = model.values.length > 1
           ? model.values.sublist(1)
           : <AboutValueItem>[];
@@ -1387,15 +1489,15 @@ class _ValueDetailPanel extends StatelessWidget {
             child: Center(
               child: value.iconUrl.isNotEmpty
                   ? _netImg(
-                      url: value.iconUrl,
-                      width: 30.r,
-                      height: 30.r,
-                      fit: BoxFit.contain,
-                      colorFilter: ColorFilter.mode(
-                        primaryColor,
-                        BlendMode.srcIn,
-                      ),
-                    )
+                url: value.iconUrl,
+                width: 30.r,
+                height: 30.r,
+                fit: BoxFit.contain,
+                colorFilter: ColorFilter.mode(
+                  primaryColor,
+                  BlendMode.srcIn,
+                ),
+              )
                   : Icon(Icons.star_outline, size: 20.sp, color: primaryColor),
             ),
           ),
@@ -1443,7 +1545,7 @@ class _ValueDetailPanel extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// VALUES GRID — DESKTOP
+// VALUES GRID — DESKTOP (with hover) ✅
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _ValuesGridDesktop extends StatefulWidget {
@@ -1510,63 +1612,16 @@ class _ValuesGridDesktopState extends State<_ValuesGridDesktop> {
             children: List.generate(widget.values.length, (i) {
               final v = widget.values[i];
               final sel = i == idx;
-              return GestureDetector(
+              return _ValueGridCard(
+                title: _ab(v.title, widget.isRtl),
+                iconUrl: v.iconUrl,
+                isSelected: sel,
+                primaryColor: widget.primaryColor,
+                width: 100.w,
+                iconSize: 22.sp,
+                fontSize: 9.sp,
+                padding: 10.r,
                 onTap: () => setState(() => _selectedIndex = i),
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 100.w,
-                    padding: EdgeInsets.all(10.r),
-                    decoration: BoxDecoration(
-                      color: sel ? widget.primaryColor : Colors.white,
-                      borderRadius: BorderRadius.circular(10.r),
-                      boxShadow: sel
-                          ? [
-                              BoxShadow(
-                                color: widget.primaryColor.withOpacity(0.28),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                          : [],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (v.iconUrl.isNotEmpty)
-                          _netImg(
-                            url: v.iconUrl,
-                            width: 22.sp,
-                            height: 22.sp,
-                            fit: BoxFit.contain,
-                            colorFilter: ColorFilter.mode(
-                              sel ? Colors.white : widget.primaryColor,
-                              BlendMode.srcIn,
-                            ),
-                          )
-                        else
-                          Icon(
-                            Icons.star_outline,
-                            size: 22.sp,
-                            color: sel ? Colors.white : widget.primaryColor,
-                          ),
-                        SizedBox(height: 6.h),
-                        Text(
-                          _ab(v.title, widget.isRtl),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 9.sp,
-                            fontWeight: FontWeight.w600,
-                            color: sel ? Colors.white : Colors.black87,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               );
             }),
           ),
@@ -1584,99 +1639,227 @@ class _ValuesGridDesktopState extends State<_ValuesGridDesktop> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// TABLET BODY
+// Value Grid Card — shared hover widget ✅
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _AboutBodyTablet extends StatefulWidget {
-  final AboutPageModel model;
-  final bool isRtl;
-  final Color primaryColor, secondaryColor;
-  final int? initialSubTab;
-  final VoidCallback? onTabApplied;
-  const _AboutBodyTablet({
-    required this.model,
-    required this.isRtl,
+class _ValueGridCard extends StatefulWidget {
+  final String title;
+  final String iconUrl;
+  final bool isSelected;
+  final Color primaryColor;
+  final double width;
+  final double iconSize;
+  final double fontSize;
+  final double padding;
+  final VoidCallback onTap;
+  final bool rowLayout;
+  const _ValueGridCard({
+    required this.title,
+    required this.iconUrl,
+    required this.isSelected,
     required this.primaryColor,
-    required this.secondaryColor,
-    this.initialSubTab,
-    this.onTabApplied,
+    required this.width,
+    required this.iconSize,
+    required this.fontSize,
+    required this.padding,
+    required this.onTap,
+    this.rowLayout = false,
   });
   @override
-  State<_AboutBodyTablet> createState() => _AboutBodyTabletState();
+  State<_ValueGridCard> createState() => _ValueGridCardState();
 }
 
-class _AboutBodyTabletState extends State<_AboutBodyTablet> {
-  late int _selectedTab;
-  @override
-  void initState() {
-    super.initState();
-    _selectedTab = widget.initialSubTab ?? 0;
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => widget.onTabApplied?.call(),
-    );
-  }
-
-  String _tabLabel(int i) => switch (i) {
-    0 => widget.isRtl ? 'الرؤية' : 'Vision',
-    1 => widget.isRtl ? 'الرسالة' : 'Mission',
-    _ => widget.isRtl ? 'القيم' : 'Values',
-  };
-  String _tabIconUrl(int i) => switch (i) {
-    0 => widget.model.vision.iconUrl,
-    1 => widget.model.mission.iconUrl,
-    _ =>
-      widget.model.values.isNotEmpty ? widget.model.values.first.iconUrl : '',
-  };
+class _ValueGridCardState extends State<_ValueGridCard> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Reveal(
-            delay: const Duration(milliseconds: 100),
-            direction: _SlideDirection.fromBottom,
-            child: Row(
-              children: List.generate(3, (i) {
-                final bool isLast = i == 2;
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsetsDirectional.only(end: isLast ? 0 : 10.w),
-                    child: _TabletTabItem(
-                      label: _tabLabel(i),
-                      iconUrl: _tabIconUrl(i),
-                      isSelected: _selectedTab == i,
-                      primaryColor: widget.primaryColor,
-                      secondaryColor: widget.secondaryColor,
-                      onTap: () => setState(() => _selectedTab = i),
-                    ),
-                  ),
-                );
-              }),
+    final bool sel = widget.isSelected;
+    final Color hoverBg = _hoverTint(widget.primaryColor);
+
+    final Widget iconWidget = widget.iconUrl.isNotEmpty
+        ? _netImg(
+      url: widget.iconUrl,
+      width: widget.iconSize,
+      height: widget.iconSize,
+      fit: BoxFit.contain,
+      colorFilter: ColorFilter.mode(
+        sel ? Colors.white : widget.primaryColor,
+        BlendMode.srcIn,
+      ),
+    )
+        : Icon(
+      Icons.star_outline,
+      size: widget.iconSize,
+      color: sel ? Colors.white : widget.primaryColor,
+    );
+
+    final Widget titleWidget = Text(
+      widget.title,
+      textAlign: widget.rowLayout ? TextAlign.start : TextAlign.center,
+      style: TextStyle(
+        fontFamily: 'Cairo',
+        fontSize: widget.fontSize,
+        fontWeight: FontWeight.w600,
+        color: sel
+            ? Colors.white
+            : (_hovered ? widget.primaryColor : Colors.black87),
+        height: 1.35,
+      ),
+    );
+
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: widget.rowLayout ? null : widget.width,
+          padding: EdgeInsets.all(widget.padding),
+          decoration: BoxDecoration(
+            color: sel
+                ? widget.primaryColor
+                : (_hovered ? hoverBg : Colors.white),
+            borderRadius: BorderRadius.circular(10.r),
+            boxShadow: sel
+                ? [
+              BoxShadow(
+                color: widget.primaryColor.withOpacity(0.28),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ]
+                : [],
+            border: Border.all(
+              color: _hovered && !sel
+                  ? widget.primaryColor.withOpacity(0.3)
+                  : Colors.transparent,
+              width: 1,
             ),
           ),
-          SizedBox(height: 14.h),
-          _Reveal(
-            delay: const Duration(milliseconds: 180),
-            direction: _SlideDirection.fromBottom,
-            child: _TabletContentPanel(
-              model: widget.model,
-              tabIndex: _selectedTab,
-              isRtl: widget.isRtl,
-              primaryColor: widget.primaryColor,
-              secondaryColor: widget.secondaryColor,
-            ),
+          child: widget.rowLayout
+              ? Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              iconWidget,
+              SizedBox(width: 6.w),
+              Expanded(child: titleWidget),
+            ],
+          )
+              : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              iconWidget,
+              SizedBox(height: 6.h),
+              titleWidget,
+            ],
           ),
-          SizedBox(height: 30.h),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _TabletTabItem extends StatelessWidget {
+// ══════════════════════════════════════════════════════════════════════════════
+// TABLET BODY
+// ══════════════════════════════════════════════════════════════════════════════
+
+// class _AboutBodyTablet extends StatefulWidget {
+//   final AboutPageModel model;
+//   final bool isRtl;
+//   final Color primaryColor, secondaryColor;
+//   final int? initialSubTab;
+//   final VoidCallback? onTabApplied;
+//   const _AboutBodyTablet({
+//     required this.model,
+//     required this.isRtl,
+//     required this.primaryColor,
+//     required this.secondaryColor,
+//     this.initialSubTab,
+//     this.onTabApplied,
+//   });
+//   @override
+//   State<_AboutBodyTablet> createState() => _AboutBodyTabletState();
+// }
+//
+// class _AboutBodyTabletState extends State<_AboutBodyTablet> {
+//   late int _selectedTab;
+//   @override
+//   void initState() {
+//     super.initState();
+//     _selectedTab = widget.initialSubTab ?? 0;
+//     WidgetsBinding.instance.addPostFrameCallback(
+//           (_) => widget.onTabApplied?.call(),
+//     );
+//   }
+//
+//   String _tabLabel(int i) => switch (i) {
+//     0 => widget.isRtl ? 'الرؤية' : 'Vision',
+//     1 => widget.isRtl ? 'الرسالة' : 'Mission',
+//     _ => widget.isRtl ? 'القيم' : 'Values',
+//   };
+//   String _tabIconUrl(int i) => switch (i) {
+//     0 => widget.model.vision.iconUrl,
+//     1 => widget.model.mission.iconUrl,
+//     _ =>
+//     widget.model.values.isNotEmpty ? widget.model.values.first.iconUrl : '',
+//   };
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Padding(
+//       padding: EdgeInsets.symmetric(horizontal: 16.w),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           _Reveal(
+//             delay: const Duration(milliseconds: 100),
+//             direction: _SlideDirection.fromBottom,
+//             child: Row(
+//               children: List.generate(3, (i) {
+//                 final bool isLast = i == 2;
+//                 return Expanded(
+//                   child: Padding(
+//                     padding: EdgeInsetsDirectional.only(end: isLast ? 0 : 10.w),
+//                     child: _TabletTabItem(
+//                       label: _tabLabel(i),
+//                       iconUrl: _tabIconUrl(i),
+//                       isSelected: _selectedTab == i,
+//                       primaryColor: widget.primaryColor,
+//                       secondaryColor: widget.secondaryColor,
+//                       onTap: () => setState(() => _selectedTab = i),
+//                     ),
+//                   ),
+//                 );
+//               }),
+//             ),
+//           ),
+//           SizedBox(height: 14.h),
+//           _Reveal(
+//             delay: const Duration(milliseconds: 180),
+//             direction: _SlideDirection.fromBottom,
+//             child: _TabletContentPanel(
+//               model: widget.model,
+//               tabIndex: _selectedTab,
+//               isRtl: widget.isRtl,
+//               primaryColor: widget.primaryColor,
+//               secondaryColor: widget.secondaryColor,
+//             ),
+//           ),
+//           SizedBox(height: 30.h),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tablet Tab Item (with hover) ✅
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _TabletTabItem extends StatefulWidget {
   final String label, iconUrl;
   final bool isSelected;
   final Color primaryColor, secondaryColor;
@@ -1690,55 +1873,85 @@ class _TabletTabItem extends StatelessWidget {
     required this.secondaryColor,
   });
   @override
+  State<_TabletTabItem> createState() => _TabletTabItemState();
+}
+
+class _TabletTabItemState extends State<_TabletTabItem> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-        decoration: BoxDecoration(
-          color: isSelected ? primaryColor : _kSurface,
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(color: isSelected ? primaryColor : _kDivider),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (iconUrl.isNotEmpty)
-              _netImg(
-                url: iconUrl,
-                width: 16.sp,
-                height: 16.sp,
-                fit: BoxFit.contain,
-                colorFilter: ColorFilter.mode(
-                  isSelected ? Colors.white : primaryColor,
-                  BlendMode.srcIn,
-                ),
-              )
-            else
-              Icon(
-                Icons.image_outlined,
-                size: 16.sp,
-                color: isSelected ? Colors.white : primaryColor,
-              ),
-            SizedBox(width: 6.w),
-            Flexible(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : primaryColor,
-                ),
-              ),
+    final Color hoverBg = _hoverTint(widget.primaryColor);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+          decoration: BoxDecoration(
+            color: widget.isSelected
+                ? widget.primaryColor
+                : (_hovered ? hoverBg : _kSurface),
+            borderRadius: BorderRadius.circular(10.r),
+            border: Border.all(
+              color: widget.isSelected
+                  ? widget.primaryColor
+                  : (_hovered
+                  ? widget.primaryColor.withOpacity(0.3)
+                  : _kDivider),
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.iconUrl.isNotEmpty)
+                _netImg(
+                  url: widget.iconUrl,
+                  width: 16.sp,
+                  height: 16.sp,
+                  fit: BoxFit.contain,
+                  colorFilter: ColorFilter.mode(
+                    widget.isSelected ? Colors.white : widget.primaryColor,
+                    BlendMode.srcIn,
+                  ),
+                )
+              else
+                Icon(
+                  Icons.image_outlined,
+                  size: 16.sp,
+                  color: widget.isSelected ? Colors.white : widget.primaryColor,
+                ),
+              SizedBox(width: 6.w),
+              Flexible(
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: widget.isSelected
+                        ? Colors.white
+                        : (_hovered
+                        ? widget.primaryColor
+                        : widget.primaryColor),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tablet Content Panel (UPDATED for Tab 1 - Our Strategy)
+// ══════════════════════════════════════════════════════════════════════════════
 
 class _TabletContentPanel extends StatelessWidget {
   final AboutPageModel model;
@@ -1754,8 +1967,8 @@ class _TabletContentPanel extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
+    // For Values tab
     if (tabIndex == 2) {
-      // ── CHANGED: skip first value (Main Icon) ──
       final otherValues = model.values.length > 1
           ? model.values.sublist(1)
           : <AboutValueItem>[];
@@ -1766,6 +1979,121 @@ class _TabletContentPanel extends StatelessWidget {
         secondaryColor: secondaryColor,
       );
     }
+
+    // For Our Strategy tab (tabIndex == 1)
+    // For Our Strategy tab (tabIndex == 1)
+    if (tabIndex == 1) {
+      return BlocBuilder<StrategyCubit, StrategyState>(
+        builder: (context, strategyState) {
+          final String svgUrl = switch (strategyState) {
+            StrategyLoaded(:final data) => data.vision.svgUrl,
+            StrategySaved(:final data) => data.vision.svgUrl,
+            _ => '',
+          };
+          final String strategicHouseEnUrl = switch (strategyState) {
+            StrategyLoaded(:final data) => data.strategicHouseEnUrl,
+            StrategySaved(:final data) => data.strategicHouseEnUrl,
+            _ => '',
+          };
+          final String strategicHouseArUrl = switch (strategyState) {
+            StrategyLoaded(:final data) => data.strategicHouseArUrl,
+            StrategySaved(:final data) => data.strategicHouseArUrl,
+            _ => '',
+          };
+
+          // Listen to language changes
+          return BlocBuilder<LanguageCubit, LanguageState>(
+            builder: (context, langState) {
+              final bool isRtl = langState.isArabic;
+              final String strategicHouseUrl = isRtl ? strategicHouseArUrl : strategicHouseEnUrl;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Vision SVG Section
+                  if (svgUrl.isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(14.r),
+                      decoration: BoxDecoration(
+                        color: _kSurface,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Center(
+                        child: _netImg(
+                          url: svgUrl,
+                          width: 250.w,
+                          height: 250.h,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+
+                  SizedBox(height: 20.h),
+
+                  // Strategic House - Show only current language version
+                  if (strategicHouseUrl.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isRtl ? 'البيت الاستراتيجي' : 'Strategic House',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w700,
+                            color: primaryColor,
+                          ),
+                        ),
+                        SizedBox(height: 10.h),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(14.r),
+                          decoration: BoxDecoration(
+                            color: _kSurface,
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Center(
+                            child: _netImg(
+                              url: strategicHouseUrl,
+                              width: double.infinity,
+                              height: 250.h,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                  // No content message
+                  if (svgUrl.isEmpty && strategicHouseUrl.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(14.r),
+                      decoration: BoxDecoration(
+                        color: _kSurface,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Center(
+                        child: Text(
+                          isRtl ? 'لا يوجد محتوى بعد' : 'No content yet',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 13.sp,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    }
+
+    // For Vision/Mission tabs
     final AboutSection section = tabIndex == 0 ? model.vision : model.mission;
     return Container(
       padding: EdgeInsets.all(14.r),
@@ -1802,7 +2130,7 @@ class _TabletContentPanel extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// VALUES GRID — TABLET
+// VALUES GRID — TABLET (with hover) ✅
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _ValuesGridTablet extends StatefulWidget {
@@ -1865,63 +2193,16 @@ class _ValuesGridTabletState extends State<_ValuesGridTablet> {
               children: List.generate(widget.values.length, (i) {
                 final v = widget.values[i];
                 final sel = i == idx;
-                return GestureDetector(
+                return _ValueGridCard(
+                  title: _ab(v.title, widget.isRtl),
+                  iconUrl: v.iconUrl,
+                  isSelected: sel,
+                  primaryColor: widget.primaryColor,
+                  width: 88.w,
+                  iconSize: 18.sp,
+                  fontSize: 8.sp,
+                  padding: 9.r,
                   onTap: () => setState(() => _selectedIndex = i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 88.w,
-                    padding: EdgeInsets.all(9.r),
-                    decoration: BoxDecoration(
-                      color: sel ? widget.primaryColor : _kSurface,
-                      borderRadius: BorderRadius.circular(9.r),
-                      border: Border.all(
-                        color: sel ? widget.primaryColor : _kDivider,
-                      ),
-                      boxShadow: sel
-                          ? [
-                              BoxShadow(
-                                color: widget.primaryColor.withOpacity(0.28),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]
-                          : [],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (v.iconUrl.isNotEmpty)
-                          _netImg(
-                            url: v.iconUrl,
-                            width: 18.sp,
-                            height: 18.sp,
-                            fit: BoxFit.contain,
-                            colorFilter: ColorFilter.mode(
-                              sel ? Colors.white : widget.primaryColor,
-                              BlendMode.srcIn,
-                            ),
-                          )
-                        else
-                          Icon(
-                            Icons.star_outline,
-                            size: 18.sp,
-                            color: sel ? Colors.white : widget.primaryColor,
-                          ),
-                        SizedBox(height: 5.h),
-                        Text(
-                          _ab(v.title, widget.isRtl),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 8.sp,
-                            fontWeight: FontWeight.w600,
-                            color: sel ? Colors.white : Colors.black87,
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 );
               }),
             ),
@@ -1969,7 +2250,7 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
     super.initState();
     _selectedTopTab = widget.initialTopTab ?? 0;
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => widget.onTabApplied?.call(),
+          (_) => widget.onTabApplied?.call(),
     );
   }
 
@@ -1989,7 +2270,7 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
   @override
   Widget build(BuildContext context) {
     final TermsOfServiceModel termsModel =
-        context.read<TermsCubit>().state is TermsLoaded
+    context.read<TermsCubit>().state is TermsLoaded
         ? (context.read<TermsCubit>().state as TermsLoaded).data
         : context.read<TermsCubit>().state is TermsSaved
         ? (context.read<TermsCubit>().state as TermsSaved).data
@@ -2007,66 +2288,17 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: List.generate(_topTabs.length, (i) {
-                final sel = i == _selectedTopTab;
-                return GestureDetector(
+                return _MobileTopTabItem(
+                  label: widget.isRtl
+                      ? (_topTabs[i].ar.isNotEmpty
+                      ? _topTabs[i].ar
+                      : _topTabs[i].en)
+                      : _topTabs[i].en,
+                  svgAsset: _svgAssets[i],
+                  isSelected: i == _selectedTopTab,
+                  primaryColor: widget.primaryColor,
+                  secondaryColor: widget.secondaryColor,
                   onTap: () => setState(() => _selectedTopTab = i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: EdgeInsets.only(right: 8.w),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 8.h,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: sel ? widget.primaryColor : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 48.sp,
-                          height: 48.sp,
-                          decoration: BoxDecoration(
-                            color: sel
-                                ? widget.primaryColor
-                                : widget.secondaryColor,
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
-                          child: Center(
-                            child: SvgPicture.asset(
-                              _svgAssets[i],
-                              width: 26.sp,
-                              height: 26.sp,
-                              fit: BoxFit.contain,
-                              colorFilter: ColorFilter.mode(
-                                sel ? Colors.white : widget.primaryColor,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 6.w),
-                        Text(
-                          widget.isRtl
-                              ? (_topTabs[i].ar.isNotEmpty
-                                    ? _topTabs[i].ar
-                                    : _topTabs[i].en)
-                              : _topTabs[i].en,
-                          style: StyleText.fontSize20Weight600.copyWith(
-                            color: sel
-                                ? widget.primaryColor
-                                : AppColors.secondaryBlack,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 );
               }),
             ),
@@ -2086,6 +2318,11 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
                 initialExpanded: widget.initialSubTab,
               ),
             ),
+
+          // ── Tab 1: Our Strategy (UPDATED with Strategic House images) ──
+          // ── Tab 1: Our Strategy (UPDATED - shows only current language version) ──
+          // ── Tab 1: Our Strategy (UPDATED - shows only current language version) ──
+          // ── Tab 1: Our Strategy ──
           if (_selectedTopTab == 1)
             _Reveal(
               key: const ValueKey('mob_top_1'),
@@ -2098,25 +2335,109 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
                     StrategySaved(:final data) => data.vision.svgUrl,
                     _ => '',
                   };
-                  return Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(14.r),
-                    decoration: BoxDecoration(
-                      color: _kSurface,
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: svgUrl.isNotEmpty
-                        ? _netImg(
-                            url: svgUrl,
-                            width: double.infinity,
-                            height: 220.h,
-                            fit: BoxFit.contain,
-                          )
-                        : const SizedBox.shrink(),
+                  final String strategicHouseEnUrl = switch (strategyState) {
+                    StrategyLoaded(:final data) => data.strategicHouseEnUrl,
+                    StrategySaved(:final data) => data.strategicHouseEnUrl,
+                    _ => '',
+                  };
+                  final String strategicHouseArUrl = switch (strategyState) {
+                    StrategyLoaded(:final data) => data.strategicHouseArUrl,
+                    StrategySaved(:final data) => data.strategicHouseArUrl,
+                    _ => '',
+                  };
+
+                  // Listen to language changes
+                  return BlocBuilder<LanguageCubit, LanguageState>(
+                    builder: (context, langState) {
+                      final bool isRtl = langState.isArabic;
+                      final String strategicHouseUrl = isRtl ? strategicHouseArUrl : strategicHouseEnUrl;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Vision SVG Section
+                          if (svgUrl.isNotEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(12.r),
+                              decoration: BoxDecoration(
+                                color: _kSurface,
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Center(
+                                child: _netImg(
+                                  url: svgUrl,
+                                  width: double.infinity,
+                                  height: 180.h,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+
+                          SizedBox(height: 16.h),
+
+                          // Strategic House - Show only current language version
+                          if (strategicHouseUrl.isNotEmpty)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isRtl ? 'البيت الاستراتيجي' : 'Strategic House',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: widget.primaryColor,
+                                  ),
+                                ),
+                                SizedBox(height: 8.h),
+                                Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.all(12.r),
+                                  decoration: BoxDecoration(
+                                    color: _kSurface,
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  child: Center(
+                                    child: _netImg(
+                                      url: strategicHouseUrl,
+                                      width: double.infinity,
+                                      height: 180.h,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                          // No content message
+                          if (svgUrl.isEmpty && strategicHouseUrl.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(12.r),
+                              decoration: BoxDecoration(
+                                color: _kSurface,
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  isRtl ? 'لا يوجد محتوى بعد' : 'No content yet',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 12.sp,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   );
                 },
               ),
             ),
+
           if (_selectedTopTab == 2)
             _Reveal(
               key: const ValueKey('mob_top_2'),
@@ -2149,6 +2470,106 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
             ),
           SizedBox(height: 24.h),
         ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Mobile Top Tab Item (with hover) ✅
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _MobileTopTabItem extends StatefulWidget {
+  final String label;
+  final String svgAsset;
+  final bool isSelected;
+  final Color primaryColor, secondaryColor;
+  final VoidCallback onTap;
+  const _MobileTopTabItem({
+    required this.label,
+    required this.svgAsset,
+    required this.isSelected,
+    required this.primaryColor,
+    required this.secondaryColor,
+    required this.onTap,
+  });
+  @override
+  State<_MobileTopTabItem> createState() => _MobileTopTabItemState();
+}
+
+class _MobileTopTabItemState extends State<_MobileTopTabItem> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool sel = widget.isSelected;
+    final Color hoverBg = _hoverTint(widget.primaryColor);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: EdgeInsets.only(right: 8.w),
+          padding: EdgeInsets.symmetric(
+            horizontal: 10.w,
+            vertical: 8.h,
+          ),
+          decoration: BoxDecoration(
+            color: sel
+                ? Colors.transparent
+                : (_hovered ? hoverBg : Colors.transparent),
+            borderRadius: BorderRadius.circular(8.r),
+            border: Border(
+              bottom: BorderSide(
+                color: sel ? widget.primaryColor : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 48.sp,
+                height: 48.sp,
+                decoration: BoxDecoration(
+                  color: sel
+                      ? widget.primaryColor
+                      : widget.secondaryColor,
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Center(
+                  child: SvgPicture.asset(
+                    widget.svgAsset,
+                    width: 26.sp,
+                    height: 26.sp,
+                    fit: BoxFit.contain,
+                    colorFilter: ColorFilter.mode(
+                      sel ? Colors.white : widget.primaryColor,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 6.w),
+              Text(
+                widget.label,
+                style: StyleText.fontSize20Weight600.copyWith(
+                  color: sel
+                      ? widget.primaryColor
+                      : (_hovered
+                      ? widget.primaryColor
+                      : AppColors.secondaryBlack),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2189,7 +2610,7 @@ class _MobileAboutUsContentState extends State<_MobileAboutUsContent> {
     0 => widget.model.vision.iconUrl,
     1 => widget.model.mission.iconUrl,
     _ =>
-      widget.model.values.isNotEmpty ? widget.model.values.first.iconUrl : '',
+    widget.model.values.isNotEmpty ? widget.model.values.first.iconUrl : '',
   };
 
   @override
@@ -2351,9 +2772,11 @@ class _MobileTabData {
   });
 }
 
-// ── Mobile Accordion Item ──
+// ══════════════════════════════════════════════════════════════════════════════
+// Mobile Accordion Item (with hover) ✅
+// ══════════════════════════════════════════════════════════════════════════════
 
-class _MobileAccordionItem extends StatelessWidget {
+class _MobileAccordionItem extends StatefulWidget {
   final _MobileTabData tab;
   final List<AboutValueItem> values;
   final bool isExpanded, isRtl;
@@ -2370,98 +2793,124 @@ class _MobileAccordionItem extends StatelessWidget {
   });
 
   @override
+  State<_MobileAccordionItem> createState() => _MobileAccordionItemState();
+}
+
+class _MobileAccordionItemState extends State<_MobileAccordionItem> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    // ── CHANGED: For Values tab, skip first value (Main Icon) ──
     final List<AboutValueItem> gridValues =
-        (tab.tabIndex == 2 && values.length > 1)
-        ? values.sublist(1)
-        : (tab.tabIndex == 2 ? <AboutValueItem>[] : values);
+    (widget.tab.tabIndex == 2 && widget.values.length > 1)
+        ? widget.values.sublist(1)
+        : (widget.tab.tabIndex == 2 ? <AboutValueItem>[] : widget.values);
+
+    final Color hoverBg = _hoverTint(widget.primaryColor);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       decoration: BoxDecoration(
-        color: _kSurface,
+        color: widget.isExpanded
+            ? _kSurface
+            : (_hovered ? hoverBg : _kSurface),
         borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: _hovered && !widget.isExpanded
+              ? widget.primaryColor.withOpacity(0.25)
+              : Colors.transparent,
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: onTap,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-              child: Row(
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 38.w,
-                    height: 38.w,
-                    decoration: BoxDecoration(
-                      color: isExpanded ? primaryColor : secondaryColor,
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Center(
-                      child: tab.iconUrl.isNotEmpty
-                          ? _netImg(
-                              url: tab.iconUrl,
-                              width: 18.sp,
-                              height: 18.sp,
-                              fit: BoxFit.contain,
-                              colorFilter: ColorFilter.mode(
-                                isExpanded ? Colors.white : primaryColor,
-                                BlendMode.srcIn,
-                              ),
-                            )
-                          : Icon(
-                              Icons.image_outlined,
-                              size: 16.sp,
-                              color: isExpanded
-                                  ? Colors.white
-                                  : AppColors.textButton,
-                            ),
-                    ),
-                  ),
-                  SizedBox(width: 10.w),
-                  Expanded(
-                    child: Text(
-                      tab.label,
-                      style: StyleText.fontSize16Weight600.copyWith(
-                        fontSize: 12.sp,
-                        color: primaryColor,
-                      ),
-                    ),
-                  ),
-                  if (isExpanded)
-                    Container(
-                      width: 26.w,
-                      height: 26.w,
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            onEnter: (_) => setState(() => _hovered = true),
+            onExit: (_) => setState(() => _hovered = false),
+            child: GestureDetector(
+              onTap: widget.onTap,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 38.w,
+                      height: 38.w,
                       decoration: BoxDecoration(
-                        color: primaryColor,
-                        borderRadius: BorderRadius.circular(6.r),
+                        color: widget.isExpanded
+                            ? widget.primaryColor
+                            : widget.secondaryColor,
+                        borderRadius: BorderRadius.circular(8.r),
                       ),
-                      child: Icon(
-                        Icons.keyboard_arrow_up_rounded,
-                        color: Colors.white,
-                        size: 16.sp,
+                      child: Center(
+                        child: widget.tab.iconUrl.isNotEmpty
+                            ? _netImg(
+                          url: widget.tab.iconUrl,
+                          width: 18.sp,
+                          height: 18.sp,
+                          fit: BoxFit.contain,
+                          colorFilter: ColorFilter.mode(
+                            widget.isExpanded
+                                ? Colors.white
+                                : widget.primaryColor,
+                            BlendMode.srcIn,
+                          ),
+                        )
+                            : Icon(
+                          Icons.image_outlined,
+                          size: 16.sp,
+                          color: widget.isExpanded
+                              ? Colors.white
+                              : AppColors.textButton,
+                        ),
                       ),
                     ),
-                ],
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: Text(
+                        widget.tab.label,
+                        style: StyleText.fontSize16Weight600.copyWith(
+                          fontSize: 12.sp,
+                          color: widget.primaryColor,
+                        ),
+                      ),
+                    ),
+                    if (widget.isExpanded)
+                      Container(
+                        width: 26.w,
+                        height: 26.w,
+                        decoration: BoxDecoration(
+                          color: widget.primaryColor,
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Icon(
+                          Icons.keyboard_arrow_up_rounded,
+                          color: Colors.white,
+                          size: 16.sp,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
-          if (isExpanded)
+          if (widget.isExpanded)
             Padding(
               padding: EdgeInsets.fromLTRB(12.w, 0, 12.w, 10.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (tab.tabIndex != 2 && tab.svgUrl.isNotEmpty) ...[
+                  if (widget.tab.tabIndex != 2 &&
+                      widget.tab.svgUrl.isNotEmpty) ...[
                     Center(
                       child: _netImg(
-                        url: tab.svgUrl,
+                        url: widget.tab.svgUrl,
                         width:
-                            MediaQuery.of(context).size.width -
+                        MediaQuery.of(context).size.width -
                             16.w * 2 -
                             12.w * 2,
                         height: 150.h,
@@ -2470,20 +2919,20 @@ class _MobileAccordionItem extends StatelessWidget {
                     ),
                     SizedBox(height: 10.h),
                   ],
-                  if (tab.tabIndex != 2)
+                  if (widget.tab.tabIndex != 2)
                     Text(
-                      tab.fullText,
+                      widget.tab.fullText,
                       style: StyleText.fontSize13Weight400.copyWith(
                         fontSize: 10.sp,
                         height: 1.7,
                       ),
                     ),
-                  if (tab.tabIndex == 2)
+                  if (widget.tab.tabIndex == 2)
                     _ValuesGridMobile(
                       values: gridValues,
-                      isRtl: isRtl,
-                      primaryColor: primaryColor,
-                      secondaryColor: secondaryColor,
+                      isRtl: widget.isRtl,
+                      primaryColor: widget.primaryColor,
+                      secondaryColor: widget.secondaryColor,
                     ),
                 ],
               ),
@@ -2495,7 +2944,7 @@ class _MobileAccordionItem extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// VALUES GRID — MOBILE
+// VALUES GRID — MOBILE (with hover) ✅
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _ValuesGridMobile extends StatefulWidget {
@@ -2531,7 +2980,7 @@ class _ValuesGridMobileState extends State<_ValuesGridMobile> {
         ),
       );
     final double innerW =
-            MediaQuery.of(context).size.width - 16.w * 2 - 12.w * 2,
+        MediaQuery.of(context).size.width - 16.w * 2 - 12.w * 2,
         gap = 7.w,
         cardW = (innerW - gap) / 2;
     final int idx = _selectedIndex.clamp(0, widget.values.length - 1);
@@ -2545,49 +2994,17 @@ class _ValuesGridMobileState extends State<_ValuesGridMobile> {
           children: List.generate(widget.values.length, (i) {
             final v = widget.values[i];
             final sel = i == idx;
-            return GestureDetector(
+            return _ValueGridCard(
+              title: _ab(v.title, widget.isRtl),
+              iconUrl: v.iconUrl,
+              isSelected: sel,
+              primaryColor: widget.primaryColor,
+              width: cardW,
+              iconSize: 16.sp,
+              fontSize: 10.sp,
+              padding: 9.r,
+              rowLayout: true,
               onTap: () => setState(() => _selectedIndex = i),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: cardW,
-                padding: EdgeInsets.all(9.r),
-                decoration: BoxDecoration(
-                  color: sel ? widget.primaryColor : _kSurface,
-                  borderRadius: BorderRadius.circular(9.r),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    if (v.iconUrl.isNotEmpty)
-                      _netImg(
-                        url: v.iconUrl,
-                        width: 16.sp,
-                        height: 16.sp,
-                        fit: BoxFit.contain,
-                        colorFilter: ColorFilter.mode(
-                          sel ? Colors.white : widget.primaryColor,
-                          BlendMode.srcIn,
-                        ),
-                      )
-                    else
-                      Icon(
-                        Icons.star_outline,
-                        size: 16.sp,
-                        color: sel ? Colors.white : widget.primaryColor,
-                      ),
-                    SizedBox(width: 6.w),
-                    Expanded(
-                      child: Text(
-                        _ab(v.title, widget.isRtl),
-                        style: StyleText.fontSize22Weight700.copyWith(
-                          fontSize: 10.sp,
-                          color: sel ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             );
           }),
         ),

@@ -8,6 +8,7 @@ import 'package:website_app/theme/new_theme.dart';
 class CustomDropdownFormFieldInvMaster extends StatefulWidget {
   final String? selectedValue;
   final double? widthIcon;
+  final Color? primaryColor; // ← add this
   final Color? dropdownColor;
   final double? heightIcon;
   final List<Map<String, String>> items;
@@ -32,6 +33,7 @@ class CustomDropdownFormFieldInvMaster extends StatefulWidget {
     required this.widthIcon,
     required this.heightIcon,
     this.validator,
+    this.primaryColor, // ← add this
     this.width,
     this.height,
     this.spaceHeight,
@@ -205,10 +207,9 @@ class _CustomDropdownFormFieldInvMasterState
                   menuItemStyleData: MenuItemStyleData(
                     height: fieldHeight.h,
                     padding: EdgeInsets.symmetric(horizontal: 8.w),
-                    overlayColor:
-                    MaterialStateProperty.resolveWith<Color?>((states) {
+                    overlayColor: MaterialStateProperty.resolveWith<Color?>((states) {
                       if (states.contains(MaterialState.hovered)) {
-                        return AppColors.primary.withOpacity(0.1);
+                        return (widget.primaryColor ?? AppColors.primary).withOpacity(0.1); // ← fix
                       }
                       return null;
                     }),

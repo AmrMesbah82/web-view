@@ -39,6 +39,8 @@ import 'package:website_app/repo/repo.dart';
 
 import '../pages/about_page.dart';
 import '../pages/home_page.dart';
+import '../repo/application/application_repo_imp.dart';
+import '../repo/job_list/job_listing_repo_imp.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SLIDE + ANGLE + FADE PAGE TRANSITION
@@ -425,7 +427,10 @@ class AppRouter {
         pageBuilder: (context, state) => animatedPage(
           key:            state.pageKey,
           child: BlocProvider(
-            create: (_) => CareersCmsCubit()..load(),
+            create: (_) => CareersCmsCubit(
+              jobRepo: JobListingRepoImp(),
+              appRepo: ApplicationRepoImp(),
+            )..load(),
             child: const CareersMainPageMaster(),
           ),
           slideDirection: SlideDirection.fromBottom,
@@ -438,7 +443,15 @@ class AppRouter {
         pageBuilder: (context, state) => animatedPage(
           key:   state.pageKey,
           child: BlocProvider(
-            create: (_) => CareersCmsCubit()..load(),
+
+
+
+
+
+            create: (_) => CareersCmsCubit(
+                jobRepo: JobListingRepoImp(),
+                appRepo: ApplicationRepoImp(),
+            )..load(),
             child: const CareersEditPage(),
           ),
           slideDirection: SlideDirection.fromBottom,
@@ -451,7 +464,10 @@ class AppRouter {
         pageBuilder: (context, state) => animatedPage(
           key:   state.pageKey,
           child: BlocProvider(
-            create: (_) => CareersCmsCubit()..load(),
+            create: (_) => CareersCmsCubit(
+              jobRepo: JobListingRepoImp(),
+              appRepo: ApplicationRepoImp(),
+            )..load(),
             child: const CareersPreviewPage(),
           ),
           slideDirection: SlideDirection.fromBottom,

@@ -1,7 +1,13 @@
 // ═══════════════════════════════════════════════════════════════════
 // FILE: job_apply_page.dart (Public Website — Apply Form)
 // Path: lib/pages/job_apply_page.dart
-// FIXED: Centered 1000.w layout — title + card aligned like all Bayanatz pages
+// UPDATED: Full AR/EN bilingual support with RTL layout
+// UPDATED: Phone field now matches contact page implementation with country dropdown + number field
+// UPDATED: Cover letter field now validates as proper URL/link format
+// UPDATED: Resume upload now accepts PDF files only with validation
+// UPDATED: Send button shows CircularProgressIndicator only (no full-screen overlay)
+// UPDATED: Required documents are now DYNAMIC — read from admin's requiredDocuments array
+//          PDF type → file upload box | Link type → URL text field
 // ═══════════════════════════════════════════════════════════════════
 
 import 'dart:typed_data';
@@ -54,28 +60,70 @@ Color _parseBg(HomeCmsState state) {
   return AppColors.background;
 }
 
+// ── Bilingual helper (top-level, no context needed) ──────────────────────────
+String _t(String en, String ar, bool isRtl) => isRtl ? ar : en;
+
 const List<Map<String, String>> _kCountryCodes = [
-  {'key': '+234', 'value': '🇳🇬  +234'},
-  {'key': '+20', 'value': '🇪🇬  +20'},
-  {'key': '+966', 'value': '🇸🇦  +966'},
-  {'key': '+1', 'value': '🇺🇸  +1'},
-  {'key': '+44', 'value': '🇬🇧  +44'},
-  {'key': '+971', 'value': '🇦🇪  +971'},
-  {'key': '+965', 'value': '🇰🇼  +965'},
-  {'key': '+974', 'value': '🇶🇦  +974'},
-  {'key': '+973', 'value': '🇧🇭  +973'},
-  {'key': '+968', 'value': '🇴🇲  +968'},
-  {'key': '+962', 'value': '🇯🇴  +962'},
-  {'key': '+961', 'value': '🇱🇧  +961'},
-  {'key': '+964', 'value': '🇮🇶  +964'},
-  {'key': '+212', 'value': '🇲🇦  +212'},
-  {'key': '+216', 'value': '🇹🇳  +216'},
-  {'key': '+213', 'value': '🇩🇿  +213'},
-  {'key': '+218', 'value': '🇱🇾  +218'},
-  {'key': '+249', 'value': '🇸🇩  +249'},
-  {'key': '+91', 'value': '🇮🇳  +91'},
-  {'key': '+92', 'value': '🇵🇰  +92'},
+  {'key': '+20', 'value': '🇪🇬 +20'},
+  {'key': '+234', 'value': '🇳🇬 +234'},
+  {'key': '+212', 'value': '🇲🇦 +212'},
+  {'key': '+213', 'value': '🇩🇿 +213'},
+  {'key': '+216', 'value': '🇹🇳 +216'},
+  {'key': '+249', 'value': '🇸🇩 +249'},
+  {'key': '+251', 'value': '🇪🇹 +251'},
+  {'key': '+254', 'value': '🇰🇪 +254'},
+  {'key': '+27', 'value': '🇿🇦 +27'},
+  {'key': '+966', 'value': '🇸🇦 +966'},
+  {'key': '+971', 'value': '🇦🇪 +971'},
+  {'key': '+965', 'value': '🇰🇼 +965'},
+  {'key': '+974', 'value': '🇶🇦 +974'},
+  {'key': '+973', 'value': '🇧🇭 +973'},
+  {'key': '+968', 'value': '🇴🇲 +968'},
+  {'key': '+962', 'value': '🇯🇴 +962'},
+  {'key': '+961', 'value': '🇱🇧 +961'},
+  {'key': '+963', 'value': '🇸🇾 +963'},
+  {'key': '+964', 'value': '🇮🇶 +964'},
+  {'key': '+967', 'value': '🇾🇪 +967'},
+  {'key': '+970', 'value': '🇵🇸 +970'},
+  {'key': '+90', 'value': '🇹🇷 +90'},
+  {'key': '+98', 'value': '🇮🇷 +98'},
+  {'key': '+44', 'value': '🇬🇧 +44'},
+  {'key': '+33', 'value': '🇫🇷 +33'},
+  {'key': '+49', 'value': '🇩🇪 +49'},
+  {'key': '+1', 'value': '🇺🇸 +1'},
+  {'key': '+91', 'value': '🇮🇳 +91'},
+  {'key': '+86', 'value': '🇨🇳 +86'},
+  {'key': '+81', 'value': '🇯🇵 +81'},
+  {'key': '+61', 'value': '🇦🇺 +61'},
+  {'key': '+64', 'value': '🇳🇿 +64'},
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  DYNAMIC DOCUMENT STATE — tracks each required document's upload / link
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _DocFieldState {
+  final String name;     // e.g. "Resume", "Cover Letter", "Portfolio"
+  final String docType;  // "PDF" or "Link"
+
+  // ── For PDF type ──
+  String? fileName;
+  Uint8List? fileBytes;
+  String? uploadedUrl;
+  String? error;
+
+  // ── For Link type ──
+  final TextEditingController linkController;
+
+  _DocFieldState({
+    required this.name,
+    required this.docType,
+  }) : linkController = TextEditingController();
+
+  void dispose() {
+    linkController.dispose();
+  }
+}
 
 class JobApplyPage extends StatefulWidget {
   final String jobId;
@@ -96,12 +144,11 @@ class _JobApplyPageState extends State<JobApplyPage> {
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _yearCtrl = TextEditingController();
-  final _coverLinkCtrl = TextEditingController();
 
-  String _countryCode = '+234';
-  String? _resumeFileName;
-  Uint8List? _resumeBytes;
-  String? _resumeUrl;
+  String _countryCode = '+20';
+
+  // ── Dynamic document fields — built from admin requiredDocuments ──
+  List<_DocFieldState> _docFields = [];
 
   @override
   void initState() {
@@ -116,9 +163,11 @@ class _JobApplyPageState extends State<JobApplyPage> {
           .doc(widget.jobId)
           .get(const GetOptions(source: Source.server));
       if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
         setState(() {
-          _job = doc.data()!;
+          _job = data;
           _loadingJob = false;
+          _buildDocFields(data);
         });
       } else {
         setState(() => _loadingJob = false);
@@ -128,125 +177,285 @@ class _JobApplyPageState extends State<JobApplyPage> {
     }
   }
 
+  /// Reads the requiredDocuments array from the job doc and creates
+  /// a _DocFieldState for each one.
+  /// Fallback: if requiredDocuments is empty or missing, default to
+  /// Resume (PDF) + Cover Letter (Link) for backward compatibility.
+  void _buildDocFields(Map<String, dynamic> jobData) {
+    final rawDocs = jobData['requiredDocuments'] as List<dynamic>? ?? [];
+
+    if (rawDocs.isEmpty) {
+      // ── Fallback — legacy jobs without requiredDocuments ──
+      _docFields = [
+        _DocFieldState(name: 'Resume', docType: 'PDF'),
+        _DocFieldState(name: 'Cover Letter', docType: 'Link'),
+      ];
+      print('🟡 [ApplyPage] No requiredDocuments found — using defaults');
+      return;
+    }
+
+    _docFields = rawDocs.map((d) {
+      final map = d as Map<String, dynamic>;
+      final name = map['name'] as String? ?? 'Document';
+      final type = map['docType'] as String? ?? 'PDF';
+      return _DocFieldState(name: name, docType: type);
+    }).toList();
+
+    print('🟢 [ApplyPage] Built ${_docFields.length} doc fields from admin config');
+  }
+
   String _biText(Map<String, dynamic>? map, bool isRtl) {
     if (map == null) return '';
     return isRtl ? (map['ar'] ?? '') : (map['en'] ?? '');
   }
 
   String _str(String key) => _job?[key] as String? ?? '';
+
   String _fmtDate(String? iso) {
     if (iso == null || iso.isEmpty) return '—';
     final dt = DateTime.tryParse(iso);
     if (dt == null) return iso;
     const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     return '${dt.day} ${m[dt.month - 1]} ${dt.year}';
   }
 
-  Future<void> _pickResume() async {
+  // ── PDF-only file picker for a specific doc field ──────────────────────────
+  Future<void> _pickFile(int index) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx'],
+      allowedExtensions: ['pdf'],
       withData: true,
     );
+
     if (result != null && result.files.isNotEmpty) {
+      final file = result.files.first;
+      final ext = file.name.split('.').last.toLowerCase();
+
+      if (ext != 'pdf') {
+        setState(() {
+          _docFields[index].error = 'pdf_only';
+          _docFields[index].fileName = null;
+          _docFields[index].fileBytes = null;
+        });
+        return;
+      }
+
       setState(() {
-        _resumeFileName = result.files.first.name;
-        _resumeBytes = result.files.first.bytes;
+        _docFields[index].fileName = file.name;
+        _docFields[index].fileBytes = file.bytes;
+        _docFields[index].error = null;
       });
     }
   }
 
-  Future<String?> _uploadResume() async {
-    if (_resumeBytes == null || _resumeFileName == null) return null;
+  /// Remove a picked file from a doc field
+  void _removeFile(int index) {
+    setState(() {
+      _docFields[index].fileName = null;
+      _docFields[index].fileBytes = null;
+      _docFields[index].uploadedUrl = null;
+      _docFields[index].error = null;
+    });
+  }
+
+  /// Upload a single PDF doc field to Firebase Storage
+  Future<String?> _uploadDocFile(_DocFieldState doc) async {
+    if (doc.fileBytes == null || doc.fileName == null) return null;
     try {
+      final safeName = doc.name.replaceAll(' ', '_').toLowerCase();
       final ref = FirebaseStorage.instance.ref(
-        'applications/${widget.jobId}/${DateTime.now().millisecondsSinceEpoch}_$_resumeFileName',
+        'applications/${widget.jobId}/${DateTime.now().millisecondsSinceEpoch}_${safeName}_${doc.fileName}',
       );
       final task = await ref.putData(
-        _resumeBytes!,
+        doc.fileBytes!,
         SettableMetadata(contentType: 'application/pdf'),
       );
       return await task.ref.getDownloadURL();
     } catch (e) {
-      print('🔴 Resume upload error: $e');
+      print('🔴 [ApplyPage] Upload error for ${doc.name}: $e');
       return null;
     }
   }
 
-  Future<void> _submit() async {
+  // ── URL Validation Helper ──────────────────────────────────────────────────
+  bool _isValidUrl(String url) {
+    if (url.isEmpty) return true;
+
+    String testUrl = url.trim();
+    if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) {
+      testUrl = 'https://$testUrl';
+    }
+
+    final uri = Uri.tryParse(testUrl);
+    if (uri == null) return false;
+
+    return uri.hasScheme && uri.hasAuthority && uri.host.contains('.');
+  }
+
+  Future<void> _submit(bool isRtl) async {
     setState(() => _formSubmitted = true);
-    if (_firstNameCtrl.text.trim().isEmpty || _emailCtrl.text.trim().isEmpty) {
+
+    // ── Validate required personal fields ──
+    if (_firstNameCtrl.text.trim().isEmpty ||
+        _emailCtrl.text.trim().isEmpty ||
+        _phoneCtrl.text.trim().isEmpty ||
+        _yearCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill required fields')),
+        SnackBar(
+          content: Text(
+            _t('Please fill required fields', 'يرجى ملء الحقول المطلوبة', isRtl),
+          ),
+        ),
       );
       return;
     }
-    setState(() => _submitting = true);
-    if (_resumeBytes != null) {
-      _resumeUrl = await _uploadResume();
+
+    // ── Validate all Link-type doc fields for valid URL ──
+    for (final doc in _docFields) {
+      if (doc.docType == 'Link') {
+        final link = doc.linkController.text.trim();
+        if (link.isNotEmpty && !_isValidUrl(link)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _t(
+                  'Please enter a valid URL for ${doc.name} (e.g., https://example.com/document)',
+                  'يرجى إدخال رابط صالح لـ ${doc.name} (مثال: https://example.com/document)',
+                  isRtl,
+                ),
+              ),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+          return;
+        }
+      }
     }
-    final isRtl = context.read<LanguageCubit>().state.isArabic;
+
+    // ── Check for PDF upload errors ──
+    for (final doc in _docFields) {
+      if (doc.docType == 'PDF' && doc.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _t(
+                'Please upload a valid PDF file for ${doc.name}.',
+                'يرجى رفع ملف PDF صالح لـ ${doc.name}.',
+                isRtl,
+              ),
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    setState(() => _submitting = true);
+
+    // ── Upload all PDF doc fields ──
+    for (final doc in _docFields) {
+      if (doc.docType == 'PDF' && doc.fileBytes != null) {
+        doc.uploadedUrl = await _uploadDocFile(doc);
+      }
+    }
+
     final jobTitle = _biText(_job?['title'] as Map<String, dynamic>?, isRtl);
+
+    // ── Build resumeUrl + coverLetterUrl for backward-compatible fields ──
+    // Also build a dynamic documents array for full flexibility
+    String resumeUrl = '';
+    String resumeName = '';
+    String coverLetterUrl = '';
+    String coverLetterName = '';
+
+    final List<Map<String, String>> documentsArray = [];
+
+    for (final doc in _docFields) {
+      final docName = doc.name;
+      String url = '';
+      String fileName = '';
+
+      if (doc.docType == 'PDF') {
+        url = doc.uploadedUrl ?? '';
+        fileName = doc.fileName ?? '';
+      } else {
+        url = doc.linkController.text.trim();
+        fileName = url.isNotEmpty ? 'Link' : '';
+      }
+
+      documentsArray.add({
+        'name': docName,
+        'docType': doc.docType,
+        'url': url,
+        'fileName': fileName,
+      });
+
+      // ── Backward compat: map known names to legacy fields ──
+      final lowerName = docName.toLowerCase();
+      if (lowerName == 'resume' || lowerName == 'cv') {
+        resumeUrl = url;
+        resumeName = fileName;
+      } else if (lowerName == 'cover letter' || lowerName == 'cover_letter') {
+        coverLetterUrl = url;
+        coverLetterName = fileName;
+      }
+    }
+
     try {
       await FirebaseFirestore.instance
           .collection('jobListings')
           .doc(widget.jobId)
           .collection('applications')
           .add({
-            'jobId': widget.jobId,
-            'jobTitle': jobTitle,
-            'department': _str('department'),
-            'firstName': _firstNameCtrl.text.trim(),
-            'lastName': _lastNameCtrl.text.trim(),
-            'email': _emailCtrl.text.trim(),
-            'countryCode': _countryCode,
-            'phone': _phoneCtrl.text.trim(),
-            'yearOfGraduation': _yearCtrl.text.trim(),
-            'resumeUrl': _resumeUrl ?? '',
-            'resumeName': _resumeFileName ?? '',
-            'coverLetterUrl': _coverLinkCtrl.text.trim(),
-            'coverLetterName': _coverLinkCtrl.text.trim().isNotEmpty
-                ? 'Link'
-                : '',
-            'status': 'Applied',
-            'tag': '',
-            'technicalSkills': 0,
-            'communicationSkills': 0,
-            'experienceBackground': 0,
-            'cultureFit': 0,
-            'leadershipPotential': 0,
-            'comments': '',
-            'applicationDate': DateTime.now().toIso8601String(),
-            'workType': _str('workType'),
-            'employmentType': _str('employmentType'),
-            'experienceLevel': _str('experienceLevel'),
-            'salaryRange':
-                '${(_job?['salaryMin'] as num?)?.toInt() ?? 0} - ${(_job?['salaryMax'] as num?)?.toInt() ?? 0}',
-            'currency': _str('salaryCurrency'),
-            'jobLocation': '',
-            'employmentDuration':
-                '${_str('employmentDurationText')} ${_str('employmentDurationType')}',
-            'requiredQualification': _biText(
-              _job?['requiredQualification'] as Map<String, dynamic>?,
-              isRtl,
-            ),
-            'requiredSkills': (_job?['requiredSkills'] as List<dynamic>? ?? [])
-                .map((s) => _biText(s['name'] as Map<String, dynamic>?, isRtl))
-                .join(', '),
-          });
+        'jobId': widget.jobId,
+        'jobTitle': jobTitle,
+        'department': _str('department'),
+        'firstName': _firstNameCtrl.text.trim(),
+        'lastName': _lastNameCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
+        'countryCode': _countryCode,
+        'phone': _phoneCtrl.text.trim(),
+        'yearOfGraduation': _yearCtrl.text.trim(),
+        // ── Legacy fields (backward compat) ──
+        'resumeUrl': resumeUrl,
+        'resumeName': resumeName,
+        'coverLetterUrl': coverLetterUrl,
+        'coverLetterName': coverLetterName,
+        // ── NEW: full dynamic documents array ──
+        'documents': documentsArray,
+        'status': 'Applied',
+        'tag': '',
+        'technicalSkills': 0,
+        'communicationSkills': 0,
+        'experienceBackground': 0,
+        'cultureFit': 0,
+        'leadershipPotential': 0,
+        'comments': '',
+        'applicationDate': DateTime.now().toIso8601String(),
+        'workType': _str('workType'),
+        'employmentType': _str('employmentType'),
+        'experienceLevel': _str('experienceLevel'),
+        'salaryRange':
+        '${(_job?['salaryMin'] as num?)?.toInt() ?? 0} - ${(_job?['salaryMax'] as num?)?.toInt() ?? 0}',
+        'currency': _str('salaryCurrency'),
+        'jobLocation': '',
+        'employmentDuration':
+        '${_str('employmentDurationText')} ${_str('employmentDurationType')}',
+        'requiredQualification': _biText(
+          _job?['requiredQualification'] as Map<String, dynamic>?,
+          isRtl,
+        ),
+        'requiredSkills':
+        (_job?['requiredSkills'] as List<dynamic>? ?? [])
+            .map(
+              (s) =>
+              _biText(s['name'] as Map<String, dynamic>?, isRtl),
+        )
+            .join(', '),
+      });
       await FirebaseFirestore.instance
           .collection('jobListings')
           .doc(widget.jobId)
@@ -257,9 +466,13 @@ class _JobApplyPageState extends State<JobApplyPage> {
       });
     } catch (e) {
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to submit: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _t('Failed to submit: $e', 'فشل في الإرسال: $e', isRtl),
+          ),
+        ),
+      );
     }
   }
 
@@ -270,12 +483,14 @@ class _JobApplyPageState extends State<JobApplyPage> {
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _yearCtrl.dispose();
-    _coverLinkCtrl.dispose();
+    for (final doc in _docFields) {
+      doc.dispose();
+    }
     super.dispose();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  BUILD — everything inside Center > SizedBox(width: 1000.w)
+  //  BUILD
   // ═══════════════════════════════════════════════════════════════════════════
 
   @override
@@ -289,7 +504,13 @@ class _JobApplyPageState extends State<JobApplyPage> {
         if (_loadingJob)
           return Scaffold(
             backgroundColor: const Color(0xFFF1F2ED),
-            body: Center(child: CircularProgressIndicator(color: primary)),
+            body: Column(
+              children: [
+                AppNavbar(currentRoute: '/careers'),
+                Expanded(child: Center(child: CircularProgressIndicator(color: primary))),
+                const AppFooter(),
+              ],
+            ),
           );
         if (_submitted) return _buildSuccessScreen(primary, isRtl);
 
@@ -299,75 +520,79 @@ class _JobApplyPageState extends State<JobApplyPage> {
           textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
           child: Scaffold(
             backgroundColor: const Color(0xFFF1F2ED),
-            body: Stack(
+            body: Column(
               children: [
-                SingleChildScrollView(
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      children: [
-                        AppNavbar(currentRoute: '/careers'),
-                        SizedBox(height: 40.h),
-
-                        // ═══ ALL CONTENT CENTERED IN 1000.w ═══
-                        Center(
-                          child: SizedBox(
-                            width: 1000.w,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // ── Title ──
-                                Text(
-                                  'Applying For Job',
-                                  style: TextStyle(
-                                    fontFamily: 'Cairo',
-                                    fontSize: 36.sp,
-                                    fontWeight: FontWeight.w700,
-                                    color: primary,
+                AppNavbar(currentRoute: '/careers'),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Column(
+                        children: [
+                          SizedBox(height: 40.h),
+                          Center(
+                            child: SizedBox(
+                              width: 1000.w,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _t('Applying For Job', 'التقديم على وظيفة', isRtl),
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 36.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: primary,
+                                    ),
                                   ),
-                                ),
-                                SizedBox(height: 24.h),
-
-                                // ── Main card (job summary + form + send) ──
-                                Container(
-                                  width: double.infinity,
-                                  padding: EdgeInsets.all(28.sp),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.card,
-                                    borderRadius: BorderRadius.circular(8.r),
+                                  SizedBox(height: 24.h),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: EdgeInsets.all(28.sp),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.card,
+                                      borderRadius: BorderRadius.circular(8.r),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildJobSummary(title, primary, bgColor, isRtl),
+                                        SizedBox(height: 28.h),
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: Color(0xFFF1F2ED),
+                                            borderRadius: BorderRadius.circular(8.r),
+                                          ),
+                                          child: Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 15.w,
+                                              vertical: 15.h,
+                                            ),
+                                            child: Column(
+                                              children: [
+                                                _buildPersonalInfo(primary, isRtl),
+                                                SizedBox(height: 28.h),
+                                                _buildProfileInfo(primary, isRtl),
+                                                SizedBox(height: 24.h),
+                                                _buildSendButton(primary, isRtl),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      _buildJobSummary(title, primary, bgColor),
-                                      SizedBox(height: 28.h),
-                                      _buildPersonalInfo(primary),
-                                      SizedBox(height: 28.h),
-                                      _buildProfileInfo(primary),
-                                      SizedBox(height: 24.h),
-                                      _buildSendButton(primary),
-                                    ],
-                                  ),
-                                ),
-                                SizedBox(height: 64.h),
-                              ],
+                                  SizedBox(height: 64.h),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-
-                        const AppFooter(),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-                if (_submitting)
-                  Container(
-                    color: Colors.black26,
-                    child: Center(
-                      child: CircularProgressIndicator(color: primary),
-                    ),
-                  ),
+                const AppFooter(),
               ],
             ),
           ),
@@ -385,76 +610,91 @@ class _JobApplyPageState extends State<JobApplyPage> {
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: const Color(0xFFF1F2ED),
-        body: SingleChildScrollView(
-          child: SizedBox(
-            width: double.infinity,
-            child: Column(
-              children: [
-                AppNavbar(currentRoute: '/careers'),
-                SizedBox(height: 80.h),
-                Center(
-                  child: SizedBox(
-                    width: 1000.w,
-                    child: Container(
-                      padding: EdgeInsets.all(40.sp),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: Column(
-                        children: [
-                          SvgPicture.asset(
-                            'assets/images/success_send.svg',
-                            height: 140.h,
-                            fit: BoxFit.contain,
-                          ),
-                          SizedBox(height: 24.h),
-                          Text(
-                            "YOU'VE OFFICIALLY APPLIED — AND WE'RE EXCITED TO LEARN MORE ABOUT YOU!",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black87,
+        body: Column(
+          children: [
+            AppNavbar(currentRoute: '/careers'),
+            Expanded(
+              child: SingleChildScrollView(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    children: [
+                      SizedBox(height: 80.h),
+                      Center(
+                        child: SizedBox(
+                          width: 1000.w,
+                          child: Container(
+                            padding: EdgeInsets.all(40.sp),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16.r),
+                            ),
+                            child: Column(
+                              children: [
+                                SvgPicture.asset(
+                                  'assets/images/success_send.svg',
+                                  height: 140.h,
+                                  fit: BoxFit.contain,
+                                ),
+                                SizedBox(height: 24.h),
+                                Text(
+                                  _t(
+                                    "YOU'VE OFFICIALLY APPLIED — AND WE'RE EXCITED TO LEARN MORE ABOUT YOU!",
+                                    'لقد تقدّمت رسمياً — ونحن متحمسون للتعرف عليك أكثر!',
+                                    isRtl,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 18.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                SizedBox(height: 16.h),
+                                Text(
+                                  _t(
+                                    'Your application has been successfully received. Our team will review your submission and contact you if your qualifications match our current opportunities. Thank you for considering Bayanatz as the next step in your career.',
+                                    'تم استلام طلبك بنجاح. سيقوم فريقنا بمراجعة طلبك والتواصل معك إذا كانت مؤهلاتك تتناسب مع الفرص المتاحة لدينا. شكراً لاختيارك بيانات محطةً لمسيرتك المهنية.',
+                                    isRtl,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 13.sp,
+                                    height: 1.6,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          SizedBox(height: 16.h),
-                          Text(
-                            'Your application has been successfully received. Our team will review your submission and contact you if your qualifications match our current opportunities. Thank you for considering Bayanatz as the next step in your career.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 13.sp,
-                              height: 1.6,
-                              color: Colors.black54,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                      SizedBox(height: 64.h),
+                    ],
                   ),
                 ),
-                SizedBox(height: 64.h),
-                const AppFooter(),
-              ],
+              ),
             ),
-          ),
+            const AppFooter(),
+          ],
         ),
       ),
     );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  JOB SUMMARY (inside the main card)
+  //  JOB SUMMARY
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildJobSummary(String title, Color primary, Color bgColor) {
+  Widget _buildJobSummary(
+      String title, Color primary, Color bgColor, bool isRtl) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          title.isEmpty ? 'Untitled' : title,
+          title.isEmpty ? _t('Untitled', 'بدون عنوان', isRtl) : title,
           style: TextStyle(
             fontFamily: 'Cairo',
             fontSize: 16.sp,
@@ -466,36 +706,42 @@ class _JobApplyPageState extends State<JobApplyPage> {
         Divider(color: _kDivider, thickness: 1),
         SizedBox(height: 12.h),
         _summaryRow(
-          'Hire Date:',
+          _t('Hire Date:', 'تاريخ التعيين:', isRtl),
           _fmtDate(_str('hiringStartDate')),
-          'Hire End Date:',
+          _t('Hire End Date:', 'تاريخ انتهاء التعيين:', isRtl),
           _fmtDate(_str('hiringEndDate')),
           primary,
         ),
         SizedBox(height: 6.h),
-        _summaryRow('Work Type:', _str('workType'), '', '', primary),
+        _summaryRow(
+          _t('Work Type:', 'نوع العمل:', isRtl),
+          _str('workType'),
+          '',
+          '',
+          primary,
+        ),
         SizedBox(height: 6.h),
         _summaryRow(
-          'Employment Type:',
+          _t('Employment Type:', 'نوع التوظيف:', isRtl),
           _str('employmentType'),
-          'Employment Type:',
+          _t('Employment Duration:', 'مدة التوظيف:', isRtl),
           '${_str('employmentDurationText')} ${_str('employmentDurationType')}',
           primary,
         ),
         SizedBox(height: 6.h),
         _summaryRow(
-          'Experience Level:',
+          _t('Experience Level:', 'مستوى الخبرة:', isRtl),
           _str('experienceLevel'),
-          'Compensation Range:',
+          _t('Compensation Range:', 'نطاق الراتب:', isRtl),
           '${(_job?['salaryMin'] as num?)?.toInt() ?? 0} - ${(_job?['salaryMax'] as num?)?.toInt() ?? 0}',
           primary,
         ),
         SizedBox(height: 6.h),
         _summaryText(
-          'Required Qualification:',
+          _t('Required Qualification:', 'المؤهل المطلوب:', isRtl),
           _biText(
             _job?['requiredQualification'] as Map<String, dynamic>?,
-            false,
+            isRtl,
           ),
           primary,
         ),
@@ -504,11 +750,11 @@ class _JobApplyPageState extends State<JobApplyPage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              'Skills:',
+              _t('Skills:', 'المهارات:', isRtl),
               style: TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 13.sp,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
                 color: _kLabel,
               ),
             ),
@@ -520,25 +766,25 @@ class _JobApplyPageState extends State<JobApplyPage> {
                 children: ((_job?['requiredSkills'] as List<dynamic>?) ?? [])
                     .map(
                       (s) => Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12.w,
-                          vertical: 4.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: bgColor,
-                          borderRadius: BorderRadius.circular(6.r),
-                          border: Border.all(color: _kDivider),
-                        ),
-                        child: Text(
-                          _biText(s['name'] as Map<String, dynamic>?, false),
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 12.sp,
-                            color: _kLabel,
-                          ),
-                        ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 4.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(6.r),
+                      border: Border.all(color: _kDivider),
+                    ),
+                    child: Text(
+                      _biText(s['name'] as Map<String, dynamic>?, isRtl),
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 12.sp,
+                        color: _kLabel,
                       ),
-                    )
+                    ),
+                  ),
+                )
                     .toList(),
               ),
             ),
@@ -552,12 +798,12 @@ class _JobApplyPageState extends State<JobApplyPage> {
   //  PERSONAL INFORMATION
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildPersonalInfo(Color primary) {
+  Widget _buildPersonalInfo(Color primary, bool isRtl) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Personal Information',
+          _t('Personal Information', 'المعلومات الشخصية', isRtl),
           style: TextStyle(
             fontFamily: 'Cairo',
             fontSize: 16.sp,
@@ -571,10 +817,11 @@ class _JobApplyPageState extends State<JobApplyPage> {
           children: [
             Expanded(
               child: CustomValidatedTextFieldMaster(
-                label: 'First Name',
-                hint: 'Text Here',
+                label: _t('First Name', 'الاسم الأول', isRtl),
+                hint: _t('Text Here', 'اكتب هنا', isRtl),
                 controller: _firstNameCtrl,
                 height: 36,
+                fillColor: Colors.white,
                 submitted: _formSubmitted,
                 primaryColor: primary,
               ),
@@ -582,10 +829,11 @@ class _JobApplyPageState extends State<JobApplyPage> {
             SizedBox(width: 24.w),
             Expanded(
               child: CustomValidatedTextFieldMaster(
-                label: 'Last Name',
-                hint: 'Text Here',
+                label: _t('Last Name', 'اسم العائلة', isRtl),
+                hint: _t('Text Here', 'اكتب هنا', isRtl),
                 controller: _lastNameCtrl,
                 height: 36,
+                fillColor: Colors.white,
                 submitted: _formSubmitted,
                 primaryColor: primary,
               ),
@@ -597,63 +845,27 @@ class _JobApplyPageState extends State<JobApplyPage> {
           children: [
             Expanded(
               child: CustomValidatedTextFieldMaster(
-                label: 'Email',
-                hint: 'Text Here',
+                label: _t('Email', 'البريد الإلكتروني', isRtl),
+                hint: _t('Text Here', 'اكتب هنا', isRtl),
                 controller: _emailCtrl,
                 height: 36,
+                fillColor: Colors.white,
                 submitted: _formSubmitted,
                 primaryColor: primary,
               ),
             ),
             SizedBox(width: 24.w),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Phone',
-                    style: StyleText.fontSize14Weight400.copyWith(
-                      color: AppColors.text,
-                    ),
-                  ),
-                  SizedBox(height: 6.h),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 110.w,
-                        child: CustomDropdownFormFieldInvMaster(
-                          selectedValue: _countryCode,
-                          items: _kCountryCodes,
-                          widthIcon: 16,
-                          heightIcon: 16,
-                          height: 36,
-                          dropdownColor: AppColors.background,
-                          hint: Text(
-                            '🇳🇬  +234',
-                            style: StyleText.fontSize12Weight400.copyWith(
-                              color: _kHint,
-                            ),
-                          ),
-                          onChanged: (v) {
-                            if (v != null) setState(() => _countryCode = v);
-                          },
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Expanded(
-                        child: CustomValidatedTextFieldMaster(
-                          hint: 'Text Here',
-                          controller: _phoneCtrl,
-                          height: 36,
-                          onlyDigits: true,
-                          submitted: false,
-                          primaryColor: primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              child: _PhoneField(
+                label: _t('Phone Number', 'رقم الهاتف', isRtl),
+                controller: _phoneCtrl,
+                submitted: _formSubmitted,
+                selectedCode: _countryCode,
+                onCodeChanged: (v) {
+                  if (v != null) setState(() => _countryCode = v);
+                },
+                isRtl: isRtl,
+                primaryColor: primary,
               ),
             ),
           ],
@@ -663,11 +875,13 @@ class _JobApplyPageState extends State<JobApplyPage> {
           children: [
             Expanded(
               child: CustomValidatedTextFieldMaster(
-                label: 'Year Of Graduation',
-                hint: 'Text Here',
+                label: _t('Year Of Graduation', 'سنة التخرج', isRtl),
+                hint: _t('Text Here', 'اكتب هنا', isRtl),
                 controller: _yearCtrl,
                 height: 36,
-                submitted: false,
+                fillColor: Colors.white,
+                onlyDigits: true,
+                submitted: _formSubmitted,
                 primaryColor: primary,
               ),
             ),
@@ -680,15 +894,15 @@ class _JobApplyPageState extends State<JobApplyPage> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  PROFILE INFORMATION
+  //  PROFILE INFORMATION — DYNAMIC DOCUMENTS FROM ADMIN
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildProfileInfo(Color primary) {
+  Widget _buildProfileInfo(Color primary, bool isRtl) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Profile Information',
+          _t('Profile Information', 'معلومات الملف الشخصي', isRtl),
           style: TextStyle(
             fontFamily: 'Cairo',
             fontSize: 16.sp,
@@ -697,8 +911,31 @@ class _JobApplyPageState extends State<JobApplyPage> {
           ),
         ),
         SizedBox(height: 16.h),
+
+        // ── Dynamically render each required document ──
+        ...List.generate(_docFields.length, (i) {
+          final doc = _docFields[i];
+          if (doc.docType == 'PDF') {
+            return _buildPdfUploadField(i, doc, primary, isRtl);
+          } else {
+            return _buildLinkField(i, doc, primary, isRtl);
+          }
+        }),
+      ],
+    );
+  }
+
+  /// Builds a PDF upload box for a given document requirement
+  Widget _buildPdfUploadField(
+      int index, _DocFieldState doc, Color primary, bool isRtl) {
+    final bool hasError = doc.error != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Label ──
         Text(
-          'Resume*',
+          doc.name,
           style: TextStyle(
             fontFamily: 'Cairo',
             fontSize: 13.sp,
@@ -707,106 +944,151 @@ class _JobApplyPageState extends State<JobApplyPage> {
           ),
         ),
         SizedBox(height: 8.h),
-        GestureDetector(
-          onTap: _pickResume,
-          child: Container(
-            width: double.infinity,
-            height: 130.h,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9F9F9),
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: _resumeFileName != null
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle, color: primary, size: 28.sp),
-                        SizedBox(height: 6.h),
-                        Text(
-                          _resumeFileName!,
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 12.sp,
-                            color: _kLabel,
-                          ),
-                        ),
-                        SizedBox(height: 4.h),
-                        GestureDetector(
-                          onTap: _pickResume,
-                          child: Text(
-                            'Change File',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 11.sp,
-                              color: primary,
-                              decoration: TextDecoration.underline,
-                              decorationColor: primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+        // ── Upload box ──
+        Stack(
+          children: [
+            GestureDetector(
+              onTap: doc.fileName != null ? null : () => _pickFile(index),
+              child: Container(
+                width: double.infinity,
+                height: 130.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(
+                    color: hasError ? Colors.red : Colors.transparent,
+                    width: 1.5,
+                  ),
+                ),
+                child: doc.fileName != null
+                    ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      CustomSvg(
-                        assetPath: "assets/images/upload.svg",
-                        width: 40.w,
-                        height: 40.h,
-                        fit: BoxFit.fill,
-                      ),
+                      Icon(Icons.picture_as_pdf,
+                          color: primary, size: 28.sp),
                       SizedBox(height: 6.h),
                       Text(
-                        'Drag & Drop files here',
+                        doc.fileName!,
                         style: TextStyle(
                           fontFamily: 'Cairo',
                           fontSize: 12.sp,
-                          color: Colors.black54,
-                        ),
-                      ),
-                      Text(
-                        'Or',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 11.sp,
-                          color: Colors.black38,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 20.w,
-                          vertical: 6.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: primary,
-                          borderRadius: BorderRadius.circular(6.r),
-                        ),
-                        child: Text(
-                          'Browse Files',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                          color: _kLabel,
                         ),
                       ),
                     ],
                   ),
+                )
+                    : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CustomSvg(
+                      assetPath: "assets/images/upload-image.svg",
+                      width: 40.w,
+                      height: 40.h,
+                      fit: BoxFit.fill,
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      _t(
+                        'Drag & Drop your PDF here',
+                        'اسحب وأفلت ملف PDF هنا',
+                        isRtl,
+                      ),
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 12.sp,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: primary,
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        _t('Browse Files', 'استعراض الملفات', isRtl),
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // ── Red remove button ──
+            if (doc.fileName != null)
+              Positioned(
+                top: 8.h,
+                right: 8.w,
+                child: GestureDetector(
+                  onTap: () => _removeFile(index),
+                  child: Container(
+                    width: 20.sp,
+                    height: 20.sp,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.remove,
+                      color: Colors.white,
+                      size: 14.sp,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        // ── PDF error message ──
+        if (hasError) ...[
+          SizedBox(height: 4.h),
+          Text(
+            _t(
+              'Invalid file type. Please upload a PDF file only.',
+              'نوع الملف غير صالح. يرجى رفع ملف PDF فقط.',
+              isRtl,
+            ),
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11.sp,
+              color: Colors.red,
+            ),
           ),
+        ],
+        SizedBox(height: 16.h),
+      ],
+    );
+  }
+
+  /// Builds a URL text field for a given document requirement (Link type)
+  Widget _buildLinkField(
+      int index, _DocFieldState doc, Color primary, bool isRtl) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _UrlValidatedTextField(
+          label: doc.name,
+          hint: _t(
+            'https://example.com/${doc.name.toLowerCase().replaceAll(' ', '-')}',
+            'https://example.com/${doc.name.toLowerCase().replaceAll(' ', '-')}',
+            isRtl,
+          ),
+          controller: doc.linkController,
+          submitted: _formSubmitted,
+          primaryColor: primary,
+          isRtl: isRtl,
         ),
         SizedBox(height: 16.h),
-        CustomValidatedTextFieldMaster(
-          label: 'Cover Letter*',
-          hint: 'Insert Link',
-          controller: _coverLinkCtrl,
-          height: 36,
-          submitted: false,
-          primaryColor: primary,
-        ),
       ],
     );
   }
@@ -815,9 +1097,9 @@ class _JobApplyPageState extends State<JobApplyPage> {
   //  SEND BUTTON
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildSendButton(Color primary) {
+  Widget _buildSendButton(Color primary, bool isRtl) {
     return GestureDetector(
-      onTap: _submitting ? null : _submit,
+      onTap: _submitting ? null : () => _submit(isRtl),
       child: Container(
         width: double.infinity,
         height: 48.h,
@@ -828,23 +1110,23 @@ class _JobApplyPageState extends State<JobApplyPage> {
         child: Center(
           child: _submitting
               ? SizedBox(
-                  width: 20.sp,
-                  height: 20.sp,
-                  child: const CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
+            width: 20.sp,
+            height: 20.sp,
+            child: const CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          )
               : Text(
-                  'SEND',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 1,
-                  ),
-                ),
+            _t('SEND', 'إرسال', isRtl),
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: isRtl ? 0 : 1,
+            ),
+          ),
         ),
       ),
     );
@@ -855,12 +1137,12 @@ class _JobApplyPageState extends State<JobApplyPage> {
   // ═══════════════════════════════════════════════════════════════════════════
 
   Widget _summaryRow(
-    String l1,
-    String v1,
-    String l2,
-    String v2,
-    Color primary,
-  ) {
+      String l1,
+      String v1,
+      String l2,
+      String v2,
+      Color primary,
+      ) {
     return Row(
       children: [
         if (l1.isNotEmpty) Expanded(child: _summaryText(l1, v1, primary)),
@@ -896,6 +1178,222 @@ class _JobApplyPageState extends State<JobApplyPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PHONE FIELD WIDGET — MATCHES CONTACT PAGE IMPLEMENTATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _PhoneField extends StatelessWidget {
+  final TextEditingController controller;
+  final bool submitted, isRtl;
+  final String selectedCode, label;
+  final ValueChanged<String?> onCodeChanged;
+  final Color primaryColor;
+
+  const _PhoneField({
+    required this.controller,
+    required this.submitted,
+    required this.selectedCode,
+    required this.onCodeChanged,
+    required this.isRtl,
+    required this.label,
+    required this.primaryColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget dropdown = CustomDropdownFormFieldInvMaster(
+      selectedValue: selectedCode,
+      items: _kCountryCodes,
+      primaryColor: primaryColor,
+      onChanged: onCodeChanged,
+      dropdownColor: Colors.white,
+      widthIcon: 16,
+      heightIcon: 16,
+      width: 110.w,
+      height: 36,
+      borderRadius: 4,
+      hint: Text(
+        isRtl ? 'الرمز' : 'Code',
+        style: StyleText.fontSize12Weight400
+            .copyWith(color: AppColors.secondaryBlack),
+      ),
+    );
+
+    final Widget input = Expanded(
+      child: CustomValidatedTextFieldMaster(
+        hint: _t('Text Here', 'اكتب هنا', isRtl),
+        controller: controller,
+        submitted: submitted,
+        primaryColor: primaryColor,
+        height: 36,
+        fillColor: Colors.white,
+        onlyDigits: true,
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.start,
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: StyleText.fontSize14Weight400.copyWith(
+            color: AppColors.text,
+          ),
+        ),
+        SizedBox(height: 6.h),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          textDirection: TextDirection.ltr,
+          children: [
+            dropdown,
+            SizedBox(width: 8.w),
+            input,
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  URL VALIDATED TEXT FIELD — FOR LINK-TYPE DOCUMENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _UrlValidatedTextField extends StatefulWidget {
+  final String label, hint;
+  final TextEditingController controller;
+  final bool submitted, isRtl;
+  final Color primaryColor;
+
+  const _UrlValidatedTextField({
+    required this.label,
+    required this.hint,
+    required this.controller,
+    required this.submitted,
+    required this.isRtl,
+    required this.primaryColor,
+  });
+
+  @override
+  State<_UrlValidatedTextField> createState() => _UrlValidatedTextFieldState();
+}
+
+class _UrlValidatedTextFieldState extends State<_UrlValidatedTextField> {
+  bool _hasError = false;
+
+  bool _isValidUrl(String url) {
+    if (url.isEmpty) return true;
+
+    String testUrl = url.trim();
+    if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) {
+      testUrl = 'https://$testUrl';
+    }
+
+    final uri = Uri.tryParse(testUrl);
+    if (uri == null) return false;
+
+    return uri.hasScheme && uri.hasAuthority && uri.host.contains('.');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTextChanged);
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    final text = widget.controller.text.trim();
+    if (text.isEmpty) {
+      setState(() => _hasError = false);
+      return;
+    }
+
+    final isValid = _isValidUrl(text);
+    if (_hasError != !isValid) {
+      setState(() => _hasError = !isValid);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final showError = _hasError && widget.controller.text.trim().isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.label,
+          style: StyleText.fontSize14Weight400.copyWith(
+            color: AppColors.text,
+          ),
+        ),
+        SizedBox(height: 6.h),
+        Container(
+          height: 36.h,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(4.r),
+            border: Border.all(
+              color: showError ? Colors.red : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: TextField(
+            controller: widget.controller,
+            style: StyleText.fontSize12Weight400.copyWith(
+              color: AppColors.text,
+            ),
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.start,
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              hintStyle: StyleText.fontSize12Weight400.copyWith(
+                color: AppColors.secondaryBlack,
+              ),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12.w,
+                vertical: 14.h,
+              ),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(4.r),
+                borderSide: BorderSide(
+                  color: showError ? Colors.red : widget.primaryColor,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (showError) ...[
+          SizedBox(height: 4.h),
+          Text(
+            _t(
+              'Please enter a valid URL (e.g., https://example.com)',
+              'يرجى إدخال رابط صالح (مثال: https://example.com)',
+              widget.isRtl,
+            ),
+            style: StyleText.fontSize12Weight400.copyWith(
+              color: Colors.red,
+              fontSize: 11.sp,
+            ),
+          ),
+        ],
+        SizedBox(height: 2.h),
+      ],
     );
   }
 }

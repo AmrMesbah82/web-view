@@ -11,6 +11,7 @@ import 'package:website_app/controller/contact_us/contacu_us_location_cubit.dart
 import 'package:website_app/controller/contact_us/contatc_us_cubit.dart';
 import 'package:website_app/controller/home_cubit.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'package:website_app/pages/dashboard/inquire/inquiry_main_page.dart';
 import 'package:website_app/repo/Services/repo_imp.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:website_app/repo/application/application_repo_imp.dart';
@@ -22,6 +23,9 @@ import 'package:website_app/repo/job_list/job_listing_repo_imp.dart';
 import 'controller/about_company/AboutCompanyCubit.dart';
 import 'controller/application/application_cubit.dart';
 import 'controller/blog/blog_cubit.dart';
+import 'controller/career/careers_section_cubit.dart';
+import 'controller/career/intern_cubit.dart';
+import 'controller/career/our_teams_cubit.dart';
 import 'controller/department/department_cubit.dart';
 import 'controller/inquire/inquiry_cubit.dart';
 import 'controller/job_list/job_listing_cubit.dart';
@@ -155,10 +159,16 @@ class BayanatzApp extends StatelessWidget {
               create: (_) => ContactUsCmsCubit()..load(),
             ),
             BlocProvider<CareersCmsCubit>(
-              create: (_) => CareersCmsCubit()..load(),
+              create: (_) => CareersCmsCubit(
+                jobRepo: JobListingRepoImp(),
+                appRepo: ApplicationRepoImp(), // your application repo implementation
+              )..loadRealData(), // ← was ..load()
             ),
 
-
+            BlocProvider(
+              create: (_) => InquiryCubit(repo: InquiryRepoImp()),
+              child: InquiryMainPage(),
+            ),
 
             BlocProvider<JobListingCubit>(
               create: (_) => JobListingCubit(repo: JobListingRepoImp())..loadJobs(),
@@ -182,6 +192,21 @@ class BayanatzApp extends StatelessWidget {
             ),
             BlocProvider<InquiryCubit>(
               create: (_) => InquiryCubit(repo: InquiryRepoImp()),
+            ),
+
+
+            BlocProvider<CareersSectionCubit>(
+              create: (_) => CareersSectionCubit(
+                sectionKey: 'whyJoinOurTeam', // default section
+              )..load(),
+            ),
+
+            // ── ADD THESE TWO ──────────────────────────────────────
+            BlocProvider<InternCubit>(
+              create: (_) => InternCubit(),
+            ),
+            BlocProvider<OurTeamsCubit>(
+              create: (_) => OurTeamsCubit(),
             ),
 
           ],

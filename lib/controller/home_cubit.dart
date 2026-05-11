@@ -12,6 +12,8 @@
 // FIXED: updateSocialLink() now accepts visibility param ✅
 // ADDED: _applyFontsToStorage() — writes selected fonts to GetStorage so
 //        AppTextStyles picks them up immediately after load/save ✅
+// ADDED: updateScheduledPublishDate() — sets scheduledPublishDate on model
+// FIXED: save() now handles 'scheduled' publishStatus with scheduledPublishDate
 
 import 'dart:math';
 import 'dart:typed_data';
@@ -53,11 +55,9 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
   }
 
   // ── Merge defaults ────────────────────────────────────────────────────────
-  // FIXED: preserves Firestore order — only appends truly missing routes at end
   HomePageModel _mergeDefaults(HomePageModel loaded) {
     final defaults = HomePageModel.defaultModel.navButtons;
 
-    // STEP 1: Deduplicate by id — keep first occurrence only
     final seen = <String>{};
     final deduped = loaded.navButtons.where((b) {
       if (seen.contains(b.id)) {
@@ -68,8 +68,6 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
       return true;
     }).toList();
 
-    // STEP 2: Append only routes that are completely missing from Firestore
-    // ✅ Do NOT rebuild from defaults order — keep loaded order as-is
     final existingRoutes = deduped.map((b) => b.route).toSet();
     final missing = defaults
         .where((d) => !existingRoutes.contains(d.route))
@@ -82,7 +80,6 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
       }
     }
 
-    // ✅ Preserve Firestore order — missing items appended at end only
     final merged = [...deduped, ...missing];
 
     print('✅ [HomeCubit] _mergeDefaults() — result: ${merged.length} items');
@@ -109,6 +106,8 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
       print('   navButtons.length      = ${fetched.navButtons.length}');
       print('   sections.length        = ${fetched.sections.length}');
       print('   branding.logoUrl       = ${fetched.branding.logoUrl}');
+      print('   publishStatus          = ${fetched.publishStatus}');
+      print('   scheduledPublishDate   = ${fetched.scheduledPublishDate}');
 
       final result = _mergeDefaults(fetched);
       print('   navButtons after merge = ${result.navButtons.length}');
@@ -138,8 +137,12 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
-  Future<void> save({String publishStatus = 'published'}) async {
-    print('🔵 [HomeCubit] save() called — publishStatus=$publishStatus');
+  Future<void> save({
+    String publishStatus = 'published',
+    DateTime? scheduledPublishDate,
+  }) async {
+    print('🔵 [HomeCubit] save() called — publishStatus=$publishStatus '
+        'scheduledPublishDate=$scheduledPublishDate');
     print('   _model.navButtons.length = ${_model.navButtons.length}');
     for (var i = 0; i < _model.navButtons.length; i++) {
       print('   BEFORE SAVE navButtons[$i] → '
@@ -157,9 +160,30 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
     emit(HomeCmsSaving(_model));
 
     try {
-      final saving = _model.copyWith(publishStatus: publishStatus);
+      // ✅ Build the model to save with correct publishStatus + scheduledPublishDate
+      HomePageModel saving;
+      if (publishStatus == 'scheduled' && scheduledPublishDate != null) {
+        saving = _model.copyWith(
+          publishStatus: 'scheduled',
+          scheduledPublishDate: scheduledPublishDate,
+        );
+      } else if (publishStatus == 'draft') {
+        // ✅ Draft — clear any previously scheduled date
+        saving = _model.copyWith(
+          publishStatus: 'draft',
+          clearScheduledPublishDate: true,
+        );
+      } else {
+        // ✅ Published — clear scheduled date (it's live now)
+        saving = _model.copyWith(
+          publishStatus: 'published',
+          clearScheduledPublishDate: true,
+        );
+      }
 
       print('🔵 [HomeCubit] save() → calling _repo.saveHomePage()...');
+      print('   saving.publishStatus        = ${saving.publishStatus}');
+      print('   saving.scheduledPublishDate  = ${saving.scheduledPublishDate}');
       await _repo.saveHomePage(saving);
       print('🟢 [HomeCubit] save() → saveHomePage() DONE');
 
@@ -169,6 +193,8 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
 
       final persisted = _mergeDefaults(fetched);
       print('   persisted.navButtons.length = ${persisted.navButtons.length}');
+      print('   persisted.publishStatus     = ${persisted.publishStatus}');
+      print('   persisted.scheduledPublishDate = ${persisted.scheduledPublishDate}');
       for (var i = 0; i < persisted.navButtons.length; i++) {
         print('   AFTER SAVE navButtons[$i] → '
             'id=${persisted.navButtons[i].id} '
@@ -191,6 +217,18 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
       print('🔴 [HomeCubit] save() ERROR: $e');
       print('   StackTrace: $st');
       emit(HomeCmsError('Failed to save: $e', _model));
+    }
+  }
+
+  // ── Scheduled Publish Date ────────────────────────────────────────────────
+
+  /// ✅ NEW: update scheduled publish date on the in-memory model
+  void updateScheduledPublishDate(DateTime? date) {
+    print('🔵 [HomeCubit] updateScheduledPublishDate() date=$date');
+    if (date == null) {
+      _model = _model.copyWith(clearScheduledPublishDate: true);
+    } else {
+      _model = _model.copyWith(scheduledPublishDate: date);
     }
   }
 
@@ -222,14 +260,13 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
     );
   }
 
-  /// ✅ ADDED: reorders navButtons list and emits live update so navbar rebuilds
   void reorderNavButtons(int oldIndex, int newIndex) {
     print('🔵 [HomeCubit] reorderNavButtons() $oldIndex → $newIndex');
     final list = List<NavButtonModel>.from(_model.navButtons);
     if (newIndex > oldIndex) newIndex--;
     list.insert(newIndex, list.removeAt(oldIndex));
     _model = _model.copyWith(navButtons: list);
-    emit(HomeCmsLoaded(_model)); // live navbar rebuild immediately
+    emit(HomeCmsLoaded(_model));
     print('🟢 [HomeCubit] reorderNavButtons() done — new order:');
     for (var i = 0; i < _model.navButtons.length; i++) {
       print('   [$i] en=${_model.navButtons[i].name.en} '
@@ -290,6 +327,12 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
     print('🔵 [HomeCubit] updateSectionDescription() index=$index en="$en"');
     _updateSection(
         index, (s) => s.copyWith(description: BiText(en: en, ar: ar)));
+  }
+
+  // ✅ NEW: update section visibility (show/hide on public site)
+  void updateSectionVisibility(int index, bool visibility) {
+    print('🔵 [HomeCubit] updateSectionVisibility() index=$index visibility=$visibility');
+    _updateSection(index, (s) => s.copyWith(visibility: visibility));
   }
 
   Future<void> uploadSectionImage(int index, Uint8List bytes) async {
@@ -476,7 +519,6 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
     );
   }
 
-  // ✅ FIXED: accepts visibility param and persists it to model
   void updateSocialLink(String id, {required String url, bool? visibility}) {
     print('🔵 [HomeCubit] updateSocialLink() '
         'id=$id url="$url" visibility=$visibility');
@@ -557,13 +599,13 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
     _model = _model.copyWith(
         branding: _model.branding.copyWith(englishFont: font));
   }
+
   void reorderNavButtonsSilent(int oldIndex, int newIndex) {
     print('🔵 [HomeCubit] reorderNavButtonsSilent() $oldIndex → $newIndex');
     final list = List<NavButtonModel>.from(_model.navButtons);
     if (newIndex > oldIndex) newIndex--;
     list.insert(newIndex, list.removeAt(oldIndex));
     _model = _model.copyWith(navButtons: list);
-    // ✅ No emit — prevents _seedFromModel() from firing mid-save
   }
 
   void updateArabicFont(String font) {

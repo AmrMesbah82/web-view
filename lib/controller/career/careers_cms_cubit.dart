@@ -1,18 +1,31 @@
 // ******************* FILE INFO *******************
 // File Name: careers_cms_cubit.dart
 // Created by: Amr Mesbah
+// FIXED: loadRealData() now fetches live jobs + applications from Firestore
+//        and builds the dashboard via CareersDashboardData.fromRealData()
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:website_app/controller/career/careers_cms_state.dart';
+import 'package:website_app/model/application_model.dart';
 import 'package:website_app/model/careers_cms_model.dart';
+import 'package:website_app/model/job_listing_model.dart';
+import 'package:website_app/repo/application/application_repo.dart';
 import 'package:website_app/repo/career/careers_cms_repo.dart';
 import 'package:website_app/repo/career/careers_cms_repo_impl.dart';
+import 'package:website_app/repo/job_list/job_listing_repo.dart';
 
 class CareersCmsCubit extends Cubit<CareersCmsState> {
   final CareersCmsRepo _repo;
+  final JobListingRepo _jobRepo;
+  final ApplicationRepo _appRepo;
 
-  CareersCmsCubit({CareersCmsRepo? repo})
-      : _repo = repo ?? CareersCmsRepoImpl(),
+  CareersCmsCubit({
+    CareersCmsRepo? repo,
+    required JobListingRepo jobRepo,
+    required ApplicationRepo appRepo,
+  })  : _repo = repo ?? CareersCmsRepoImpl(),
+        _jobRepo = jobRepo,
+        _appRepo = appRepo,
         super(CareersCmsInitial());
 
   // ── Convenience getter for the current model (never null) ──────────────────
@@ -25,7 +38,7 @@ class CareersCmsCubit extends Cubit<CareersCmsState> {
     return CareersCmsModel.empty();
   }
 
-  // ── Load from Firestore ────────────────────────────────────────────────────
+  // ── Load CMS content from Firestore ───────────────────────────────────────
 
   Future<void> load() async {
     print('🟡 [CareersCmsCubit] load()');
@@ -39,7 +52,43 @@ class CareersCmsCubit extends Cubit<CareersCmsState> {
     }
   }
 
-  /// Load with hardcoded demo data (no Firestore needed yet)
+  // ── Load REAL dashboard data from Firestore jobs + applications ────────────
+
+  Future<void> loadRealData() async {
+    print('🟡 [CareersCmsCubit] loadRealData()');
+    emit(CareersCmsLoading());
+    try {
+      // Fetch CMS content (overview, statistics) + real-time data in parallel
+      final results = await Future.wait([
+        _repo.fetch(),
+        _jobRepo.fetchAllJobs(),
+        _appRepo.fetchAllApplications(),
+      ]);
+
+      final cmsModel        = results[0] as CareersCmsModel;
+      final jobs            = results[1] as List<JobPostModel>;
+      final apps            = results[2] as List<ApplicationModel>;
+
+      print('🟢 [CareersCmsCubit] loadRealData() — jobs: ${jobs.length}, apps: ${apps.length}');
+
+      // Build dashboard from real Firebase data
+      final dashboard = CareersDashboardData.fromRealData(
+        jobs: jobs,
+        apps: apps,
+      );
+
+      // Merge: keep CMS overview/statistics, replace dashboard with live data
+      final merged = cmsModel.copyWith(dashboard: dashboard);
+
+      emit(CareersCmsLoaded(merged));
+    } catch (e) {
+      print('🔴 [CareersCmsCubit] loadRealData() ERROR: $e');
+      // Fallback to demo so the page still shows something
+      emit(CareersCmsLoaded(CareersCmsModel.empty()));
+    }
+  }
+
+  /// Fallback demo (no Firestore needed) — keep for offline testing
   void loadDemo() {
     print('🟡 [CareersCmsCubit] loadDemo()');
     emit(CareersCmsLoaded(CareersCmsModel.empty()));
