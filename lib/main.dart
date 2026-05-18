@@ -5,35 +5,36 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:website_app/controller/about_us/about_us_cubit.dart';
-import 'package:website_app/controller/career/careers_cms_cubit.dart';
-import 'package:website_app/controller/contact_us/contacu_us_location_cubit.dart';
-import 'package:website_app/controller/contact_us/contatc_us_cubit.dart';
-import 'package:website_app/controller/home_cubit.dart';
+import 'package:website_app/features/abou_us/domain/repo/about_company_repo.dart';
+
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-import 'package:website_app/pages/dashboard/inquire/inquiry_main_page.dart';
-import 'package:website_app/repo/Services/repo_imp.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:website_app/repo/application/application_repo_imp.dart';
-import 'package:website_app/repo/department/department_repo_imp.dart';
-import 'package:website_app/repo/home_repository_impl.dart';
-import 'package:website_app/repo/inquire/inquiry_repo_imp.dart';
-import 'package:website_app/repo/job_list/about_company_repo_imp.dart';
-import 'package:website_app/repo/job_list/job_listing_repo_imp.dart';
-import 'controller/about_company/AboutCompanyCubit.dart';
-import 'controller/application/application_cubit.dart';
-import 'controller/blog/blog_cubit.dart';
-import 'controller/career/careers_section_cubit.dart';
-import 'controller/career/intern_cubit.dart';
-import 'controller/career/our_teams_cubit.dart';
-import 'controller/department/department_cubit.dart';
-import 'controller/inquire/inquiry_cubit.dart';
-import 'controller/job_list/job_listing_cubit.dart';
-import 'controller/lang_state.dart';
-import 'controller/services/services_cubit.dart';
+import 'package:website_app/features/abou_us/presentation/controller/AboutCompanyCubit.dart';
+
+import 'core/router/app_router.dart';
+import 'core/theme/app_theme.dart';
+
+import 'features/abou_us/presentation/controller/about_us_cubit.dart';
+import 'features/careers/presentation/controller/careers_cms_cubit.dart';
+import 'features/careers/presentation/controller/careers_section_cubit.dart';
+import 'features/careers/presentation/controller/intern_cubit.dart';
+import 'features/careers/presentation/controller/our_teams_cubit.dart';
+import 'features/contact_us/presentation/controller/contacu_us_location_cubit.dart';
+import 'features/contact_us/presentation/controller/contatc_us_cubit.dart';
+import 'features/departments/data/repo_imp/department_repo_imp.dart';
+import 'features/departments/presentation/controller/department_cubit.dart';
+import 'features/home/data/repo_imp/home_repository_impl.dart';
+import 'features/home/presentation/controller/home_cubit.dart';
+import 'features/home/presentation/controller/lang_state.dart';
+import 'features/job/data/repo_imp/application_repo_imp.dart';
+import 'features/job/data/repo_imp/job_listing_repo_imp.dart';
+import 'features/job/presentation/controller/application_cubit.dart';
+import 'features/job/presentation/controller/job_listing_cubit.dart';
+import 'features/services/data/repo_imp/repo_imp.dart';
+import 'features/services/presentation/controller/blog_cubit.dart';
+import 'features/services/presentation/controller/services_cubit.dart';
 import 'firebase_options.dart';
-import 'router/app_router.dart';
-import 'theme/app_theme.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -165,20 +166,17 @@ class BayanatzApp extends StatelessWidget {
               )..loadRealData(), // ← was ..load()
             ),
 
-            BlocProvider(
-              create: (_) => InquiryCubit(repo: InquiryRepoImp()),
-              child: InquiryMainPage(),
-            ),
+
 
             BlocProvider<JobListingCubit>(
               create: (_) => JobListingCubit(repo: JobListingRepoImp())..loadJobs(),
             ),
 
-            BlocProvider<AboutCompanyCubit>(
-              create: (_) => AboutCompanyCubit(
-                repo: AboutCompanyRepoImp(),
-              )..loadAboutCompany(),
-            ),
+            // BlocProvider<AboutCompanyCubit>(
+            //   create: (_) => AboutCompanyCubit(
+            //     repo: AboutCompanyRepoImp(),
+            //   )..loadAboutCompany(),
+            // ),
 
             BlocProvider<DepartmentCubit>(
               create: (_) => DepartmentCubit(
@@ -190,9 +188,7 @@ class BayanatzApp extends StatelessWidget {
                 repo: ApplicationRepoImp(),
               ),
             ),
-            BlocProvider<InquiryCubit>(
-              create: (_) => InquiryCubit(repo: InquiryRepoImp()),
-            ),
+
 
 
             BlocProvider<CareersSectionCubit>(

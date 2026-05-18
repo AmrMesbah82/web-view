@@ -12,10 +12,10 @@ import 'package:get/get.dart';
 
 
 import 'package:website_app/core/widget/default_form.dart';
-import 'package:website_app/theme/appcolors.dart';
-import 'package:website_app/theme/text.dart';
 
-import '../../theme/app_theme.dart';
+import '../theme/app_theme.dart';
+import '../theme/appcolors.dart';
+import '../theme/text.dart';
 
 
 

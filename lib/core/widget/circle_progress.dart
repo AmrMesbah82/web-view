@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:website_app/theme/appcolors.dart';
+
+import '../theme/appcolors.dart';
 
 
 // date:April/30/2024
