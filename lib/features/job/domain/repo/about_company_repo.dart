@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 
-import '../model/about_us_company_model.dart';
+import '../../../abou_us/data/model/about_us_company_model.dart';
 
 abstract class AboutCompanyRepo {
   Future<AboutCompanyModel?> fetchAboutCompany();

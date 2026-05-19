@@ -5,11 +5,11 @@
 import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:website_app/features/abou_us/data/model/about_us.dart';
+import 'package:website_app/features/abou_us/data/model/about_us_model.dart';
 
 
 import '../../data/repo_imp/about_repo_imp.dart';
-import '../../domain/repo/about_repo.dart';
+import '../../domain/repo/about_us_repo.dart';
 import 'about_us_state.dart';
 
 // ── Safe emit — never throws "Cannot emit after close" ────────────────────────
@@ -210,7 +210,7 @@ class TermsCubit extends Cubit<TermsState> {
   Future<void> save({
     required TermsOfServiceModel model,
     Map<String, Uint8List>?      imageUploads,
-    Map<String, DocUpload>?      docUploads,  // PUBLIC type from about_us.dart
+    Map<String, DocUpload>?      docUploads,  // PUBLIC type from about_us_model.dart
   }) async {
     print('🟡 [TermsCubit] save()');
     try {
@@ -276,4 +276,4 @@ class TermsCubit extends Cubit<TermsState> {
   }
 }
 
-// NOTE: DocUpload class lives in model/about_us.dart — do NOT redeclare it here.
+// NOTE: DocUpload class lives in model/about_us_model.dart — do NOT redeclare it here.

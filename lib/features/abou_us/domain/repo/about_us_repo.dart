@@ -1,10 +1,10 @@
 // ******************* FILE INFO *******************
-// File Name: about_repo.dart
+// File Name: about_us_repo.dart
 // Created by: Amr Mesbah
 
 import 'dart:typed_data';
 
-import '../../data/model/about_us.dart';
+import '../../data/model/about_us_model.dart';
 
 abstract class AboutRepo {
   // About Us

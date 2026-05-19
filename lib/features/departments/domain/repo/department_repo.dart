@@ -1,11 +1,14 @@
 // ═══════════════════════════════════════════════════════════════════
-// FILE 2: about_us_company_repo.dart
+// FILE 2: department_repo.dart
+// Path: lib/repo/department/department_repo.dart
 // ═══════════════════════════════════════════════════════════════════
 
 
-import '../model/about_us_company_model.dart';
+import '../../data/model/department_model.dart';
 
-abstract class AboutCompanyRepo {
-  Future<AboutCompanyModel?> fetchAboutCompany();
-  Future<void> saveAboutCompany(AboutCompanyModel data);
+abstract class DepartmentRepo {
+  Future<List<DepartmentModel>> fetchAllDepartments();
+  Future<DepartmentModel> createDepartment(DepartmentModel dept);
+  Future<DepartmentModel> updateDepartment(DepartmentModel dept);
+  Future<void> deleteDepartment(String id);
 }
