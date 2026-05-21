@@ -43,8 +43,8 @@ import '../../../../../core/theme/new_theme.dart';
 import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
-import '../../../data/model/contact_us_model_location.dart';
-import '../../../data/model/contact_us_model.dart';
+import '../../../data/models/contact_us_model_location.dart';
+import '../../../data/models/contact_us_model.dart';
 import '../../controller/contact_us_otp_cubit.dart';
 import '../../controller/contact_us_otp_state.dart';
 import '../../controller/contacu_us_location_cubit.dart';
@@ -523,7 +523,6 @@ class _ContactPageViewState extends State<_ContactPageView> {
   }
 
   void _submitContactForm() async {
-    print('🟡 location=$_selectedLocation entityType=$_selectedEntityType entitySize=$_selectedEntitySize');
 
 
 
@@ -551,9 +550,6 @@ class _ContactPageViewState extends State<_ContactPageView> {
       message:           _messageCtrl.text.trim(),
       submissionDate:    DateTime.now(),
     );
-    print('🔴 DEBUG preferredLanguage: $_preferredLanguage');
-    print('🔴 DEBUG resolvedLanguage: $resolvedLanguage');
-    print('🔴 DEBUG isArabic: ${resolvedLanguage == 'ar'}');
     context.read<ContactCubit>().submitContact(submission);
   }
 

@@ -19,7 +19,7 @@ import '../../../../../core/theme/text.dart';
 import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
-import '../../../data/model/blog_model.dart';
+import '../../../data/models/blog_model.dart';
 import '../../controller/blog_cubit.dart';
 import '../../controller/blog_state.dart';
 

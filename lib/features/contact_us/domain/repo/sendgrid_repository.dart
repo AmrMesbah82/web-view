@@ -23,7 +23,6 @@ class SendGridRepository {
     required String entityType,
     required String entitySize,
   }) async {
-    print('📧 [SendGridRepo] sendContactNotification → lang: $preferredLanguage');
     try {
       final callable = FirebaseFunctions.instance.httpsCallable('sendContactEmail');
       final result   = await callable.call({
@@ -40,12 +39,9 @@ class SendGridRepository {
         'entityType':        entityType,
         'entitySize':        entitySize,
       });
-      print('✅ [SendGridRepo] sendContactNotification result: ${result.data}');
     } on FirebaseFunctionsException catch (e) {
-      print('❌ [SendGridRepo] sendContactNotification FunctionsException: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
-      print('❌ [SendGridRepo] sendContactNotification error: $e');
       rethrow;
     }
   }
@@ -78,12 +74,9 @@ class SendGridRepository {
         'entityType':        entityType,
         'entitySize':        entitySize,
       });
-      print('✅ [SendGridRepo] sendContactConfirmation result: ${result.data}');
     } on FirebaseFunctionsException catch (e) {
-      print('❌ [SendGridRepo] sendContactConfirmation FunctionsException: ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
-      print('❌ [SendGridRepo] sendContactConfirmation error: $e');
       rethrow;
     }
   }

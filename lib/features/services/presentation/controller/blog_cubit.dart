@@ -5,7 +5,7 @@
   import 'dart:typed_data';
   import 'package:flutter_bloc/flutter_bloc.dart';
 
-  import '../../data/model/blog_model.dart';
+  import '../../data/models/blog_model.dart';
 import '../../data/repo_imp/blog_repo_impl.dart';
 import '../../domain/repo/blog_repo.dart';
 import 'blog_state.dart';
@@ -21,7 +21,6 @@ import 'blog_state.dart';
 
     // ── Load all ──────────────────────────────────────────────────────────────
     Future<void> load() async {
-      print('🟡 [BlogCubit] load()');
       emit(BlogLoading());
       try {
         _posts = await _repo.fetchAllPosts();
@@ -36,7 +35,6 @@ import 'blog_state.dart';
       required BlogPostModel post,
       Uint8List?             imageBytes,
     }) async {
-      print('🟡 [BlogCubit] createPost()');
       emit(BlogLoading());
       try {
         BlogPostModel toSave = post;
@@ -61,7 +59,6 @@ import 'blog_state.dart';
       required BlogPostModel post,
       Uint8List?             imageBytes,
     }) async {
-      print('🟡 [BlogCubit] updatePost(${post.id})');
       emit(BlogLoading());
       try {
         BlogPostModel toSave = post;
@@ -80,7 +77,6 @@ import 'blog_state.dart';
 
     // ── Delete ────────────────────────────────────────────────────────────────
     Future<void> deletePost(String id) async {
-      print('🟡 [BlogCubit] deletePost($id)');
       emit(BlogLoading());
       try {
         await _repo.deletePost(id);

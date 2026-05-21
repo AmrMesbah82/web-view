@@ -193,7 +193,6 @@ class _JobApplyPageState extends State<JobApplyPage> {
         _DocFieldState(name: 'Resume', docType: 'PDF'),
         _DocFieldState(name: 'Cover Letter', docType: 'Link'),
       ];
-      print('🟡 [ApplyPage] No requiredDocuments found — using defaults');
       return;
     }
 
@@ -204,7 +203,6 @@ class _JobApplyPageState extends State<JobApplyPage> {
       return _DocFieldState(name: name, docType: type);
     }).toList();
 
-    print('🟢 [ApplyPage] Built ${_docFields.length} doc fields from admin config');
   }
 
   String _biText(Map<String, dynamic>? map, bool isRtl) {
@@ -278,7 +276,6 @@ class _JobApplyPageState extends State<JobApplyPage> {
       );
       return await task.ref.getDownloadURL();
     } catch (e) {
-      print('🔴 [ApplyPage] Upload error for ${doc.name}: $e');
       return null;
     }
   }

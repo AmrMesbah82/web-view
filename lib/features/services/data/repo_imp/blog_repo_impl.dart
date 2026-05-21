@@ -7,7 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../domain/repo/blog_repo.dart';
-import '../model/blog_model.dart';
+import '../models/blog_model.dart';
 
 
 class BlogRepositoryImpl implements BlogRepository {
@@ -26,16 +26,13 @@ class BlogRepositoryImpl implements BlogRepository {
   // ── Fetch all ─────────────────────────────────────────────────────────────
   @override
   Future<List<BlogPostModel>> fetchAllPosts() async {
-    print('🔵 [BlogRepo] fetchAllPosts()');
     try {
       final snap = await _col.orderBy('createdAt', descending: true).get();
       final posts = snap.docs
           .map((d) => BlogPostModel.fromMap(d.id, _sanitize(d.data())))
           .toList();
-      print('🟢 [BlogRepo] fetchAllPosts() → ${posts.length} posts');
       return posts;
     } catch (e) {
-      print('🔴 [BlogRepo] fetchAllPosts() ERROR: $e');
       return [];
     }
   }
@@ -43,13 +40,11 @@ class BlogRepositoryImpl implements BlogRepository {
   // ── Fetch single ──────────────────────────────────────────────────────────
   @override
   Future<BlogPostModel> fetchPost(String id) async {
-    print('🔵 [BlogRepo] fetchPost($id)');
     try {
       final snap = await _col.doc(id).get();
       if (!snap.exists || snap.data() == null) return BlogPostModel.empty();
       return BlogPostModel.fromMap(snap.id, _sanitize(snap.data()!));
     } catch (e) {
-      print('🔴 [BlogRepo] fetchPost() ERROR: $e');
       return BlogPostModel.empty();
     }
   }
@@ -57,16 +52,13 @@ class BlogRepositoryImpl implements BlogRepository {
   // ── Create ────────────────────────────────────────────────────────────────
   @override
   Future<String> createPost(BlogPostModel post) async {
-    print('🔵 [BlogRepo] createPost()');
     try {
       final ref = await _col.add({
         ...post.toMap(),
         'createdAt': FieldValue.serverTimestamp(),
       });
-      print('🟢 [BlogRepo] createPost() → id=${ref.id}');
       return ref.id;
     } catch (e) {
-      print('🔴 [BlogRepo] createPost() ERROR: $e');
       rethrow;
     }
   }
@@ -74,15 +66,12 @@ class BlogRepositoryImpl implements BlogRepository {
   // ── Update ────────────────────────────────────────────────────────────────
   @override
   Future<void> updatePost(BlogPostModel post) async {
-    print('🔵 [BlogRepo] updatePost(${post.id})');
     try {
       await _col.doc(post.id).set({
         ...post.toMap(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      print('🟢 [BlogRepo] updatePost() done');
     } catch (e) {
-      print('🔴 [BlogRepo] updatePost() ERROR: $e');
       rethrow;
     }
   }
@@ -90,12 +79,9 @@ class BlogRepositoryImpl implements BlogRepository {
   // ── Delete ────────────────────────────────────────────────────────────────
   @override
   Future<void> deletePost(String id) async {
-    print('🔵 [BlogRepo] deletePost($id)');
     try {
       await _col.doc(id).delete();
-      print('🟢 [BlogRepo] deletePost() done');
     } catch (e) {
-      print('🔴 [BlogRepo] deletePost() ERROR: $e');
       rethrow;
     }
   }
@@ -103,16 +89,13 @@ class BlogRepositoryImpl implements BlogRepository {
   // ── Upload image ──────────────────────────────────────────────────────────
   @override
   Future<String> uploadImage({required Uint8List bytes, required String storagePath}) async {
-    print('🔵 [BlogRepo] uploadImage() path=$storagePath');
     try {
       final ref  = _storage.ref().child(storagePath);
       final mime = _detectMime(bytes);
       final task = await ref.putData(bytes, SettableMetadata(contentType: mime));
       final url  = await task.ref.getDownloadURL();
-      print('🟢 [BlogRepo] uploadImage() → $url');
       return url;
     } catch (e) {
-      print('🔴 [BlogRepo] uploadImage() ERROR: $e');
       rethrow;
     }
   }

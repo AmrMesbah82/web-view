@@ -8,7 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/repo/contact_us_repo.dart';
 import '../../domain/repo/sendgrid_repository.dart';
-import '../model/contact_us_model.dart';
+import '../models/contact_us_model.dart';
 
 class ContactRepoImpl implements ContactRepo {
   final _col      = FirebaseFirestore.instance.collection('contact_submissions');
@@ -21,7 +21,6 @@ class ContactRepoImpl implements ContactRepo {
     // 1️⃣ Save to Firestore
     final doc = _col.doc();
     await doc.set(submission.copyWith(id: doc.id).toMap());
-    print('✅ [ContactRepo] Saved to Firestore: ${doc.id}');
 
     // 2️⃣ Send company notification email
     try {
@@ -39,9 +38,7 @@ class ContactRepoImpl implements ContactRepo {
         entityType:        submission.entityType,
         entitySize:        submission.entitySize,
       );
-      print('✅ [ContactRepo] Company notification sent');
     } catch (e) {
-      print('🔴 [ContactRepo] Company notification failed: $e');
     }
 
     // 3️⃣ Send confirmation email to submitter
@@ -59,11 +56,8 @@ class ContactRepoImpl implements ContactRepo {
         entitySize:        submission.entitySize,
       );
       // dsfasd
-      print('🔴 DEBUG sending confirmation → preferredLanguage: ${submission.preferredLanguage} | isArabic: ${submission.preferredLanguage == 'ar'}');
 
-      print('✅ [ContactRepo] Confirmation email sent to: ${submission.email}');
     } catch (e) {
-      print('🔴 [ContactRepo] Confirmation email failed: $e');
     }
   }
 

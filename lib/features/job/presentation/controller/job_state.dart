@@ -7,7 +7,7 @@
 
 
 import '../../../../core/main_widgets/job_listing_filter_dialog.dart';
-import '../../data/model/job__model.dart';
+import '../../data/models/job__model.dart';
 
 abstract class JobListingState {}
 

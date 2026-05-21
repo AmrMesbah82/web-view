@@ -4,7 +4,7 @@
 
 import 'dart:typed_data';
 
-import '../../data/model/blog_model.dart';
+import '../../data/models/blog_model.dart';
 
 abstract class BlogRepository {
   Future<List<BlogPostModel>> fetchAllPosts();

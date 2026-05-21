@@ -17,8 +17,8 @@ import 'package:get/get.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-import '../../features/job/data/model/application_model.dart';
-import '../../features/job/data/model/job__model.dart';
+import '../../features/job/data/models/application_model.dart';
+import '../../features/job/data/models/job__model.dart';
 import '../theme/new_theme.dart';
 
 
@@ -375,7 +375,6 @@ class _JobListingExportDialogState extends State<_JobListingExportDialog> {
     setState(() => _isExporting = true);
 
     try {
-      print('🟡 [ExportPDF] Generating PDF — ${widget.applications.length} rows');
 
       final pdfBytes = await _generatePdf();
 
@@ -383,18 +382,15 @@ class _JobListingExportDialogState extends State<_JobListingExportDialog> {
           ? fileName
           : '$fileName.pdf';
 
-      print('🟢 [ExportPDF] PDF generated — ${pdfBytes.length} bytes');
 
       // ── Download via browser ──
       _downloadPdfWeb(pdfBytes, finalName);
 
-      print('🟢 [ExportPDF] PDF download triggered');
 
       if (mounted && Navigator.canPop(context)) {
         Navigator.pop(context);
       }
     } catch (e) {
-      print('🔴 [ExportPDF] ERROR: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

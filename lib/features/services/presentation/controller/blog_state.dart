@@ -3,7 +3,7 @@
 // Created by: Amr Mesbah
 
 
-import '../../data/model/blog_model.dart';
+import '../../data/models/blog_model.dart';
 
 abstract class BlogState {}
 

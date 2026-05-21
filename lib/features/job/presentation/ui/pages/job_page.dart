@@ -11,7 +11,7 @@ import '../../../../../core/theme/appcolors.dart';
 import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
-import '../../../data/model/job__model.dart';
+import '../../../data/models/job__model.dart';
 import '../../controller/job_cubit.dart';
 import '../../controller/job_state.dart';
 

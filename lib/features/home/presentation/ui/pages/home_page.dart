@@ -24,14 +24,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:website_app/features/home/data/model/home_model.dart';
+import 'package:website_app/features/home/data/models/home_model.dart';
 
 import '../../../../../core/custom_svg.dart';
 import '../../../../../core/main_widgets/app_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/app_wight.dart';
 import '../../../../../core/theme/appcolors.dart';
-import '../../../../careers/data/model/careers_section_model.dart' hide BiText;
+import '../../../../careers/data/models/careers_section_model.dart' hide BiText;
 import '../../controller/home_cubit.dart';
 import '../../controller/home_state.dart';
 import '../../controller/lang_state.dart';
@@ -144,7 +144,6 @@ Future<void> _preloadSvgImages(List<String> urls) async {
               () => loader.loadBytes(null),
         );
       } catch (e) {
-        print('⚠️  Failed to preload SVG: $url\nError: $e');
       }
     }),
   );
