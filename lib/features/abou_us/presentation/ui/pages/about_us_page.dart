@@ -78,6 +78,7 @@ class AboutPage extends StatelessWidget {
         BlocProvider(create: (_) => StrategyCubit()..load()),
       ],
       child: const _AboutPageView(),
+      // done
       // test
     );
   }
