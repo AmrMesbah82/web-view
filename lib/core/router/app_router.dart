@@ -3,14 +3,14 @@ import 'package:go_router/go_router.dart';
 
 
 
-import '../../features/abou_us/presentation/ui/pages/about_us_page.dart';
+import '../../features/about_us/presentation/ui/pages/about_us_page.dart';
 import '../../features/careers/presentation/ui/pages/careers_page.dart';
 import '../../features/contact_us/presentation/ui/pages/contact_us_page.dart';
 import '../../features/home/presentation/ui/pages/home_page.dart';
 import '../../features/job/presentation/ui/pages/job_apply_page.dart';
 import '../../features/job/presentation/ui/pages/job_detail_page.dart';
 import '../../features/job/presentation/ui/pages/job_page.dart';
-import '../../features/services/presentation/ui/pages/blog_detail_Page.dart';
+import '../../features/services/presentation/ui/pages/blog_detail_page.dart';
 import '../../features/services/presentation/ui/pages/services_page.dart';
 
 

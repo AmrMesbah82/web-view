@@ -20,8 +20,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:website_app/core/custom_svg.dart';
-import 'package:website_app/core/widget/custom_dropdwon.dart';
-import 'package:website_app/core/widget/textfield.dart';
+import 'package:website_app/core/widgets/custom_dropdown.dart';
+import 'package:website_app/core/widgets/textfield.dart';
 
 import '../../../../../core/main_widgets/app_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
@@ -31,9 +31,9 @@ import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
 
-part '../widget/doc_field_state.dart';
-part '../widget/phone_field.dart';
-part '../widget/url_validated_text_field.dart';
+part '../widgets/doc_field_state.dart';
+part '../widgets/phone_field.dart';
+part '../widgets/url_validated_text_field.dart';
 
 const Color _kGreen = Color(0xFF2D8C4E);
 const Color _kDivider = Color(0xFFDDE8DD);
@@ -46,10 +46,11 @@ Color _parsePrimary(HomeCmsState state) {
     HomeCmsSaved(:final data) => data.branding.primaryColor,
     _ => '',
   };
-  try {
-    final c = hex.replaceAll('#', '');
-    if (c.length == 6) return Color(int.parse('FF$c', radix: 16));
-  } catch (_) {}
+  final cl = hex.replaceAll('#', '');
+  if (cl.length == 6) {
+    final value = int.tryParse('FF\$cl', radix: 16);
+    if (value != null) return Color(value);
+  }
   return _kGreen;
 }
 
@@ -59,10 +60,11 @@ Color _parseBg(HomeCmsState state) {
     HomeCmsSaved(:final data) => data.branding.backgroundColor,
     _ => '',
   };
-  try {
-    final c = hex.replaceAll('#', '');
-    if (c.length == 6) return Color(int.parse('FF$c', radix: 16));
-  } catch (_) {}
+  final cl = hex.replaceAll('#', '');
+  if (cl.length == 6) {
+    final value = int.tryParse('FF\$cl', radix: 16);
+    if (value != null) return Color(value);
+  }
   return AppColors.background;
 }
 
@@ -140,22 +142,20 @@ class _JobApplyPageState extends State<JobApplyPage> {
   }
 
   Future<void> _loadJob() async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('jobListings')
-          .doc(widget.jobId)
-          .get(const GetOptions(source: Source.server));
-      if (doc.exists && doc.data() != null) {
-        final data = doc.data()!;
-        setState(() {
-          _job = data;
-          _loadingJob = false;
-          _buildDocFields(data);
-        });
-      } else {
-        setState(() => _loadingJob = false);
-      }
-    } catch (_) {
+    final doc = await FirebaseFirestore.instance
+        .collection('jobListings')
+        .doc(widget.jobId)
+        .get(const GetOptions(source: Source.server))
+        .onError((_, __) { if (mounted) setState(() => _loadingJob = false); return Future.error(''); });
+    if (!mounted) return;
+    if (doc.exists && doc.data() != null) {
+      final data = doc.data()!;
+      setState(() {
+        _job = data;
+        _loadingJob = false;
+        _buildDocFields(data);
+      });
+    } else {
       setState(() => _loadingJob = false);
     }
   }
@@ -245,19 +245,16 @@ class _JobApplyPageState extends State<JobApplyPage> {
   /// Upload a single PDF doc field to Firebase Storage
   Future<String?> _uploadDocFile(_DocFieldState doc) async {
     if (doc.fileBytes == null || doc.fileName == null) return null;
-    try {
-      final safeName = doc.name.replaceAll(' ', '_').toLowerCase();
-      final ref = FirebaseStorage.instance.ref(
-        'applications/${widget.jobId}/${DateTime.now().millisecondsSinceEpoch}_${safeName}_${doc.fileName}',
-      );
-      final task = await ref.putData(
-        doc.fileBytes!,
-        SettableMetadata(contentType: 'application/pdf'),
-      );
-      return await task.ref.getDownloadURL();
-    } catch (e) {
-      return null;
-    }
+    final safeName = doc.name.replaceAll(' ', '_').toLowerCase();
+    final ref = FirebaseStorage.instance.ref(
+      'applications/${widget.jobId}/${DateTime.now().millisecondsSinceEpoch}_${safeName}_${doc.fileName}',
+    );
+    final task = await ref.putData(
+      doc.fileBytes!,
+      SettableMetadata(contentType: 'application/pdf'),
+    ).onError((_, __) => null as TaskSnapshot);
+    if (task == null) return null;
+    return await task.ref.getDownloadURL().onError((_, __) => '');
   }
 
   // ── URL Validation Helper ──────────────────────────────────────────────────
@@ -384,76 +381,78 @@ class _JobApplyPageState extends State<JobApplyPage> {
       }
     }
 
-    try {
-      await FirebaseFirestore.instance
-          .collection('jobListings')
-          .doc(widget.jobId)
-          .collection('applications')
-          .add({
-        'jobId': widget.jobId,
-        'jobTitle': jobTitle,
-        'department': _str('department'),
-        'firstName': _firstNameCtrl.text.trim(),
-        'lastName': _lastNameCtrl.text.trim(),
-        'email': _emailCtrl.text.trim(),
-        'countryCode': _countryCode,
-        'phone': _phoneCtrl.text.trim(),
-        'yearOfGraduation': _yearCtrl.text.trim(),
-        // ── Legacy fields (backward compat) ──
-        'resumeUrl': resumeUrl,
-        'resumeName': resumeName,
-        'coverLetterUrl': coverLetterUrl,
-        'coverLetterName': coverLetterName,
-        // ── NEW: full dynamic documents array ──
-        'documents': documentsArray,
-        'status': 'Applied',
-        'tag': '',
-        'technicalSkills': 0,
-        'communicationSkills': 0,
-        'experienceBackground': 0,
-        'cultureFit': 0,
-        'leadershipPotential': 0,
-        'comments': '',
-        'applicationDate': DateTime.now().toIso8601String(),
-        'workType': _str('workType'),
-        'employmentType': _str('employmentType'),
-        'experienceLevel': _str('experienceLevel'),
-        'salaryRange':
-        '${(_job?['salaryMin'] as num?)?.toInt() ?? 0} - ${(_job?['salaryMax'] as num?)?.toInt() ?? 0}',
-        'currency': _str('salaryCurrency'),
-        'jobLocation': '',
-        'employmentDuration':
-        '${_str('employmentDurationText')} ${_str('employmentDurationType')}',
-        'requiredQualification': _biText(
-          _job?['requiredQualification'] as Map<String, dynamic>?,
-          isRtl,
-        ),
-        'requiredSkills':
-        (_job?['requiredSkills'] as List<dynamic>? ?? [])
-            .map(
-              (s) =>
-              _biText(s['name'] as Map<String, dynamic>?, isRtl),
-        )
-            .join(', '),
-      });
-      await FirebaseFirestore.instance
-          .collection('jobListings')
-          .doc(widget.jobId)
-          .update({'totalApplications': FieldValue.increment(1)});
-      setState(() {
-        _submitting = false;
-        _submitted = true;
-      });
-    } catch (e) {
+    final submitFailed = await FirebaseFirestore.instance
+        .collection('jobListings')
+        .doc(widget.jobId)
+        .collection('applications')
+        .add({
+      'jobId': widget.jobId,
+      'jobTitle': jobTitle,
+      'department': _str('department'),
+      'firstName': _firstNameCtrl.text.trim(),
+      'lastName': _lastNameCtrl.text.trim(),
+      'email': _emailCtrl.text.trim(),
+      'countryCode': _countryCode,
+      'phone': _phoneCtrl.text.trim(),
+      'yearOfGraduation': _yearCtrl.text.trim(),
+      // ── Legacy fields (backward compat) ──
+      'resumeUrl': resumeUrl,
+      'resumeName': resumeName,
+      'coverLetterUrl': coverLetterUrl,
+      'coverLetterName': coverLetterName,
+      // ── NEW: full dynamic documents array ──
+      'documents': documentsArray,
+      'status': 'Applied',
+      'tag': '',
+      'technicalSkills': 0,
+      'communicationSkills': 0,
+      'experienceBackground': 0,
+      'cultureFit': 0,
+      'leadershipPotential': 0,
+      'comments': '',
+      'applicationDate': DateTime.now().toIso8601String(),
+      'workType': _str('workType'),
+      'employmentType': _str('employmentType'),
+      'experienceLevel': _str('experienceLevel'),
+      'salaryRange':
+      '${(_job?['salaryMin'] as num?)?.toInt() ?? 0} - ${(_job?['salaryMax'] as num?)?.toInt() ?? 0}',
+      'currency': _str('salaryCurrency'),
+      'jobLocation': '',
+      'employmentDuration':
+      '${_str('employmentDurationText')} ${_str('employmentDurationType')}',
+      'requiredQualification': _biText(
+        _job?['requiredQualification'] as Map<String, dynamic>?,
+        isRtl,
+      ),
+      'requiredSkills':
+      (_job?['requiredSkills'] as List<dynamic>? ?? [])
+          .map(
+            (s) =>
+            _biText(s['name'] as Map<String, dynamic>?, isRtl),
+      )
+          .join(', '),
+    }).then<Object?>((_) => null).onError((e, __) => e);
+    if (!mounted) return;
+    if (submitFailed != null) {
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _t('Failed to submit: $e', 'فشل في الإرسال: $e', isRtl),
+            _t('Failed to submit', 'فشل في الإرسال', isRtl),
           ),
         ),
       );
+      return;
     }
+    await FirebaseFirestore.instance
+        .collection('jobListings')
+        .doc(widget.jobId)
+        .update({'totalApplications': FieldValue.increment(1)});
+    if (!mounted) return;
+    setState(() {
+      _submitting = false;
+      _submitted = true;
+    });
   }
 
   @override

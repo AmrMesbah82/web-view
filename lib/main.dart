@@ -5,32 +5,32 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:website_app/features/abou_us/domain/repo/about_us_company_repo.dart';
+import 'package:website_app/features/about_us/domain/base_repository/about_us_company_repo.dart';
 
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:website_app/features/abou_us/presentation/controller/about_us_company_cubit.dart';
+import 'package:website_app/features/about_us/presentation/controller/about_us_company_cubit.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
-import 'features/abou_us/presentation/controller/about_us_cubit.dart';
+import 'features/about_us/presentation/controller/about_us_cubit.dart';
 import 'features/careers/presentation/controller/careers_cubit.dart';
 import 'features/careers/presentation/controller/careers_section_cubit.dart';
 import 'features/careers/presentation/controller/intern_cubit.dart';
 import 'features/careers/presentation/controller/our_teams_cubit.dart';
-import 'features/contact_us/presentation/controller/contacu_us_location_cubit.dart';
-import 'features/contact_us/presentation/controller/contatc_us_cubit.dart';
-import 'features/departments/data/repo_imp/department_repo_imp.dart';
+import 'features/contact_us/presentation/controller/contact_us_location_cubit.dart';
+import 'features/contact_us/presentation/controller/contact_us_cubit.dart';
+import 'features/departments/data/repository/department_repository_impl.dart';
 import 'features/departments/presentation/controller/department_cubit.dart';
-import 'features/home/data/repo_imp/home_repo_impl.dart';
+import 'features/home/data/repository/home_repo_impl.dart';
 import 'features/home/presentation/controller/home_cubit.dart';
 import 'features/home/presentation/controller/lang_state.dart';
-import 'features/job/data/repo_imp/application_repo_imp.dart';
-import 'features/job/data/repo_imp/job_repo_imp.dart';
+import 'features/job/data/repository/application_repository_impl.dart';
+import 'features/job/data/repository/job_repository_impl.dart';
 import 'features/job/presentation/controller/application_cubit.dart';
 import 'features/job/presentation/controller/job_cubit.dart';
-import 'features/services/data/repo_imp/services_repo_imp.dart';
+import 'features/services/data/repository/services_repository_impl.dart';
 import 'features/services/presentation/controller/blog_cubit.dart';
 import 'features/services/presentation/controller/services_cubit.dart';
 import 'firebase_options.dart';
@@ -151,15 +151,15 @@ class BayanatzApp extends StatelessWidget {
             ),
             BlocProvider<CareersCmsCubit>(
               create: (_) => CareersCmsCubit(
-                jobRepo: JobListingRepoImp(),
-                appRepo: ApplicationRepoImp(), // your application repo implementation
+                jobRepo: JobListingRepoImpl(),
+                appRepo: ApplicationRepoImpl(), // your application repo implementation
               )..loadRealData(), // ← was ..load()
             ),
 
 
 
             BlocProvider<JobListingCubit>(
-              create: (_) => JobListingCubit(repo: JobListingRepoImp())..loadJobs(),
+              create: (_) => JobListingCubit(repo: JobListingRepoImpl())..loadJobs(),
             ),
 
             // BlocProvider<AboutCompanyCubit>(
@@ -170,12 +170,12 @@ class BayanatzApp extends StatelessWidget {
 
             BlocProvider<DepartmentCubit>(
               create: (_) => DepartmentCubit(
-                repo: DepartmentRepoImp(),
+                repo: DepartmentRepoImpl(),
               )..loadDepartments(),
             ),
             BlocProvider<ApplicationCubit>(
               create: (_) => ApplicationCubit(
-                repo: ApplicationRepoImp(),
+                repo: ApplicationRepoImpl(),
               ),
             ),
 

@@ -39,15 +39,15 @@ import '../../controller/lang_state.dart';
 
 
 
-part '../widget/home_reveal_animation.dart';
-part '../widget/home_svg_pulse_loader.dart';
-part '../widget/home_coming_soon_page.dart';
-part '../widget/home_body.dart';
-part '../widget/home_hero_section.dart';
-part '../widget/home_cms_nav_btn.dart';
-part '../widget/home_hero_cards.dart';
-part '../widget/home_cms_footer.dart';
-part '../widget/home_shared_widgets.dart';
+part '../widgets/home_reveal_animation.dart';
+part '../widgets/home_svg_pulse_loader.dart';
+part '../widgets/home_coming_soon_page.dart';
+part '../widgets/home_body.dart';
+part '../widgets/home_hero_section.dart';
+part '../widgets/home_cms_nav_btn.dart';
+part '../widgets/home_hero_cards.dart';
+part '../widgets/home_cms_footer.dart';
+part '../widgets/home_shared_widgets.dart';
 
 // ── Breakpoints ───────────────────────────────────────────────────────────────
 class _BP {
@@ -59,10 +59,11 @@ const Color _kDefaultPrimary    = Color(0xFF2D8C4E);
 const Color _kDefaultBackground = Color(0xFFF5F5F5);
 
 Color _hexColor(String hex, {required Color fallback}) {
-  try {
-    final h = hex.replaceAll('#', '');
-    if (h.length == 6) return Color(int.parse('FF$h', radix: 16));
-  } catch (_) {}
+  final h = hex.replaceAll('#', '');
+  if (h.length == 6) {
+    final value = int.tryParse('FF\$h', radix: 16);
+    if (value != null) return Color(value);
+  }
   return fallback;
 }
 
@@ -148,14 +149,11 @@ Future<void> _preloadSvgImages(List<String> urls) async {
 
   await Future.wait(
     validUrls.map((url) async {
-      try {
-        final loader = SvgNetworkLoader(url);
-        await svg.cache.putIfAbsent(
-          loader.cacheKey(null),
-              () => loader.loadBytes(null),
-        );
-      } catch (e) {
-      }
+      final loader = SvgNetworkLoader(url);
+      await svg.cache.putIfAbsent(
+        loader.cacheKey(null),
+            () => loader.loadBytes(null),
+      ).catchError((_) => null);
     }),
   );
 }

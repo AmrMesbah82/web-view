@@ -18,7 +18,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../features/job/data/models/application_model.dart';
-import '../../features/job/data/models/job__model.dart';
+import '../../features/job/data/models/job_model.dart';
 import '../theme/new_theme.dart';
 
 
@@ -84,23 +84,19 @@ class _JobListingExportDialogState extends State<_JobListingExportDialog> {
 
   // ── Load font that supports Unicode ───────────────────────────────────────
   Future<pw.Font> _loadFont() async {
-    try {
-      // Try loading Roboto from assets (most Flutter projects include it)
-      final fontData = await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
-      return pw.Font.ttf(fontData);
-    } catch (_) {
-      // Fallback: use Helvetica (works for English-only content)
-      return pw.Font.helvetica();
-    }
+    final fontData = await rootBundle
+        .load('assets/fonts/Roboto-Regular.ttf')
+        .onError((_, __) => null as ByteData);
+    if (fontData != null) return pw.Font.ttf(fontData);
+    return pw.Font.helvetica();
   }
 
   Future<pw.Font> _loadFontBold() async {
-    try {
-      final fontData = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
-      return pw.Font.ttf(fontData);
-    } catch (_) {
-      return pw.Font.helveticaBold();
-    }
+    final fontData = await rootBundle
+        .load('assets/fonts/Roboto-Bold.ttf')
+        .onError((_, __) => null as ByteData);
+    if (fontData != null) return pw.Font.ttf(fontData);
+    return pw.Font.helveticaBold();
   }
 
   // ── Generate PDF bytes ────────────────────────────────────────────────────
@@ -374,34 +370,33 @@ class _JobListingExportDialogState extends State<_JobListingExportDialog> {
 
     setState(() => _isExporting = true);
 
-    try {
+    final result = await _generatePdf()
+        .then<Object?>((bytes) => bytes)
+        .onError((e, __) => e);
 
-      final pdfBytes = await _generatePdf();
+    if (!mounted) return;
+    setState(() => _isExporting = false);
 
-      final finalName = fileName.toLowerCase().endsWith('.pdf')
-          ? fileName
-          : '$fileName.pdf';
+    if (result is! Uint8List) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export failed: ${result.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
 
+    final finalName = fileName.toLowerCase().endsWith('.pdf')
+        ? fileName
+        : '$fileName.pdf';
 
-      // ── Download via browser ──
-      _downloadPdfWeb(pdfBytes, finalName);
+    // ── Download via browser ──
+    _downloadPdfWeb(result, finalName);
 
-
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Export failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isExporting = false);
+    if (mounted && Navigator.canPop(context)) {
+      Navigator.pop(context);
     }
   }
 

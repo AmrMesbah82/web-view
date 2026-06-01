@@ -71,10 +71,11 @@ Color _navbarBgFromState(HomeCmsState state) {
 }
 
 Color _hexColor(String hex, Color fallback) {
-  try {
-    final clean = hex.replaceAll('#', '');
-    if (clean.length == 6) return Color(int.parse('FF$clean', radix: 16));
-  } catch (_) {}
+  final clean = hex.replaceAll('#', '');
+  if (clean.length == 6) {
+    final value = int.tryParse('FF$clean', radix: 16);
+    if (value != null) return Color(value);
+  }
   return fallback;
 }
 

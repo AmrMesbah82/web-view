@@ -9,8 +9,8 @@ import 'package:uuid/uuid.dart';
 
 
 import '../../data/models/careers_section_model.dart';
-import '../../data/repo_imp/careers_section_repo_imp.dart';
-import '../../domain/repo/careers_section_repo.dart';
+import '../../data/repository/careers_section_repository_impl.dart';
+import '../../domain/base_repository/careers_section_repo.dart';
 import 'careers_section_state.dart';
 
 
@@ -22,7 +22,7 @@ class CareersSectionCubit extends Cubit<CareersSectionState> {
   CareersSectionCubit({
     required this.sectionKey,
     CareersSectionRepo? repo,
-  })  : _repo = repo ?? CareersSectionRepoImp(),
+  })  : _repo = repo ?? CareersSectionRepoImpl(),
         super(CareersSectionInitial()) {
     _model = CareersSectionModel.empty(sectionKey);
   }

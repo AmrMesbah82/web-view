@@ -1,0 +1,11 @@
+// ═══════════════════════════════════════════════════════════════════
+// FILE 2: about_us_company_repo.dart
+// ═══════════════════════════════════════════════════════════════════
+
+
+import '../../../about_us/data/models/about_us_company_model.dart';
+
+abstract class AboutCompanyRepo {
+  Future<AboutCompanyModel?> fetchAboutCompany();
+  Future<void> saveAboutCompany(AboutCompanyModel data);
+}

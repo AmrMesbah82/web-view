@@ -11,8 +11,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 
 import '../../../../core/main_widgets/job_listing_filter_dialog.dart';
-import '../../data/models/job__model.dart';
-import '../../domain/repo/job_repo.dart';
+import '../../data/models/job_model.dart';
+import '../../domain/base_repository/job_repo.dart';
 import 'job_state.dart';
 
 class JobListingCubit extends Cubit<JobListingState> {

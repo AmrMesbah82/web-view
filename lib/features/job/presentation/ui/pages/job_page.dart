@@ -11,15 +11,15 @@ import '../../../../../core/theme/appcolors.dart';
 import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
-import '../../../data/models/job__model.dart';
+import '../../../data/models/job_model.dart';
 import '../../controller/job_cubit.dart';
 import '../../controller/job_state.dart';
 
-part '../widget/l.dart';
-part '../widget/filter_tab.dart';
-part '../widget/job_card.dart';
-part '../widget/info_item.dart';
-part '../widget/view_job_btn.dart';
+part '../widgets/localization_helper.dart';
+part '../widgets/filter_tab.dart';
+part '../widgets/job_card.dart';
+part '../widgets/info_item.dart';
+part '../widgets/view_job_btn.dart';
 
 const Color _kGreen      = Color(0xFF2D8C4E);
 const Color _kGreenLight = Color(0xFFE8F5EE);
@@ -28,10 +28,11 @@ const Color _kDivider    = Color(0xFFDDE8DD);
 // ─── Helper: parse hex color from Firebase branding ──────────────────────────
 
 Color _parseColor(String hex, {required Color fallback}) {
-  try {
-    final h = hex.replaceAll('#', '');
-    if (h.length == 6) return Color(int.parse('FF$h', radix: 16));
-  } catch (_) {}
+  final h = hex.replaceAll('#', '');
+  if (h.length == 6) {
+    final value = int.tryParse('FF\$h', radix: 16);
+    if (value != null) return Color(value);
+  }
   return fallback;
 }
 

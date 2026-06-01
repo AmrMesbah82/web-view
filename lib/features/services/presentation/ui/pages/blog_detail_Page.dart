@@ -23,12 +23,12 @@ import '../../../data/models/blog_model.dart';
 import '../../controller/blog_cubit.dart';
 import '../../controller/blog_state.dart';
 
-part '../widget/b_p.dart';
-part '../widget/mobile_body.dart';
-part '../widget/desktop_body.dart';
-part '../widget/block_list.dart';
-part '../widget/blog_image.dart';
-part '../widget/blog_nav_button.dart';
+part '../widgets/services_helpers.dart';
+part '../widgets/mobile_body.dart';
+part '../widgets/desktop_body.dart';
+part '../widgets/block_list.dart';
+part '../widgets/blog_image.dart';
+part '../widgets/blog_nav_button.dart';
 
 // ── Fallback colors ───────────────────────────────────────────────────────────
 const Color _kFallbackPrimary   = Color(0xFF2D8C4E);
@@ -37,10 +37,11 @@ const Color _kDivider           = Color(0xFFDDE8DD);
 const Color _kSurface           = Color(0xFFFFFFFF);
 
 Color _parseColor(String hex, {Color fallback = _kFallbackPrimary}) {
-  try {
-    final h = hex.replaceAll('#', '');
-    if (h.length == 6) return Color(int.parse('FF$h', radix: 16));
-  } catch (_) {}
+  final h = hex.replaceAll('#', '');
+  if (h.length == 6) {
+    final value = int.tryParse('FF\$h', radix: 16);
+    if (value != null) return Color(value);
+  }
   return fallback;
 }
 

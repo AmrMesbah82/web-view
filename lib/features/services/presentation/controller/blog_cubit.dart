@@ -6,8 +6,8 @@
   import 'package:flutter_bloc/flutter_bloc.dart';
 
   import '../../data/models/blog_model.dart';
-import '../../data/repo_imp/blog_repo_impl.dart';
-import '../../domain/repo/blog_repo.dart';
+import '../../data/repository/blog_repo_impl.dart';
+import '../../domain/base_repository/blog_repo.dart';
 import 'blog_state.dart';
 
   class BlogCubit extends Cubit<BlogState> {

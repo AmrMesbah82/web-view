@@ -8,7 +8,7 @@
 
 
 import '../../../job/data/models/application_model.dart';
-import '../../../job/data/models/job__model.dart';
+import '../../../job/data/models/job_model.dart';
 
 class BilingualText {
   final String en;

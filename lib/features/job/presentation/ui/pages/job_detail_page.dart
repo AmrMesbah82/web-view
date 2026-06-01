@@ -17,13 +17,13 @@ import 'package:go_router/go_router.dart';
 import '../../../../../core/main_widgets/app_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/appcolors.dart';
-import '../../../../abou_us/presentation/controller/about_us_company_cubit.dart';
-import '../../../../abou_us/presentation/controller/about_us_company_state.dart';
+import '../../../../about_us/presentation/controller/about_us_company_cubit.dart';
+import '../../../../about_us/presentation/controller/about_us_company_state.dart';
 import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
 
-part '../widget/labels.dart';
+part '../widgets/labels.dart';
 
 const Color _kGreen = Color(0xFF2D8C4E);
 const Color _kDivider = Color(0xFFDDE8DD);
@@ -34,10 +34,11 @@ Color _parsePrimary(HomeCmsState state) {
     HomeCmsSaved(:final data) => data.branding.primaryColor,
     _ => '',
   };
-  try {
-    final c = hex.replaceAll('#', '');
-    if (c.length == 6) return Color(int.parse('FF$c', radix: 16));
-  } catch (_) {}
+  final cl = hex.replaceAll('#', '');
+  if (cl.length == 6) {
+    final value = int.tryParse('FF\$cl', radix: 16);
+    if (value != null) return Color(value);
+  }
   return _kGreen;
 }
 
@@ -47,10 +48,11 @@ Color _parseBg(HomeCmsState state) {
     HomeCmsSaved(:final data) => data.branding.backgroundColor,
     _ => '',
   };
-  try {
-    final c = hex.replaceAll('#', '');
-    if (c.length == 6) return Color(int.parse('FF$c', radix: 16));
-  } catch (_) {}
+  final cl = hex.replaceAll('#', '');
+  if (cl.length == 6) {
+    final value = int.tryParse('FF\$cl', radix: 16);
+    if (value != null) return Color(value);
+  }
   return AppColors.background;
 }
 
@@ -78,20 +80,18 @@ class _JobDetailPageState extends State<JobDetailPage> {
   }
 
   Future<void> _loadJob() async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('jobListings')
-          .doc(widget.jobId)
-          .get(const GetOptions(source: Source.server));
-      if (doc.exists && doc.data() != null) {
-        setState(() {
-          _job = doc.data()!;
-          _loading = false;
-        });
-      } else {
-        setState(() => _loading = false);
-      }
-    } catch (e) {
+    final doc = await FirebaseFirestore.instance
+        .collection('jobListings')
+        .doc(widget.jobId)
+        .get(const GetOptions(source: Source.server))
+        .onError((_, __) { if (mounted) setState(() => _loading = false); return Future.error(''); });
+    if (!mounted) return;
+    if (doc.exists && doc.data() != null) {
+      setState(() {
+        _job = doc.data()!;
+        _loading = false;
+      });
+    } else {
       setState(() => _loading = false);
     }
   }

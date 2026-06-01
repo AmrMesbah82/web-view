@@ -4,7 +4,7 @@
 // Purpose: Filter dialog for Job Listing page — matches Figma design
 // Fields: Departments, Locations, Employment Type, Years of Experience, Date
 // Uses: CustomDropdownFormFieldInvMaster, _DatePickerField
-// FIXED: Date picker now uses DatePicker().showDatePicker() from core/widget/date_picker.dart
+// FIXED: Date picker now uses DatePicker().showDatePicker() from core/widgets/date_picker.dart
 // UPDATED: Dropdown hover color uses CMS primary color from Firebase
 
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
@@ -14,8 +14,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:website_app/core/custom_date.dart';
 import 'package:website_app/core/custom_svg.dart';
-import 'package:website_app/core/widget/custom_dropdwon.dart';
-import 'package:website_app/core/widget/date_picker.dart';
+import 'package:website_app/core/widgets/custom_dropdown.dart';
+import 'package:website_app/core/widgets/date_picker.dart';
 
 import '../../features/home/presentation/controller/home_cubit.dart';
 import '../../features/home/presentation/controller/home_state.dart';
@@ -33,10 +33,11 @@ class _C {
 
 // ── CMS primary color helper ──────────────────────────────────────────────────
 Color _cmsHexColor(String hex) {
-  try {
-    final clean = hex.replaceAll('#', '');
-    if (clean.length == 6) return Color(int.parse('FF$clean', radix: 16));
-  } catch (_) {}
+  final clean = hex.replaceAll('#', '');
+  if (clean.length == 6) {
+    final value = int.tryParse('FF$clean', radix: 16);
+    if (value != null) return Color(value);
+  }
   return const Color(0xFF008037);
 }
 

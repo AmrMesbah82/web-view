@@ -21,8 +21,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:website_app/core/widget/button.dart';
-import 'package:website_app/core/widget/navigator.dart';
+import 'package:website_app/core/widgets/button.dart';
+import 'package:website_app/core/widgets/navigator.dart';
 
 import '../../../../../core/main_widgets/app_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
@@ -44,34 +44,34 @@ import '../../controller/intern_state.dart';
 import '../../controller/our_teams_cubit.dart';
 import '../../controller/our_teams_state.dart';
 
-part '../widget/b_p.dart';
-part '../widget/reveal_coordinator.dart';
-part '../widget/reveal_coordinator_widget.dart';
-part '../widget/reveal.dart';
-part '../widget/tab_item.dart';
-part '../widget/svg_pulse_loader.dart';
-part '../widget/mobile_body.dart';
-part '../widget/mobile_header_card.dart';
-part '../widget/mobile_bullet.dart';
-part '../widget/mobile_plain.dart';
-part '../widget/mobile_stats_section.dart';
-part '../widget/mobile_tab_bar.dart';
-part '../widget/mobile_why_join_tab.dart';
-part '../widget/mobile_interns_tab.dart';
-part '../widget/mobile_intern_card.dart';
-part '../widget/mobile_our_team_tab.dart';
-part '../widget/mobile_team_card.dart';
-part '../widget/deliverable_buttons.dart';
-part '../widget/desktop_body.dart';
-part '../widget/desktop_why_join_tab.dart';
-part '../widget/desktop_interns_tab.dart';
-part '../widget/desktop_intern_card.dart';
-part '../widget/desktop_our_team_tab.dart';
-part '../widget/desktop_team_card.dart';
-part '../widget/desktop_deliverable_buttons.dart';
-part '../widget/bullet_text.dart';
-part '../widget/plain_text.dart';
-part '../widget/apply_now_btn_desktop.dart';
+part '../widgets/careers_helpers.dart';
+part '../widgets/reveal_coordinator.dart';
+part '../widgets/reveal_coordinator_widget.dart';
+part '../widgets/reveal.dart';
+part '../widgets/tab_item.dart';
+part '../widgets/svg_pulse_loader.dart';
+part '../widgets/mobile_body.dart';
+part '../widgets/mobile_header_card.dart';
+part '../widgets/mobile_bullet.dart';
+part '../widgets/mobile_plain.dart';
+part '../widgets/mobile_stats_section.dart';
+part '../widgets/mobile_tab_bar.dart';
+part '../widgets/mobile_why_join_tab.dart';
+part '../widgets/mobile_interns_tab.dart';
+part '../widgets/mobile_intern_card.dart';
+part '../widgets/mobile_our_team_tab.dart';
+part '../widgets/mobile_team_card.dart';
+part '../widgets/deliverable_buttons.dart';
+part '../widgets/desktop_body.dart';
+part '../widgets/desktop_why_join_tab.dart';
+part '../widgets/desktop_interns_tab.dart';
+part '../widgets/desktop_intern_card.dart';
+part '../widgets/desktop_our_team_tab.dart';
+part '../widgets/desktop_team_card.dart';
+part '../widgets/desktop_deliverable_buttons.dart';
+part '../widgets/bullet_text.dart';
+part '../widgets/plain_text.dart';
+part '../widgets/apply_now_btn_desktop.dart';
 
 // ── Bilingual helper ──────────────────────────────────────────────────────────
 String _t(String en, String ar, bool isRtl) => isRtl ? ar : en;
@@ -82,10 +82,11 @@ const Color _kFallbackSecondary = Color(0xFFE8F5EE);
 const Color _kDivider = Color(0xFFDDE8DD);
 
 Color _parseColor(String hex, {Color fallback = _kFallbackPrimary}) {
-  try {
-    final h = hex.replaceAll('#', '');
-    if (h.length == 6) return Color(int.parse('FF$h', radix: 16));
-  } catch (_) {}
+  final h = hex.replaceAll('#', '');
+  if (h.length == 6) {
+    final value = int.tryParse('FF$h', radix: 16);
+    if (value != null) return Color(value);
+  }
   return fallback;
 }
 
@@ -130,16 +131,14 @@ class _CareersPageState extends State<CareersPage> {
 
   void _readTabParam() {
     if (!mounted) return;
-    try {
-      final uri = GoRouterState.of(context).uri;
-      final tabParam = uri.queryParameters['tab'];
-      final resolved = (tabParam != null && tabParam.isNotEmpty)
-          ? _resolveTabParam(tabParam)
-          : 0;
-      if (_selectedTab != resolved) {
-        setState(() => _selectedTab = resolved);
-      }
-    } catch (_) {}
+    final uri = GoRouterState.of(context).uri;
+    final tabParam = uri.queryParameters['tab'];
+    final resolved = (tabParam != null && tabParam.isNotEmpty)
+        ? _resolveTabParam(tabParam)
+        : 0;
+    if (_selectedTab != resolved) {
+      setState(() => _selectedTab = resolved);
+    }
   }
 
   @override

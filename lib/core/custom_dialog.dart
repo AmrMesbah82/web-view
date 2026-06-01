@@ -17,7 +17,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:website_app/core/custom_svg.dart';
 import 'package:website_app/core/theme/appcolors.dart';
 import 'package:website_app/core/theme/new_theme.dart';
-import 'package:website_app/core/widget/textfield.dart';
+import 'package:website_app/core/widgets/textfield.dart';
 
 
 

@@ -5,7 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:website_app/core/widget/custom_dropdwon.dart';
+import 'package:website_app/core/widgets/custom_dropdown.dart';
 
 import '../../features/job/data/models/application_model.dart';
 
