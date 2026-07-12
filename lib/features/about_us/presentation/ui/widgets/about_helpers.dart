@@ -153,6 +153,51 @@ Future<void> _preloadImages(List<String> urls) async {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// Top tab icon — CMS navigation-label icon with material-icon fallback
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Renders the CMS-provided navigation label icon ([iconUrl], from the admin
+/// app). Falls back to [fallback] material icon when the CMS icon is empty
+/// or fails to load.
+Widget _topTabIcon({
+  required String iconUrl,
+  required IconData fallback,
+  required Color color,
+  required double size,
+}) {
+  final Widget fallbackIcon = Icon(fallback, color: color, size: size);
+
+  if (iconUrl.isEmpty) return fallbackIcon;
+
+  if (_isSvgUrl(iconUrl)) {
+    return SvgPicture.network(
+      iconUrl,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+      placeholderBuilder: (_) => SizedBox(width: size, height: size),
+    );
+  }
+
+  return Image.network(
+    iconUrl,
+    width: size,
+    height: size,
+    fit: BoxFit.contain,
+    errorBuilder: (_, __, ___) => fallbackIcon,
+  );
+}
+
+/// Material fallback icons for the 4 About-page top tabs.
+const List<IconData> _kTopTabFallbackIcons = [
+  Icons.info_outline,           // About Us
+  Icons.account_tree_outlined,  // Our Strategy
+  Icons.description_outlined,   // Terms and Conditions
+  Icons.privacy_tip_outlined,   // Privacy Policy
+];
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Reveal animation system
 // ══════════════════════════════════════════════════════════════════════════════
 

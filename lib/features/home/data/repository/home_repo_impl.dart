@@ -1,8 +1,11 @@
 // ******************* FILE INFO *******************
 // File Name: home_repo_impl.dart
 // Description: Firebase implementation of HomeRepository.
-//   • Firestore  → document: cms/home_page
+//   • Firestore  → document: homePage/home_page (FLAT VERSIONED — admin format)
 //   • Storage    → bucket path: home_cms/...
+// UPDATED: Path + format synced with web_app_admin (was cms/home_page, nested).
+//          Admin writes with FlatCodec.writeVersioned → we decode with
+//          FlatCodec.decode + HomePageModel.flatTemplate.
 // Created by: Amr Mesbah
 
 import 'dart:typed_data';
@@ -10,6 +13,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+import '../../../../core/utils/flat_codec.dart';
 import '../../domain/base_repository/home_repo.dart';
 import '../models/home_model.dart';
 
@@ -18,19 +22,23 @@ class HomeRepositoryImpl implements HomeRepository {
   HomeRepositoryImpl({
     FirebaseFirestore? firestore,
     FirebaseStorage? storage,
+    String collection   = 'homePage',
+    String publishedDoc = 'home_page',
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? FirebaseStorage.instance;
+        _storage = storage ?? FirebaseStorage.instance,
+        _collection = collection,
+        _document = publishedDoc;
 
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
 
-  static const String _collection = 'cms';
-  static const String _document   = 'home_page';
+  // Same paths the admin app writes to:
+  //   Home → homePage/home_page      Main → mainPage/main
+  final String _collection;
+  final String _document;
 
   DocumentReference<Map<String, dynamic>> get _docRef =>
       _firestore.collection(_collection).doc(_document);
-
-  // ── Fetch (cache-first) ──────────────────────────────────────────────────
 
   // ── Fetch (cache-first) ──────────────────────────────────────────────────
 
@@ -41,11 +49,9 @@ class HomeRepositoryImpl implements HomeRepository {
       if (!snapshot.exists || snapshot.data() == null) {
         return HomePageModel.defaultModel;
       }
-      final data = _sanitize(snapshot.data()!);
-      if ((data['sections'] as List?)?.isNotEmpty == true) {
-        final s0 = (data['sections'] as List)[0] as Map<String, dynamic>;
-      }
-      final model = HomePageModel.fromMap(data);
+      final model = HomePageModel.fromMap(
+        FlatCodec.decode(_sanitize(snapshot.data()!), HomePageModel.flatTemplate),
+      );
       return model;
     } catch (e, st) {
       return HomePageModel.defaultModel;
@@ -61,11 +67,9 @@ class HomeRepositoryImpl implements HomeRepository {
       if (!snapshot.exists || snapshot.data() == null) {
         return HomePageModel.defaultModel;
       }
-      final data = _sanitize(snapshot.data()!);
-      if ((data['sections'] as List?)?.isNotEmpty == true) {
-        final s0 = (data['sections'] as List)[0] as Map<String, dynamic>;
-      }
-      final model = HomePageModel.fromMap(data);
+      final model = HomePageModel.fromMap(
+        FlatCodec.decode(_sanitize(snapshot.data()!), HomePageModel.flatTemplate),
+      );
       return model;
     } catch (e, st) {
       return HomePageModel.defaultModel;
@@ -75,25 +79,19 @@ class HomeRepositoryImpl implements HomeRepository {
 // ── Sanitize raw Firestore map ────────────────────────────────────────────
 
   Map<String, dynamic> _sanitize(Map<String, dynamic> data) {
-    final copy = Map<String, dynamic>.from(data);
-    // lastUpdatedAt comes back as a Firestore Timestamp object from Source.server
-    // but fromMap() tries to cast it as String → crash. Just drop it.
-    copy.remove('lastUpdatedAt');
-    return copy;
+    return Map<String, dynamic>.from(data);
   }
 
   // ── Save ─────────────────────────────────────────────────────────────────
 
   @override
   Future<void> saveHomePage(HomePageModel model) async {
-    if (model.sections.isNotEmpty) {
-    }
     try {
-      final map = {
+      final nested = {
         ...model.toMap(),
-        'lastUpdatedAt': FieldValue.serverTimestamp(),
+        'scheduledPublishDate': model.scheduledPublishDate?.toIso8601String(),
       };
-      await _docRef.set(map);
+      await FlatCodec.writeVersioned(_docRef, nested);
     } catch (e, st) {
       rethrow;
     }
@@ -124,7 +122,9 @@ class HomeRepositoryImpl implements HomeRepository {
     return _docRef.snapshots().map((snap) {
       if (!snap.exists || snap.data() == null) return HomePageModel.defaultModel;
       try {
-        return HomePageModel.fromMap(snap.data()!);
+        return HomePageModel.fromMap(
+          FlatCodec.decode(_sanitize(snap.data()!), HomePageModel.flatTemplate),
+        );
       } catch (e) {
         return HomePageModel.defaultModel;
       }

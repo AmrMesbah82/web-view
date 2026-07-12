@@ -11,7 +11,8 @@ import '../../domain/base_repository/sendgrid_repository.dart';
 import '../models/contact_us_model.dart';
 
 class ContactRepoImpl implements ContactRepo {
-  final _col      = FirebaseFirestore.instance.collection('contact_submissions');
+  // Same collection the admin app reads ('contactSubmissions' — was 'contact_submissions')
+  final _col      = FirebaseFirestore.instance.collection('contactSubmissions');
   final _sendGrid = SendGridRepository();
 
   // ── Submit (public website) ────────────────────────────────────────────────

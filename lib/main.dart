@@ -56,6 +56,7 @@ Size _getDesignSize({
   if (!kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
     // ignore: avoid_print
 
+
     if (screenWidth >= 1920) {
       const size = Size(1920, 1080);
       // ignore: avoid_print
@@ -130,6 +131,11 @@ class BayanatzApp extends StatelessWidget {
             BlocProvider<HomeCmsCubit>(
               create: (_) => HomeCmsCubit(
                 repository: HomeRepositoryImpl(),
+                // Theme + logo (branding) come from the admin's MAIN page CMS
+                mainRepository: HomeRepositoryImpl(
+                  collection: 'mainPage',
+                  publishedDoc: 'main',
+                ),
               )..load(),
             ),
             BlocProvider<ServiceCmsCubit>(

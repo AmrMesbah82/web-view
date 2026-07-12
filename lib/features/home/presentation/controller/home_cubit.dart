@@ -27,12 +27,38 @@ import 'home_state.dart';
 
 
 class HomeCmsCubit extends Cubit<HomeCmsState> {
-  HomeCmsCubit({required HomeRepository repository})
-      : _repo = repository,
+  HomeCmsCubit({
+    required HomeRepository repository,
+    HomeRepository? mainRepository,
+  })  : _repo = repository,
+        _mainRepo = mainRepository,
         super(HomeCmsInitial());
 
   final HomeRepository _repo;
+
+  /// Repository pointing at the admin's MAIN page doc (mainPage/main).
+  /// Theme + logo (branding) are edited on the Main page in the admin app,
+  /// so branding is read from there and merged over the home model.
+  final HomeRepository? _mainRepo;
+
   final _storage = GetStorage();
+
+  /// Overlay the branding (theme colors, fonts, logo) from mainPage/main.
+  /// Falls back to the home doc's own branding if Main was never published.
+  Future<HomePageModel> _applyMainBranding(HomePageModel home) async {
+    if (_mainRepo == null) return home;
+    try {
+      final mainData = await _mainRepo!.fetchHomePageFresh();
+      // lastUpdatedAt != null means the doc actually exists in Firestore
+      // (a missing doc returns defaultModel, which has no timestamp).
+      if (mainData.lastUpdatedAt != null) {
+        return home.copyWith(branding: mainData.branding);
+      }
+    } catch (_) {
+      // Keep home branding on any failure.
+    }
+    return home;
+  }
 
   HomePageModel _model = HomePageModel.defaultModel;
 
@@ -95,14 +121,7 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
     try {
       final fetched = await _repo.fetchHomePageFresh();
 
-      final result = _mergeDefaults(fetched);
-      for (var i = 0; i < result.navButtons.length; i++) {
-
-      }
-
-      for (var i = 0; i < result.socialLinks.length; i++) {
-
-      }
+      final result = await _applyMainBranding(_mergeDefaults(fetched));
 
       _model = result;
       _applyFontsToStorage(_model.branding);
@@ -153,12 +172,7 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
 
       final fetched = await _repo.fetchHomePageFresh();
 
-      final persisted = _mergeDefaults(fetched);
-      for (var i = 0; i < persisted.navButtons.length; i++) {
-
-      }
-      for (var i = 0; i < persisted.socialLinks.length; i++) {
-      }
+      final persisted = await _applyMainBranding(_mergeDefaults(fetched));
 
       _model = persisted;
       _applyFontsToStorage(_model.branding);

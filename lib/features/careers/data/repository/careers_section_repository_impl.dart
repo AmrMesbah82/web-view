@@ -13,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 
+import '../../../../core/utils/flat_codec.dart';
 import '../../domain/base_repository/careers_section_repo.dart';
 import '../models/careers_section_model.dart';
 
@@ -20,8 +21,8 @@ class CareersSectionRepoImpl implements CareersSectionRepo {
   final _db = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
 
-  DocumentReference _doc(String key) =>
-      _db.collection('careers_cms').doc(key);
+  DocumentReference<Map<String, dynamic>> _doc(String key) =>
+      _db.collection('whyJoinOurTeam').doc(key);
 
   // ── Load ────────────────────────────────────────────────────────────────────
   @override
@@ -32,16 +33,17 @@ class CareersSectionRepoImpl implements CareersSectionRepo {
         return CareersSectionModel.empty(sectionKey);
       }
 
-      final docData = snap.data()! as Map<String, dynamic>;
-      final rawItems = docData['items'] as List<dynamic>? ?? [];
-      final itemMaps = rawItems.map((e) {
+      final raw = snap.data()! as Map<String, dynamic>;
+      final nested = FlatCodec.decode(raw, CareersSectionModel.flatTemplate);
+      final itemMaps = (nested['items'] as List).map((e) {
         final m = Map<String, dynamic>.from(e as Map);
+        m['_id'] = m['id'] ?? '';
         return m;
       }).toList();
 
       final model = CareersSectionModel.fromFirestore(
         sectionKey,
-        docData,
+        {'lastUpdated': raw['Last_Updated_At']},
         itemMaps,
       );
       return model;
@@ -54,16 +56,10 @@ class CareersSectionRepoImpl implements CareersSectionRepo {
   @override
   Future<void> save(CareersSectionModel model) async {
     try {
-      final itemsList = model.items.map((item) {
-        final m = item.toMap();
-        m['_id'] = item.id;
-        return m;
-      }).toList();
-
-      await _doc(model.sectionKey).set({
-        'items': itemsList,
-        'lastUpdated': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      final nested = {
+        'items': model.items.map((item) => {'id': item.id, ...item.toMap()}).toList(),
+      };
+      await FlatCodec.writeVersioned(_doc(model.sectionKey), nested);
 
     } catch (e) {
       rethrow;

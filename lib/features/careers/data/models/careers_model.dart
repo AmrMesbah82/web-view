@@ -36,12 +36,14 @@ class CareerStatItem {
   final BilingualText title;
   final BilingualText shortDescription;
   final String summaryValue;
+  final String iconUrl; // ← NEW (synced with admin)
 
   const CareerStatItem({
     required this.id,
     required this.title,
     required this.shortDescription,
     required this.summaryValue,
+    this.iconUrl = '',
   });
 
   factory CareerStatItem.empty() => CareerStatItem(
@@ -49,6 +51,7 @@ class CareerStatItem {
     title: const BilingualText(),
     shortDescription: const BilingualText(),
     summaryValue: '',
+    iconUrl: '',
   );
 
   factory CareerStatItem.fromMap(String id, Map<String, dynamic> map) =>
@@ -59,12 +62,14 @@ class CareerStatItem {
         shortDescription: BilingualText.fromMap(
             (map['shortDescription'] as Map<String, dynamic>?) ?? {}),
         summaryValue: map['summaryValue'] as String? ?? '',
+        iconUrl: map['iconUrl'] as String? ?? '', // ← read from Firestore
       );
 
   Map<String, dynamic> toMap() => {
     'title': title.toMap(),
     'shortDescription': shortDescription.toMap(),
     'summaryValue': summaryValue,
+    'iconUrl': iconUrl, // ← write to Firestore
   };
 
   CareerStatItem copyWith({
@@ -72,12 +77,14 @@ class CareerStatItem {
     BilingualText? title,
     BilingualText? shortDescription,
     String? summaryValue,
+    String? iconUrl,
   }) =>
       CareerStatItem(
         id: id ?? this.id,
         title: title ?? this.title,
         shortDescription: shortDescription ?? this.shortDescription,
         summaryValue: summaryValue ?? this.summaryValue,
+        iconUrl: iconUrl ?? this.iconUrl,
       );
 }
 
@@ -559,6 +566,24 @@ class CareersCmsModel {
     'statistics': statistics.map((s) => {'id': s.id, ...s.toMap()}).toList(),
     'lastUpdated': DateTime.now().toIso8601String(),
   };
+
+  /// Nested template for [FlatCodec.decode] (one populated sample statistic).
+  static Map<String, dynamic> get flatTemplate => {
+        'overview': {
+          'description': {'en': '', 'ar': ''},
+          'actionButtonLabel': {'en': '', 'ar': ''},
+        },
+        'statistics': [
+          {
+            'id': '',
+            'title': {'en': '', 'ar': ''},
+            'shortDescription': {'en': '', 'ar': ''},
+            'summaryValue': '',
+            'iconUrl': '',
+          }
+        ],
+        'lastUpdated': '',
+      };
 
   CareersCmsModel copyWith({
     CareersOverview? overview,

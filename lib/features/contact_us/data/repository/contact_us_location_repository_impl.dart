@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+import '../../../../core/utils/flat_codec.dart';
 import '../../domain/base_repository/contact_us_location.dart';
 import '../models/contact_us_model_location.dart';
 
@@ -14,7 +15,9 @@ class ContactUsCmsRepoImpl implements ContactUsCmsRepo {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  static const String _collectionName = 'contact_us_cms';
+  // Same path + FLAT VERSIONED format the admin app writes.
+  // (Was: 'contact_us_cms' with plain nested maps.)
+  static const String _collectionName = 'contactUs';
   static const String _docId = 'main';
 
   @override
@@ -29,13 +32,16 @@ class ContactUsCmsRepoImpl implements ContactUsCmsRepo {
         return _defaultModel();
       }
 
-      final model = ContactUsCmsModel.fromJson(doc.data()!);
+      final nested = FlatCodec.decode(doc.data()!, ContactUsCmsModel.flatTemplate);
+      final model = ContactUsCmsModel.fromJson(nested);
 
-      // ── Extract Firestore Timestamp and inject into model ──
-      final raw = doc.data()!['lastUpdatedAt'];
-      final lastUpdatedAt = raw is Timestamp ? raw.toDate() : null;
+      // ── Extract last-updated (scalar Firestore timestamp) ──
+      final raw = doc.data()!['Last_Updated_At'];
+      final lastUpdatedAt = raw is Timestamp
+          ? raw.toDate()
+          : (raw is String && raw.isNotEmpty ? DateTime.tryParse(raw) : null);
 
-      return model.copyWith(lastUpdatedAt: lastUpdatedAt); // ← THIS was missing
+      return model.copyWith(lastUpdatedAt: lastUpdatedAt);
     } catch (e) {
       rethrow;
     }
@@ -54,13 +60,9 @@ class ContactUsCmsRepoImpl implements ContactUsCmsRepo {
 
       final updatedModel = _updateModelWithUrls(model, uploadedUrls);
 
-      final json = updatedModel.toJson();
-      json['lastUpdatedAt'] = FieldValue.serverTimestamp(); // ← THIS was missing
-
-      await _firestore
-          .collection(_collectionName)
-          .doc(_docId)
-          .set(json, SetOptions(merge: true));
+      // Versioned append write; scalar Last_Updated_At added by the codec.
+      final ref = _firestore.collection(_collectionName).doc(_docId);
+      await FlatCodec.writeVersioned(ref, updatedModel.toJson());
 
     } catch (e) {
       rethrow;
@@ -129,11 +131,8 @@ class ContactUsCmsRepoImpl implements ContactUsCmsRepo {
       confirmSvgUrl = uploadedUrls[svgPath]!;
     }
 
-    // Return updated model
-    return ContactUsCmsModel(
-      publishStatus: model.publishStatus,
-      subDescription: model.subDescription,
-      email: model.email,
+    // Return updated model (copyWith keeps followUsTitle & other fields intact)
+    return model.copyWith(
       socialIcons: updatedSocialIcons,
       officeLocations: updatedOfficeLocations,
       confirmMessage: ContactConfirmMessage(

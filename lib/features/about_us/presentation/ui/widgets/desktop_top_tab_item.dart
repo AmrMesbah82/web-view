@@ -4,6 +4,10 @@ class _DesktopTopTabItem extends StatefulWidget {
   final int index;
   final String label;
   final String svgAsset;
+
+  /// CMS navigation-label icon URL (from the admin app). When non-empty it
+  /// takes priority over [svgAsset].
+  final String iconUrl;
   final bool isSelected;
   final Color primaryColor, secondaryColor;
   final VoidCallback onTap;
@@ -11,6 +15,7 @@ class _DesktopTopTabItem extends StatefulWidget {
     required this.index,
     required this.label,
     required this.svgAsset,
+    this.iconUrl = '',
     required this.isSelected,
     required this.primaryColor,
     required this.secondaryColor,
@@ -51,15 +56,12 @@ class _DesktopTopTabItemState extends State<_DesktopTopTabItem> {
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Center(
-                  child: SvgPicture.asset(
-                    widget.svgAsset,
-                    width: 24.sp,
-                    height: 24.sp,
-                    fit: BoxFit.contain,
-                    colorFilter: ColorFilter.mode(
-                      sel ? Colors.white : widget.primaryColor,
-                      BlendMode.srcIn,
-                    ),
+                  child: _topTabIcon(
+                    iconUrl: widget.iconUrl,
+                    fallback: _kTopTabFallbackIcons[
+                        widget.index.clamp(0, _kTopTabFallbackIcons.length - 1)],
+                    color: sel ? Colors.white : widget.primaryColor,
+                    size: 24.sp,
                   ),
                 ),
               ),

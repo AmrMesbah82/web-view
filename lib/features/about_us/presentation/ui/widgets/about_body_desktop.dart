@@ -167,29 +167,48 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
           // ── Top Tab Bar ──
           Container(
             padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(_topTabs.length, (i) {
-                final bool isRtl = context.read<LanguageCubit>().state.isArabic;
-                final String label = isRtl
-                    ? (_topTabs[i].ar.isNotEmpty ? _topTabs[i].ar : _topTabs[i].en)
-                    : _topTabs[i].en;
-                final String svgAsset = switch (i) {
-                  0 => 'assets/images/about_us/about_us.svg',
-                  1 => 'assets/images/about_us/Our Strategy.svg',
-                  2 => 'assets/images/about_us/Terms and Conditions.svg',
-                  _ => 'assets/images/about_us/Privacy Policy.svg',
+            child: BlocBuilder<StrategyCubit, StrategyState>(
+              builder: (context, strategyState) {
+                // CMS navigation-label icons (set in the admin app)
+                final String strategyIconUrl = switch (strategyState) {
+                  StrategyLoaded(:final data) => data.navigationLabel.iconUrl,
+                  StrategySaved(:final data) => data.navigationLabel.iconUrl,
+                  _ => '',
                 };
-                return _DesktopTopTabItem(
-                  index: i,
-                  label: label,
-                  svgAsset: svgAsset,
-                  isSelected: i == _selectedTopTab,
-                  primaryColor: widget.primaryColor,
-                  secondaryColor: widget.secondaryColor,
-                  onTap: () => setState(() => _selectedTopTab = i),
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(_topTabs.length, (i) {
+                    final bool isRtl =
+                        context.read<LanguageCubit>().state.isArabic;
+                    final String label = isRtl
+                        ? (_topTabs[i].ar.isNotEmpty
+                            ? _topTabs[i].ar
+                            : _topTabs[i].en)
+                        : _topTabs[i].en;
+                    final String svgAsset = switch (i) {
+                      0 => 'assets/images/about_us/about_us.svg',
+                      1 => 'assets/images/about_us/Our Strategy.svg',
+                      2 => 'assets/images/about_us/Terms and Conditions.svg',
+                      _ => 'assets/images/about_us/Privacy Policy.svg',
+                    };
+                    final String cmsIconUrl = switch (i) {
+                      0 => widget.model.navigationLabel.iconUrl,
+                      1 => strategyIconUrl,
+                      _ => widget.termsModel.navigationLabel.iconUrl,
+                    };
+                    return _DesktopTopTabItem(
+                      index: i,
+                      label: label,
+                      svgAsset: svgAsset,
+                      iconUrl: cmsIconUrl,
+                      isSelected: i == _selectedTopTab,
+                      primaryColor: widget.primaryColor,
+                      secondaryColor: widget.secondaryColor,
+                      onTap: () => setState(() => _selectedTopTab = i),
+                    );
+                  }),
                 );
-              }),
+              },
             ),
           ),
           SizedBox(height: 16.h),

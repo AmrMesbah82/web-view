@@ -8,6 +8,7 @@ class ContactUsCmsModel {
   final String publishStatus;
   final ContactBilingualText subDescription;
   final String email;
+  final ContactBilingualText followUsTitle;   // ← synced with admin
   final List<ContactSocialIcon> socialIcons;
   final List<ContactOfficeLocation> officeLocations;
   final ContactConfirmMessage confirmMessage;
@@ -20,6 +21,7 @@ class ContactUsCmsModel {
     required this.publishStatus,
     required this.subDescription,
     required this.email,
+    this.followUsTitle = const ContactBilingualText(en: '', ar: ''),
     required this.socialIcons,
     required this.officeLocations,
     required this.confirmMessage,
@@ -33,6 +35,9 @@ class ContactUsCmsModel {
         json['subDescription'] ?? {'en': '', 'ar': ''},
       ),
       email: json['email'] ?? '',
+      followUsTitle: ContactBilingualText.fromJson(
+        json['followUsTitle'] ?? {'en': '', 'ar': ''},
+      ),
       socialIcons: (json['socialIcons'] as List<dynamic>?)
           ?.map((e) => ContactSocialIcon.fromJson(e as Map<String, dynamic>))
           .toList() ??
@@ -54,6 +59,7 @@ class ContactUsCmsModel {
       'publishStatus': publishStatus,
       'subDescription': subDescription.toJson(),
       'email': email,
+      'followUsTitle': followUsTitle.toJson(),
       'socialIcons': socialIcons.map((e) => e.toJson()).toList(),
       'officeLocations': officeLocations.map((e) => e.toJson()).toList(),
       'confirmMessage': confirmMessage.toJson(),
@@ -61,10 +67,38 @@ class ContactUsCmsModel {
     };
   }
 
+  /// Nested template for [FlatCodec.decode] (one populated sample per list).
+  /// MUST match the admin app.
+  static Map<String, dynamic> get flatTemplate => {
+        'publishStatus': '',
+        'subDescription': {'en': '', 'ar': ''},
+        'email': '',
+        'followUsTitle': {'en': '', 'ar': ''},
+        'socialIcons': [
+          {'id': '', 'iconUrl': '', 'link': ''}
+        ],
+        'officeLocations': [
+          {
+            'id': '',
+            'iconUrl': '',
+            'locationName': {'en': '', 'ar': ''},
+            'text1': {'en': '', 'ar': ''},
+            'text2': {'en': '', 'ar': ''},
+            'mapLink': '',
+          }
+        ],
+        'confirmMessage': {
+          'svgUrl': '',
+          'title': {'en': '', 'ar': ''},
+          'description': {'en': '', 'ar': ''},
+        },
+      };
+
   ContactUsCmsModel copyWith({
     String? publishStatus,
     ContactBilingualText? subDescription,
     String? email,
+    ContactBilingualText? followUsTitle,
     List<ContactSocialIcon>? socialIcons,
     List<ContactOfficeLocation>? officeLocations,
     ContactConfirmMessage? confirmMessage,
@@ -74,6 +108,7 @@ class ContactUsCmsModel {
       publishStatus: publishStatus ?? this.publishStatus,
       subDescription: subDescription ?? this.subDescription,
       email: email ?? this.email,
+      followUsTitle: followUsTitle ?? this.followUsTitle,
       socialIcons: socialIcons ?? this.socialIcons,
       officeLocations: officeLocations ?? this.officeLocations,
       confirmMessage: confirmMessage ?? this.confirmMessage,
@@ -90,7 +125,7 @@ class ContactBilingualText {
   final String en;
   final String ar;
 
-  ContactBilingualText({required this.en, required this.ar});
+  const ContactBilingualText({required this.en, required this.ar});
 
   factory ContactBilingualText.fromJson(Map<String, dynamic> json) {
     return ContactBilingualText(

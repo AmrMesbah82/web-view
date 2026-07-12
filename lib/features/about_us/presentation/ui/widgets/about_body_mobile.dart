@@ -62,21 +62,38 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
           SizedBox(height: 8.h),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              children: List.generate(_topTabs.length, (i) {
-                return _MobileTopTabItem(
-                  label: widget.isRtl
-                      ? (_topTabs[i].ar.isNotEmpty
-                      ? _topTabs[i].ar
-                      : _topTabs[i].en)
-                      : _topTabs[i].en,
-                  svgAsset: _svgAssets[i],
-                  isSelected: i == _selectedTopTab,
-                  primaryColor: widget.primaryColor,
-                  secondaryColor: widget.secondaryColor,
-                  onTap: () => setState(() => _selectedTopTab = i),
+            child: BlocBuilder<StrategyCubit, StrategyState>(
+              builder: (context, strategyState) {
+                // CMS navigation-label icons (set in the admin app)
+                final String strategyIconUrl = switch (strategyState) {
+                  StrategyLoaded(:final data) => data.navigationLabel.iconUrl,
+                  StrategySaved(:final data) => data.navigationLabel.iconUrl,
+                  _ => '',
+                };
+                return Row(
+                  children: List.generate(_topTabs.length, (i) {
+                    final String cmsIconUrl = switch (i) {
+                      0 => widget.model.navigationLabel.iconUrl,
+                      1 => strategyIconUrl,
+                      _ => termsModel.navigationLabel.iconUrl,
+                    };
+                    return _MobileTopTabItem(
+                      index: i,
+                      label: widget.isRtl
+                          ? (_topTabs[i].ar.isNotEmpty
+                          ? _topTabs[i].ar
+                          : _topTabs[i].en)
+                          : _topTabs[i].en,
+                      svgAsset: _svgAssets[i],
+                      iconUrl: cmsIconUrl,
+                      isSelected: i == _selectedTopTab,
+                      primaryColor: widget.primaryColor,
+                      secondaryColor: widget.secondaryColor,
+                      onTap: () => setState(() => _selectedTopTab = i),
+                    );
+                  }),
                 );
-              }),
+              },
             ),
           ),
           SizedBox(height: 16.h),
@@ -107,14 +124,23 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
                     StrategySaved(:final data) => data.vision.svgUrl,
                     _ => '',
                   };
+                  // Mobile layout → mobile image, falling back to desktop
                   final String strategicHouseEnUrl = switch (strategyState) {
-                    StrategyLoaded(:final data) => data.strategicHouseEnUrl,
-                    StrategySaved(:final data) => data.strategicHouseEnUrl,
+                    StrategyLoaded(:final data) => data.strategicHouseEnMobileUrl.isNotEmpty
+                        ? data.strategicHouseEnMobileUrl
+                        : data.strategicHouseEnDesktopUrl,
+                    StrategySaved(:final data) => data.strategicHouseEnMobileUrl.isNotEmpty
+                        ? data.strategicHouseEnMobileUrl
+                        : data.strategicHouseEnDesktopUrl,
                     _ => '',
                   };
                   final String strategicHouseArUrl = switch (strategyState) {
-                    StrategyLoaded(:final data) => data.strategicHouseArUrl,
-                    StrategySaved(:final data) => data.strategicHouseArUrl,
+                    StrategyLoaded(:final data) => data.strategicHouseArMobileUrl.isNotEmpty
+                        ? data.strategicHouseArMobileUrl
+                        : data.strategicHouseArDesktopUrl,
+                    StrategySaved(:final data) => data.strategicHouseArMobileUrl.isNotEmpty
+                        ? data.strategicHouseArMobileUrl
+                        : data.strategicHouseArDesktopUrl,
                     _ => '',
                   };
                   return BlocBuilder<LanguageCubit, LanguageState>(

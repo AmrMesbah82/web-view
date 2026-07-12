@@ -33,14 +33,23 @@ class _TabletContentPanel extends StatelessWidget {
             StrategySaved(:final data) => data.vision.svgUrl,
             _ => '',
           };
+          // Tablet layout → tablet image, falling back to desktop
           final String strategicHouseEnUrl = switch (strategyState) {
-            StrategyLoaded(:final data) => data.strategicHouseEnUrl,
-            StrategySaved(:final data) => data.strategicHouseEnUrl,
+            StrategyLoaded(:final data) => data.strategicHouseEnTabletUrl.isNotEmpty
+                ? data.strategicHouseEnTabletUrl
+                : data.strategicHouseEnDesktopUrl,
+            StrategySaved(:final data) => data.strategicHouseEnTabletUrl.isNotEmpty
+                ? data.strategicHouseEnTabletUrl
+                : data.strategicHouseEnDesktopUrl,
             _ => '',
           };
           final String strategicHouseArUrl = switch (strategyState) {
-            StrategyLoaded(:final data) => data.strategicHouseArUrl,
-            StrategySaved(:final data) => data.strategicHouseArUrl,
+            StrategyLoaded(:final data) => data.strategicHouseArTabletUrl.isNotEmpty
+                ? data.strategicHouseArTabletUrl
+                : data.strategicHouseArDesktopUrl,
+            StrategySaved(:final data) => data.strategicHouseArTabletUrl.isNotEmpty
+                ? data.strategicHouseArTabletUrl
+                : data.strategicHouseArDesktopUrl,
             _ => '',
           };
           return BlocBuilder<LanguageCubit, LanguageState>(

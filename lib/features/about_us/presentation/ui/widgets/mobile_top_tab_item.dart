@@ -1,14 +1,21 @@
 part of '../pages/about_us_page.dart';
 
 class _MobileTopTabItem extends StatefulWidget {
+  final int index;
   final String label;
   final String svgAsset;
+
+  /// CMS navigation-label icon URL (from the admin app). When non-empty it
+  /// takes priority over [svgAsset].
+  final String iconUrl;
   final bool isSelected;
   final Color primaryColor, secondaryColor;
   final VoidCallback onTap;
   const _MobileTopTabItem({
+    this.index = 0,
     required this.label,
     required this.svgAsset,
+    this.iconUrl = '',
     required this.isSelected,
     required this.primaryColor,
     required this.secondaryColor,
@@ -57,15 +64,12 @@ class _MobileTopTabItemState extends State<_MobileTopTabItem> {
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Center(
-                  child: SvgPicture.asset(
-                    widget.svgAsset,
-                    width: 26.sp,
-                    height: 26.sp,
-                    fit: BoxFit.contain,
-                    colorFilter: ColorFilter.mode(
-                      sel ? Colors.white : widget.primaryColor,
-                      BlendMode.srcIn,
-                    ),
+                  child: _topTabIcon(
+                    iconUrl: widget.iconUrl,
+                    fallback: _kTopTabFallbackIcons[
+                        widget.index.clamp(0, _kTopTabFallbackIcons.length - 1)],
+                    color: sel ? Colors.white : widget.primaryColor,
+                    size: 26.sp,
                   ),
                 ),
               ),

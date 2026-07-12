@@ -289,6 +289,7 @@ class BrandingModel {
   final String secondaryColor;
   final String backgroundColor;
   final String headerFooterColor;
+  final String mainWidgetColor;    // Main Widget Color   ← NEW (synced with admin)
   final String englishFont;
   final String arabicFont;
 
@@ -298,6 +299,7 @@ class BrandingModel {
     this.secondaryColor    = '#D9D9D9',
     this.backgroundColor   = '#D9D9D9',
     this.headerFooterColor = '#D9D9D9',
+    this.mainWidgetColor   = '#D9D9D9',   // ← NEW
     this.englishFont       = 'Cairo',
     this.arabicFont        = 'Cairo',
   });
@@ -308,6 +310,7 @@ class BrandingModel {
     String? secondaryColor,
     String? backgroundColor,
     String? headerFooterColor,
+    String? mainWidgetColor,      // ← NEW
     String? englishFont,
     String? arabicFont,
   }) =>
@@ -317,6 +320,7 @@ class BrandingModel {
         secondaryColor:    secondaryColor    ?? this.secondaryColor,
         backgroundColor:   backgroundColor   ?? this.backgroundColor,
         headerFooterColor: headerFooterColor ?? this.headerFooterColor,
+        mainWidgetColor:   mainWidgetColor   ?? this.mainWidgetColor,    // ← NEW
         englishFont:       englishFont       ?? this.englishFont,
         arabicFont:        arabicFont        ?? this.arabicFont,
       );
@@ -327,6 +331,7 @@ class BrandingModel {
     'secondaryColor':    secondaryColor,
     'backgroundColor':   backgroundColor,
     'headerFooterColor': headerFooterColor,
+    'mainWidgetColor':   mainWidgetColor,    // ← NEW
     'englishFont':       englishFont,
     'arabicFont':        arabicFont,
   };
@@ -337,6 +342,7 @@ class BrandingModel {
     secondaryColor:    map['secondaryColor']    ?? '#D9D9D9',
     backgroundColor:   map['backgroundColor']   ?? '#D9D9D9',
     headerFooterColor: map['headerFooterColor'] ?? '#D9D9D9',
+    mainWidgetColor:   map['mainWidgetColor']   ?? '#D9D9D9',    // ← NEW
     englishFont:       map['englishFont']       ?? 'Cairo',
     arabicFont:        map['arabicFont']        ?? 'Cairo',
   );
@@ -416,6 +422,14 @@ class HomePageModel {
     'publishStatus':        publishStatus,
     'lastUpdatedAt':        lastUpdatedAt?.toIso8601String(),
     'scheduledPublishDate': scheduledPublishDate?.toIso8601String(), // ✅ NEW
+  };
+
+  /// Nested template for [FlatCodec.decode] — MUST match the admin app so the
+  /// flat versioned document written by the admin decodes correctly here.
+  static Map<String, dynamic> get flatTemplate => {
+    ...defaultModel.toMap(),
+    'lastUpdatedAt': '',
+    'scheduledPublishDate': '',
   };
 
   factory HomePageModel.fromMap(Map<String, dynamic> map) => HomePageModel(

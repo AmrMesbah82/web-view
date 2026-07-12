@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 
+import '../../../../core/utils/flat_codec.dart';
 import '../../domain/base_repository/our_teams_repo.dart';
 import '../models/our_teams_model.dart';
 
@@ -22,7 +23,7 @@ class OurTeamsRepoImpl implements OurTeamsRepo {
 
   // ── Firestore document reference ────────────────────────────────────────────
   DocumentReference<Map<String, dynamic>> get _docRef =>
-      _db.collection('cms').doc('ourTeams');
+      _db.collection('ourTeams').doc('ourTeams');
 
   // ── Load ────────────────────────────────────────────────────────────────────
   @override
@@ -32,7 +33,9 @@ class OurTeamsRepoImpl implements OurTeamsRepo {
       if (!snap.exists || snap.data() == null) {
         return const OurTeamsModel();
       }
-      return OurTeamsModel.fromMap(snap.data()!);
+      return OurTeamsModel.fromMap(
+        FlatCodec.decode(snap.data()!, OurTeamsModel.flatTemplate),
+      );
     } catch (e) {
       throw Exception('OurTeamsRepo.load failed: $e');
     }
@@ -42,9 +45,8 @@ class OurTeamsRepoImpl implements OurTeamsRepo {
   @override
   Future<void> save(OurTeamsModel model) async {
     try {
-      final data = model.toMap();
-      data['lastUpdated'] = FieldValue.serverTimestamp();
-      await _docRef.set(data, SetOptions(merge: true));
+      final nested = model.toMap()..remove('lastUpdated');
+      await FlatCodec.writeVersioned(_docRef, nested);
     } catch (e) {
       throw Exception('OurTeamsRepo.save failed: $e');
     }
