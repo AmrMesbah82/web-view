@@ -19,6 +19,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import '../../data/models/home_model.dart';
@@ -43,19 +44,35 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
 
   final _storage = GetStorage();
 
-  /// Overlay the branding (theme colors, fonts, logo) from mainPage/main.
-  /// Falls back to the home doc's own branding if Main was never published.
+  /// Overlay the MAIN page data from mainPage/main:
+  /// • branding (theme colors, fonts, LOGO)
+  /// • footer columns
+  /// • social links
+  /// The admin app now stores these ONLY in the mainPage collection — they
+  /// are no longer part of the homePage document.
+  /// Falls back to the home doc's own values if Main was never published.
   Future<HomePageModel> _applyMainBranding(HomePageModel home) async {
     if (_mainRepo == null) return home;
     try {
       final mainData = await _mainRepo!.fetchHomePageFresh();
-      // lastUpdatedAt != null means the doc actually exists in Firestore
-      // (a missing doc returns defaultModel, which has no timestamp).
-      if (mainData.lastUpdatedAt != null) {
-        return home.copyWith(branding: mainData.branding);
-      }
+      // Branding (theme colors + logo) is ALWAYS taken from the Main page —
+      // it is the single source of truth after the home/main split. Previously
+      // this was gated behind a logo/footer/social/timestamp "exists" check,
+      // which meant that if the admin only set colors (no logo/footer/social),
+      // the branding was skipped and the whole site fell back to the local
+      // default colors. When the Main doc is missing, fetchHomePageFresh
+      // returns defaults, so applying branding unconditionally is still safe.
+      return home.copyWith(
+        branding: mainData.branding,
+        footerColumns: mainData.footerColumns.isNotEmpty
+            ? mainData.footerColumns
+            : home.footerColumns,
+        socialLinks: mainData.socialLinks.isNotEmpty
+            ? mainData.socialLinks
+            : home.socialLinks,
+      );
     } catch (_) {
-      // Keep home branding on any failure.
+      // Keep home values on any failure.
     }
     return home;
   }
@@ -77,13 +94,17 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
     final arFont  = branding.arabicFont.isEmpty  ? 'Cairo' : branding.arabicFont;
     _storage.write('font',         engFont);
     _storage.write('font_arabic',  arFont);
-
+    // Rebuild the whole tree so AppTextStyles re-reads the new families.
+    Get.forceAppUpdate();
   }
 
   // ── Merge defaults ────────────────────────────────────────────────────────
+  // Dedupe the admin's saved nav buttons by id. Default nav buttons are used
+  // ONLY as a fallback when the admin has saved none — we never re-inject a
+  // default by route, otherwise changing a saved button's route (e.g. moving
+  // Services to another page) would make the old route look "missing" and add
+  // a duplicate tab in the navbar.
   HomePageModel _mergeDefaults(HomePageModel loaded) {
-    final defaults = HomePageModel.defaultModel.navButtons;
-
     final seen = <String>{};
     final deduped = loaded.navButtons.where((b) {
       if (seen.contains(b.id)) {
@@ -93,25 +114,12 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
       return true;
     }).toList();
 
-    final existingRoutes = deduped.map((b) => b.route).toSet();
-    final missing = defaults
-        .where((d) => !existingRoutes.contains(d.route))
-        .toList();
-
-    if (missing.isNotEmpty) {
-      for (final m in missing) {
-
-      }
+    // No admin-defined nav buttons at all → fall back to defaults.
+    if (deduped.isEmpty) {
+      return loaded.copyWith(navButtons: HomePageModel.defaultModel.navButtons);
     }
 
-    final merged = [...deduped, ...missing];
-
-    for (var i = 0; i < merged.length; i++) {
-
-
-    }
-
-    return loaded.copyWith(navButtons: merged);
+    return loaded.copyWith(navButtons: deduped);
   }
 
   // ── Load ──────────────────────────────────────────────────────────────────

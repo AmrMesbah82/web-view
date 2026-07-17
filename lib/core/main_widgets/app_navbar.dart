@@ -17,7 +17,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../features/home/data/models/home_model.dart';
@@ -27,6 +26,9 @@ import '../../features/home/presentation/controller/lang_state.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_wight.dart';
 import '../theme/appcolors.dart';
+// StyleText resolves the admin-selected English/Arabic font at runtime,
+// so navbar labels follow the CMS font choice instead of a hardcoded Cairo.
+import '../theme/new_theme.dart';
 
 class _WebColors {
   static const Color primary        = Colors.transparent;
@@ -70,6 +72,16 @@ Color _navbarBgFromState(HomeCmsState state) {
   return _hexColor(hex, AppColors.white);
 }
 
+// ✅ Extract secondary (branding) color from CMS state
+Color _secondaryFromState(HomeCmsState state) {
+  final String hex = switch (state) {
+    HomeCmsLoaded(:final data) => data.branding.secondaryColor,
+    HomeCmsSaved(:final data)  => data.branding.secondaryColor,
+    _                          => '',
+  };
+  return _hexColor(hex, AppColors.secondaryPrimary);
+}
+
 Color _hexColor(String hex, Color fallback) {
   final clean = hex.replaceAll('#', '');
   if (clean.length == 6) {
@@ -84,11 +96,12 @@ Color _lightTint(Color primary) => primary.withOpacity(0.12);
 // ── CMS-driven nav items, filtered by status ──────────────────────────────────
 List<({String label, String route, String svgAsset})> _getVisibleNavItems(
     String languageCode, HomeCmsState cmsState) {
-  final List<NavButtonModel> navButtons = switch (cmsState) {
-    HomeCmsLoaded(:final data) => data.navButtons,
-    HomeCmsSaved(:final data)  => data.navButtons,
-    _                          => HomePageModel.defaultModel.navButtons,
-  };
+  // The top navbar is intentionally FIXED to the standard tabs and their
+  // standard routes (Home → /, Services → /services, About → /about,
+  // Contact → /contact, Careers → /careers). Editing a nav button's
+  // "Navigate To" route in the admin only changes the middle hero buttons
+  // (home_hero_cards) — it must NOT move or duplicate the navbar tabs.
+  final List<NavButtonModel> navButtons = HomePageModel.defaultModel.navButtons;
 
   final bool isAr = languageCode == 'ar';
 
@@ -219,7 +232,10 @@ class _NavbarDesktop extends StatelessWidget {
                     ))
                         .toList(),
                   ),
-                  _LanguageToggle(primary: primary),
+                  _LanguageToggle(
+                    primary:   primary,
+                    secondary: _secondaryFromState(cmsState),
+                  ),
                 ],
               ),
             ),
@@ -267,7 +283,7 @@ class _NavbarMobile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6.r),
               ),
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 0.w, vertical: 8.h),
+                padding: EdgeInsets.only(right: 0.w, top: 8.h, bottom: 8.h,left: 8.h,),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -378,7 +394,12 @@ class _FullScreenDrawer extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: 16.w),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
-                      children: [_LanguageToggle(primary: primary)],
+                      children: [
+                        _LanguageToggle(
+                          primary:   primary,
+                          secondary: _secondaryFromState(cmsState),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -428,7 +449,7 @@ class _FullScreenDrawer extends StatelessWidget {
                                   textDirection: isRtl
                                       ? TextDirection.rtl
                                       : TextDirection.ltr,
-                                  style: GoogleFonts.cairo(
+                                  style: StyleText.fontSize14Weight400.copyWith(
                                     fontSize:   14.sp,
                                     fontWeight: isActive
                                         ? AppFontWeights.semiBold
@@ -571,7 +592,7 @@ class _NavItemState extends State<_NavItem> {
                 textDirection: langState.isArabic
                     ? TextDirection.rtl
                     : TextDirection.ltr,
-                style: GoogleFonts.cairo(
+                style: StyleText.fontSize14Weight400.copyWith(
                   fontSize:   widget.compact ? 11.sp : 13.sp,
                   fontWeight: _isActive
                       ? AppFontWeights.medium
@@ -593,7 +614,8 @@ class _NavItemState extends State<_NavItem> {
 
 class _LanguageToggle extends StatelessWidget {
   final Color primary;
-  const _LanguageToggle({required this.primary});
+  final Color secondary;
+  const _LanguageToggle({required this.primary, required this.secondary});
 
   @override
   Widget build(BuildContext context) {
@@ -602,7 +624,7 @@ class _LanguageToggle extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(6.r),
-            color:        AppColors.secondaryText.withOpacity(.1),
+            color:        secondary, // ✅ background uses secondary, not primary
           ),
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
@@ -660,7 +682,7 @@ class _LangBtn extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: GoogleFonts.cairo(
+            style: StyleText.fontSize11Weight600.copyWith(
               fontSize:   11.sp,
               fontWeight: AppFontWeights.semiBold,
               color:      active ? Colors.white : AppColors.secondaryBlack,

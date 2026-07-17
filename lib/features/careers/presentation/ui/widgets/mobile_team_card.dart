@@ -80,7 +80,7 @@ class _MobileTeamCard extends StatelessWidget {
           Text(
             desc,
             textAlign: TextAlign.center,
-            style: StyleText.fontSize12Weight400.copyWith(
+            style: StyleText.fontSize12Weight600.copyWith(
               fontSize: 10.sp,
               height: 1.6,
               color: AppColors.secondaryText.withOpacity(.7),

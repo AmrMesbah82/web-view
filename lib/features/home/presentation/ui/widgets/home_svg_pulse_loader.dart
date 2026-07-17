@@ -8,10 +8,9 @@ part of '../pages/home_page.dart';
 class _SvgPulseLoader extends StatefulWidget {
   final String? logoUrl;
   final Color   backgroundColor;
-
   const _SvgPulseLoader({
     this.logoUrl,
-    this.backgroundColor = _kDefaultPrimary,
+    required this.backgroundColor,
   });
 
   @override
@@ -60,13 +59,13 @@ class _SvgPulseLoaderState extends State<_SvgPulseLoader>
   Widget build(BuildContext context) {
     if (_resolvedUrl == null) {
       return Scaffold(
-        backgroundColor: widget.backgroundColor,
+        backgroundColor: Colors.white,
         body: const SizedBox.shrink(),
       );
     }
 
     return Scaffold(
-      backgroundColor: widget.backgroundColor,
+      backgroundColor:Colors.white,
       body: Center(
         child: FadeTransition(
           opacity: _opacity,
@@ -75,7 +74,8 @@ class _SvgPulseLoaderState extends State<_SvgPulseLoader>
             width:  88.w,
             height: 88.w,
             fit:    BoxFit.contain,
-            placeholderBuilder: (_) => SizedBox(width: 88.w, height: 88.w),
+            placeholderBuilder: (_) =>
+                SizedBox(width: 88.w, height: 88.w),
           ),
         ),
       ),

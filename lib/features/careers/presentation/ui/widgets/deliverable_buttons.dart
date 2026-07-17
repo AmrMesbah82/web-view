@@ -58,9 +58,9 @@ class _DeliverableButtonsState extends State<_DeliverableButtons> {
                   child: Text(
                     widget.deliverables[index],
                     style: StyleText.fontSize11Weight400.copyWith(
-                      fontSize: 9.sp,
+                      fontSize: 10.sp,
                       color: Colors.black54,
-                      fontWeight: FontWeight.w400,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),

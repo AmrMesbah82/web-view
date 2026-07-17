@@ -79,12 +79,32 @@ class _DesktopInternCard extends StatelessWidget {
                   Text(
                     data.degrees,
                     textAlign: TextAlign.center,
-                    style: StyleText.fontSize10Weight400.copyWith(
+                    style: StyleText.fontSize11Weight600.copyWith(
                       fontSize: degFz,
                       color: Colors.black45,
                       height: 1.4,
                     ),
                   ),
+                  // ── Position ─────────────────────────────────────────
+                  if (data.position.isNotEmpty) ...[
+                    SizedBox(height: 6.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 10.w, vertical: 5.h),
+                      decoration: BoxDecoration(
+                        color: primary,
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        data.position,
+                        textAlign: TextAlign.center,
+                        style: StyleText.fontSize13Weight600.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
                   SizedBox(height: 8.h),
                   Wrap(
                     spacing: 5.w,
@@ -123,14 +143,27 @@ class _DesktopInternCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    data.joinDateLabel,
-                    style: StyleText.fontSize11Weight400.copyWith(
-                      fontSize: joinFz,
-                      color: Colors.black45,
-                    ),
+                  Row(
+                    children: [
+
+                      Text(
+                        "Joined as Intern: ",
+                        style: StyleText.fontSize12Weight600.copyWith(
+                          fontSize: joinFz,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+
+                      Text(
+                        data.joinDateLabel,
+                        style: StyleText.fontSize11Weight600.copyWith(
+                          fontSize: joinFz,
+                          color: AppColors.text,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 22.h),
+                  SizedBox(height: 10.h),
                   Text(
                     _t('What Have I Learned', 'ماذا تعلمت', isRtl),
                     style: StyleText.fontSize16Weight700.copyWith(
@@ -138,10 +171,10 @@ class _DesktopInternCard extends StatelessWidget {
                       color: Colors.black87,
                     ),
                   ),
-                  SizedBox(height: 10.h),
+                  SizedBox(height: 6.h),
                   Text(
                     data.whatHaveILearned,
-                    style: StyleText.fontSize14Weight400.copyWith(
+                    style: StyleText.fontSize14Weight600.copyWith(
                       fontSize: bodyFz,
                       height: 1.6,
                       color: Colors.black54,

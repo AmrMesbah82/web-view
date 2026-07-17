@@ -112,44 +112,18 @@ class _SearchableDropdownState extends State<_SearchableDropdown> {
                         children: [
                           Padding(
                             padding: const EdgeInsets.all(8),
-                            child: TextField(
+                            child: custom.CustomTextField(
                               controller: _searchCtrl,
                               focusNode:  _focusNode,
-                              autofocus:  true,
-                              style: StyleText.fontSize12Weight400
+                              hint: widget.isRtl ? 'بحث...' : 'Search...',
+                              height: 34,
+                              primaryColor: widget.primaryColor,
+                              fillColor: AppColors.background,
+                              prefixIcon: const Icon(Icons.search, size: 18),
+                              valueStyle: StyleText.fontSize12Weight400
                                   .copyWith(color: AppColors.text),
-                              decoration: InputDecoration(
-                                hintText:
-                                widget.isRtl ? 'بحث...' : 'Search...',
-                                hintStyle: StyleText.fontSize12Weight400
-                                    .copyWith(color: Colors.grey),
-                                prefixIcon:
-                                const Icon(Icons.search, size: 18),
-                                isDense: true,
-                                contentPadding:
-                                const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 8),
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.circular(4.r),
-                                  borderSide: BorderSide(
-                                      color:
-                                      Colors.grey.withOpacity(0.3)),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.circular(4.r),
-                                  borderSide: BorderSide(
-                                      color:
-                                      Colors.grey.withOpacity(0.3)),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.circular(4.r),
-                                  borderSide: BorderSide(
-                                      color: widget.primaryColor),
-                                ),
-                              ),
+                              hintStyle: StyleText.fontSize12Weight400
+                                  .copyWith(color: Colors.grey),
                               onChanged: (query) {
                                 setInnerState(() {
                                   if (query.isEmpty) {
@@ -237,6 +211,8 @@ class _SearchableDropdownState extends State<_SearchableDropdown> {
     );
 
     Overlay.of(context).insert(_overlayEntry!);
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _focusNode.requestFocus());
   }
 
   @override

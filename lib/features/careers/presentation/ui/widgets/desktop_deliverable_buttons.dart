@@ -46,10 +46,9 @@ class _DesktopDeliverableButtons extends StatelessWidget {
               ),
               child: Text(
                 deliverables[index],
-                style: StyleText.fontSize11Weight400.copyWith(
-                  fontSize: fontSize,
+                style: StyleText.fontSize12Weight600.copyWith(
+
                   color: Colors.black54,
-                  fontWeight: FontWeight.w400,
                 ),
               ),
             ),

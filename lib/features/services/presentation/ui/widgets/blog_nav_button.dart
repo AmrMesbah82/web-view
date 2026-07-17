@@ -51,16 +51,13 @@ class _BlogNavButtonState extends State<_BlogNavButton> {
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius:
-            BorderRadius.circular(widget.isMobile ? 10 : 10.r),
+            BorderRadius.circular(widget.isMobile ? 8 : 8.r),
           ),
           child: Text(
             widget.label,
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize:   widget.isMobile ? 12 : 13.sp,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
+            style: StyleText.fontSize12Weight500.copyWith(
+                color: textColor
+            )
           ),
         ),
       ),

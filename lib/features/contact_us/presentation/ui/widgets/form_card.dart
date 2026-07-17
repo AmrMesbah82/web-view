@@ -85,6 +85,24 @@ class _FormCard extends StatelessWidget {
     );
   }
 
+  // ── Helper: two fields side-by-side on desktop, stacked on mobile ──
+  Widget _pair(Widget a, Widget b) {
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [a, SizedBox(height: 15.sp), b],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: a),
+        SizedBox(width: 12.w),
+        Expanded(child: b),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final double rad = isMobile ? 12 : 12.r;
@@ -214,66 +232,16 @@ class _FormCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextField(
+                      CustomValidatedTextFieldMaster(
+                        hint:          otherLangHint,
                         controller:    otherLanguageCtrl,
+                        submitted:     otherFieldError,
+                        height:        36,
+                        primaryColor:  primaryColor,
                         textDirection: dir,
                         textAlign:     align,
-                        style: StyleText.fontSize13Weight400.copyWith(
-                          color:    AppColors.text,
-                          fontSize: isMobile ? 12.sp : 13.sp,
-                        ),
-                        decoration: InputDecoration(
-                          hoverColor: Colors.transparent,
-                          hintText:  otherLangHint,
-                          hintStyle: StyleText.fontSize12Weight400.copyWith(
-                            color: Colors.grey.shade400,
-                          ),
-                          isDense:        true,
-                          filled:         true,
-                          fillColor:      otherFieldError
-                              ? Colors.red.withOpacity(0.04)
-                              : const Color(0xFFF1F2ED),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10.w,
-                            vertical:   isMobile ? 10 : 9.h,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4.r),
-                            borderSide: BorderSide(
-                              color: otherFieldError
-                                  ? Colors.red
-                                  : Colors.transparent,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4.r),
-                            borderSide: BorderSide(
-                              color: otherFieldError
-                                  ? Colors.red
-                                  : Colors.transparent,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4.r),
-                            borderSide: BorderSide(
-                              color: otherFieldError
-                                  ? Colors.red
-                                  : primaryColor,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
+                        fillColor:     Colors.white,
                       ),
-                      if (otherFieldError) ...[
-                        SizedBox(height: 3.h),
-                        Text(
-                          otherLangRequired,
-                          style: StyleText.fontSize12Weight400.copyWith(
-                            color:    Colors.red,
-                            fontSize: isMobile ? 11.sp : 11.sp,
-                          ),
-                        ),
-                      ],
                     ],
                   )
                       : const SizedBox.shrink(),
@@ -281,147 +249,114 @@ class _FormCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: isMobile ? 15.sp : 18.h),
 
+          // ── First Name / Last Name (mobile: stacked) ──
+          _pair(
+            CustomValidatedTextFieldMaster(
+              label:         firstNameLabel,
+              hint:          hint,
+              controller:    firstNameCtrl,
+              submitted:     submitted,
+              height:        36,
+              primaryColor:  primaryColor,
+              textDirection: dir,
+              textAlign:     align,
+            ),
+            CustomValidatedTextFieldMaster(
+              label:         lastNameLabel,
+              hint:          hint,
+              controller:    lastNameCtrl,
+              submitted:     submitted,
+              height:        36,
+              primaryColor:  primaryColor,
+              textDirection: dir,
+              textAlign:     align,
+            ),
+          ),
+          if (isMobile) SizedBox(height: 15.sp),
 
+          // ── Email / Phone (mobile: stacked; phone keeps code+number row) ──
+          _pair(
+            CustomValidatedTextFieldMaster(
+              label:        emailLabel,
+              primaryColor: primaryColor,
+              hint: _t(context,
+                  en: 'Enter your email',
+                  ar: 'أدخل البريد الإلكتروني'),
+              controller:    emailCtrl,
+              submitted:     submitted,
+              height:        36,
+              textDirection: dir,
+              textAlign:     align,
+            ),
+            _PhoneField(
+              label:         phoneLabel,
+              controller:    phoneCtrl,
+              submitted:     submitted,
+              isMobile:      isMobile,
+              selectedCode:  phoneCode,
+              onCodeChanged: onCodeChanged,
+              isRtl:         isRtl,
+              primaryColor:  primaryColor,
+            ),
+          ),
+          if (isMobile) SizedBox(height: 15.sp),
 
-          SizedBox(height: isMobile ? 8.h : 10.h),
+          // ── Location / Entity Name (mobile: stacked) ──
+          _pair(
+            _DropdownField(
+              label:        locationLabel,
+              hint:         selectLocation,
+              value:        selectedLocation,
+              items:        countryItems,
+              onChanged:    onLocationChanged,
+              submitted:    submitted,
+              isRtl:        isRtl,
+              isMobile:     isMobile,
+              primaryColor: primaryColor,
+              isSearchable: true,
+            ),
+            CustomValidatedTextFieldMaster(
+              label:         entityNameLabel,
+              hint:          hint,
+              controller:    entityNameCtrl,
+              submitted:     false, // optional
+              height:        36,
+              primaryColor:  primaryColor,
+              textDirection: dir,
+              textAlign:     align,
+            ),
+          ),
+          if (isMobile) SizedBox(height: 15.sp),
 
-          // ── First Name / Last Name (side by side) ──
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: CustomValidatedTextFieldMaster(
-                  label:         firstNameLabel,
-                  hint:          hint,
-                  controller:    firstNameCtrl,
-                  submitted:     submitted,
-                  height:        32,
-                  primaryColor:  primaryColor,
-                  textDirection: dir,
-                  textAlign:     align,
-                ),
-              ),
-              SizedBox(width: isMobile ? 8.w : 12.w),
-              Expanded(
-                child: CustomValidatedTextFieldMaster(
-                  label:         lastNameLabel,
-                  hint:          hint,
-                  controller:    lastNameCtrl,
-                  submitted:     submitted,
-                  height:        32,
-                  primaryColor:  primaryColor,
-                  textDirection: dir,
-                  textAlign:     align,
-                ),
-              ),
-            ],
+          // ── Entity Type / Entity Size (mobile: stacked) ──
+          _pair(
+            _DropdownField(
+              label:        entityTypeLabel,
+              hint:         selectType,
+              value:        selectedEntityType,
+              items:        entityTypeItems,
+              onChanged:    onEntityTypeChanged,
+              submitted:    false,
+              isRtl:        isRtl,
+              isMobile:     isMobile,
+              primaryColor: primaryColor,
+            ),
+            _DropdownField(
+              label:        entitySizeLabel,
+              hint:         selectSize,
+              value:        selectedEntitySize,
+              items:        entitySizeItems,
+              onChanged:    onEntitySizeChanged,
+              submitted:    false,
+              isRtl:        isRtl,
+              isMobile:     isMobile,
+              primaryColor: primaryColor,
+            ),
           ),
 
-          // ── Email / Phone (side by side) ──
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: CustomValidatedTextFieldMaster(
-                  label:        emailLabel,
-                  primaryColor: primaryColor,
-                  hint: _t(context,
-                      en: 'Enter your email',
-                      ar: 'أدخل البريد الإلكتروني'),
-                  controller:    emailCtrl,
-                  submitted:     submitted,
-                  height:        32,
-                  textDirection: dir,
-                  textAlign:     align,
-                ),
-              ),
-              SizedBox(width: isMobile ? 8.w : 12.w),
-              Expanded(
-                child: _PhoneField(
-                  label:         phoneLabel,
-                  controller:    phoneCtrl,
-                  submitted:     submitted,
-                  isMobile:      isMobile,
-                  selectedCode:  phoneCode,
-                  onCodeChanged: onCodeChanged,
-                  isRtl:         isRtl,
-                  primaryColor:  primaryColor,
-                ),
-              ),
-            ],
-          ),
-
-          // ── Location / Entity Name (side by side) ──
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _DropdownField(
-                  label:        locationLabel,
-                  hint:         selectLocation,
-                  value:        selectedLocation,
-                  items:        countryItems,
-                  onChanged:    onLocationChanged,
-                  submitted:    submitted,
-                  isRtl:        isRtl,
-                  isMobile:     isMobile,
-                  primaryColor: primaryColor,
-                  isSearchable: true,
-                ),
-              ),
-              SizedBox(width: isMobile ? 8.w : 12.w),
-              Expanded(
-                child: CustomValidatedTextFieldMaster(
-                  label:         entityNameLabel,
-                  hint:          hint,
-                  controller:    entityNameCtrl,
-                  submitted:     false, // optional
-                  height:        32,
-                  primaryColor:  primaryColor,
-                  textDirection: dir,
-                  textAlign:     align,
-                ),
-              ),
-            ],
-          ),
-
-          // ── Entity Type / Entity Size (side by side) ──
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _DropdownField(
-                  label:        entityTypeLabel,
-                  hint:         selectType,
-                  value:        selectedEntityType,
-                  items:        entityTypeItems,
-                  onChanged:    onEntityTypeChanged,
-                  submitted:    false,
-                  isRtl:        isRtl,
-                  isMobile:     isMobile,
-                  primaryColor: primaryColor,
-                ),
-              ),
-              SizedBox(width: isMobile ? 8.w : 12.w),
-              Expanded(
-                child: _DropdownField(
-                  label:        entitySizeLabel,
-                  hint:         selectSize,
-                  value:        selectedEntitySize,
-                  items:        entitySizeItems,
-                  onChanged:    onEntitySizeChanged,
-                  submitted:    false,
-                  isRtl:        isRtl,
-                  isMobile:     isMobile,
-                  primaryColor: primaryColor,
-                ),
-              ),
-            ],
-          ),
-
-          SizedBox(height: 15.h),
+          SizedBox(height: isMobile ? 15.sp : 15.h),
 
           // ── Subject (full width) ──
           CustomValidatedTextFieldMaster(
@@ -430,10 +365,12 @@ class _FormCard extends StatelessWidget {
               hint:          hint,
               controller:    subjectCtrl,
               submitted:     submitted,
-              height:        32,
+              height:        36,
               minLength:     10,
               textDirection: dir,
               textAlign:     align),
+
+          if (isMobile) SizedBox(height: 15.sp),
 
           // ── Message (full width) ──
           CustomValidatedTextFieldMaster(
@@ -448,7 +385,7 @@ class _FormCard extends StatelessWidget {
               textDirection: dir,
               textAlign:     align),
 
-          SizedBox(height: 4.h),
+          SizedBox(height: 13.h),
 
           // ── Send Button ──
           SizedBox(
@@ -466,6 +403,7 @@ class _FormCard extends StatelessWidget {
                       .copyWith(color: Colors.white, fontSize: 14.sp)),
             ),
           ),
+          SizedBox(height: 7.h),
         ],
       ),
     );

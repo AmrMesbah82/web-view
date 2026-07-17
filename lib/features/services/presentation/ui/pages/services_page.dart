@@ -25,6 +25,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:website_app/core/widgets/format_heper.dart';
+import 'package:website_app/features/home/data/models/home_model.dart';
 import 'package:website_app/features/services/data/models/services_model.dart';
 
 import '../../../../../core/main_widgets/app_footer.dart';
@@ -124,10 +126,25 @@ class _ServicesPageState extends State<ServicesPage> {
     }
   }
 
+
+
+   Color _kDefaultPrimary    = Color(0xFF2D8C4E);
+   Color _kDefaultBackground = Color(0xFFF5F5F5);
+  Color _hexColor(String hex, {required Color fallback}) {
+    final h = hex.replaceAll('#', '');
+    if (h.length == 6) {
+      final value = int.tryParse('FF\$h', radix: 16);
+      if (value != null) return Color(value);
+    }
+    return fallback;
+  }
   @override
   Widget build(BuildContext context) {
+
     return BlocBuilder<HomeCmsCubit, HomeCmsState>(
       builder: (context, homeState) {
+
+
 
         // ── backgroundColor from CMS branding ─────────────────────────────
         final Color backgroundColor = switch (homeState) {
@@ -208,12 +225,8 @@ class _ServicesPageState extends State<ServicesPage> {
 
                 if (_showLoader || !allDataReady) {
                   return _SvgPulseLoader(
-                    logoUrl:         logoUrl.isEmpty ? null : logoUrl,
-                    backgroundColor: homeReady
-                        ? _parseColor(
-                        context.read<HomeCmsCubit>().current.branding.backgroundColor,
-                        fallback: AppColors.background)
-                        : AppColors.background,
+                    logoUrl: logoUrl.isEmpty ? null : logoUrl,
+                    backgroundColor: backgroundColor,
                   );
                 }
 

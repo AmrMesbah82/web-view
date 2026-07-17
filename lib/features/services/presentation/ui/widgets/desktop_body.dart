@@ -26,50 +26,54 @@ class _DesktopBody extends StatelessWidget {
     final double pageW = (450.w * 3) + (12.w * 2);
 
     return SizedBox(
-      width: 1000.w,
+      width: 1010.w,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(height: 32.h),
 
           // ── Tab buttons ────────────────────────────────────────────────
-          Center(
-            child: SizedBox(
-              width: pageW,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: posts.asMap().entries.map((e) {
-                  final bool isLast = e.key == posts.length - 1;
-                  return Padding(
-                    padding: EdgeInsets.only(right: isLast ? 0 : 12.w, left: isLast ? 0 : 12.w,),
-                    child: _BlogNavButton(
-                      label: _tb(e.value.descriptionTitle, isRtl).isNotEmpty
-                          ? _tb(e.value.descriptionTitle, isRtl)
-                          : _tb(e.value.question, isRtl),  // ← new:
-                      isSelected: selected.id == e.value.id,
-                      onTap:      () => onTabChange(e.value.id),
-                      isMobile:   false,
-                      primary:    primary,
-                      secondary:  secondary,
-                    ),
-                  );
-                }).toList(),
-              ),
+          SizedBox(
+            width: pageW,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: posts.asMap().entries.map((e) {
+                final bool isLast = e.key == posts.length - 1;
+                return Padding(
+                  padding: EdgeInsets.only(right: 10.sp),
+                  child: _BlogNavButton(
+                    label: FormatHelper.capitalize(
+                        _tb(e.value.descriptionTitle, isRtl).isNotEmpty
+                            ? _tb(e.value.descriptionTitle, isRtl)
+                            : _tb(e.value.question, isRtl)),  // ← new:
+                    isSelected: selected.id == e.value.id,
+                    onTap:      () => onTabChange(e.value.id),
+                    isMobile:   false,
+                    primary:    primary,
+                    secondary:  secondary,
+                  ),
+                );
+              }).toList(),
             ),
           ),
 
           SizedBox(height: 40.h),
 
           // ── Article body ───────────────────────────────────────────────
-          Center(
-            child: SizedBox(
-              width: pageW,
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            width: pageW,
+            child: Padding(
+              padding:  EdgeInsets.symmetric(horizontal: 15.sp, vertical: 10.sp),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Question as page title
                   Text(
-                    _tb(selected.question, isRtl),
+                    FormatHelper.capitalize(_tb(selected.question, isRtl)),
                     style: AppTextStyles.font28BlackSemiBoldCairo.copyWith(
                       fontSize:   28.sp,
                       fontWeight: FontWeight.w700,
@@ -88,7 +92,8 @@ class _DesktopBody extends StatelessWidget {
                           children: [
                             // descriptionTitle
                             Text(
-                              _tb(selected.descriptionTitle, isRtl),
+                              FormatHelper.capitalize(
+                                  _tb(selected.descriptionTitle, isRtl)),
                               style: AppTextStyles.font14BlackCairo.copyWith(
                                 fontSize:   15.sp,
                                 fontWeight: FontWeight.w700,
@@ -115,27 +120,6 @@ class _DesktopBody extends StatelessWidget {
                                 color:    AppColors.secondaryBlack,
                               ),
                             ),
-                            SizedBox(height: 8.h),
-                            // Read More / Less
-                            GestureDetector(
-                              onTap: onToggleExpand,
-                              child: MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: Text(
-                                  expanded
-                                      ? (isRtl ? 'اقرأ أقل'    : 'Read Less')
-                                      : (isRtl ? 'اقرأ المزيد' : 'Read More'),
-                                  style: AppTextStyles.font12BlackCairoRegular
-                                      .copyWith(
-                                    fontSize:        13.sp,
-                                    fontWeight:      FontWeight.w600,
-                                    color:           primary,
-                                    decoration:      TextDecoration.underline,
-                                    decorationColor: primary,
-                                  ),
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -153,18 +137,16 @@ class _DesktopBody extends StatelessWidget {
                     ],
                   ),
 
-                  // ── Expandable: blocks ─────────────────────────────────
-                  if (expanded) ...[
-                    SizedBox(height: 28.h),
-                    _BlockList(
-                      blocks:   selected.blocks,
-                      isRtl:    isRtl,
-                      fontSize: 13.sp,
-                      isMobile: false,
-                      primary:  primary,
-                    ),
-                    SizedBox(height: 40.h),
-                  ],
+                  // ── Blocks: always shown (no read more/less) ───────────
+                  SizedBox(height: 28.h),
+                  _BlockList(
+                    blocks:   selected.blocks,
+                    isRtl:    isRtl,
+                    fontSize: 13.sp,
+                    isMobile: false,
+                    primary:  primary,
+                  ),
+                  SizedBox(height: 40.h),
                 ],
               ),
             ),

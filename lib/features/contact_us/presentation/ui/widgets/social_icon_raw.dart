@@ -38,13 +38,17 @@ class _SocialIconRaw extends StatelessWidget {
             borderRadius: BorderRadius.circular(7.r)),
         child: Center(
           child: iconUrl != null && iconUrl!.isNotEmpty
-              ?SvgPicture.network(iconUrl!,
+              ? SvgPicture.network(iconUrl!,
               width:  20.w,
               height: 20.w,
               fit:    BoxFit.contain,
-              headers: const {'Cache-Control': 'no-cache'},
-              colorFilter: ColorFilter.mode(
-                  primaryColor, BlendMode.srcIn))
+              // Render the uploaded logo in its OWN colors — do NOT tint it,
+              // or a multi-color logo collapses into a solid brand-color blob.
+              placeholderBuilder: (_) => Icon(
+                Icons.link,
+                size: 16.sp,
+                color: primaryColor,
+              ))
               : SvgPicture.asset(
               svgPath ?? 'assets/images/instegrm.svg',
               width:  20.w,

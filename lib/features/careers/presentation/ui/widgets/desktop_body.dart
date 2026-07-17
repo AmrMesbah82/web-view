@@ -10,6 +10,10 @@ class _DesktopBody extends StatelessWidget {
   final List<CareersSectionItem> whyJoinItems;
   final List<InternModel> interns;
   final List<OurTeamItem> teams;
+  final String internsIconUrl;
+  final String internsTitle;
+  final String teamIconUrl;
+  final String teamTitle;
 
   const _DesktopBody({
     required this.selectedTab,
@@ -21,6 +25,10 @@ class _DesktopBody extends StatelessWidget {
     required this.whyJoinItems,
     required this.interns,
     required this.teams,
+    this.internsIconUrl = '',
+    this.internsTitle = '',
+    this.teamIconUrl = '',
+    this.teamTitle = '',
   });
 
   @override
@@ -87,19 +95,6 @@ class _DesktopBody extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _t(
-                      'Join a Team That Drives Innovation and Values You',
-                      'انضم إلى فريق يقود الابتكار ويُقدّرك',
-                      isRtl,
-                    ),
-                    style: StyleText.fontSize12Weight600.copyWith(
-                      fontSize: headerFz,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  SizedBox(height: 10.h),
                   if (overviewDesc.isNotEmpty)
                     _PlainText(overviewDesc, fontSize: plainFz),
                   SizedBox(height: 16.h),
@@ -214,6 +209,27 @@ class _DesktopBody extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(_tabs.length, (i) {
                 final bool selected = selectedTab == i;
+                // Admin-controlled icon/label overrides:
+                //   tab 0 → "Why Join Our Team" section item 0
+                //   tab 1 → "Our Interns" section header
+                final String tabIconUrl = switch (i) {
+                  0 => whyJoinItems.isNotEmpty
+                      ? whyJoinItems.first.iconUrl
+                      : '',
+                  1 => internsIconUrl,
+                  2 => teamIconUrl,
+                  _ => '',
+                };
+                final String tabLabelOverride = switch (i) {
+                  0 => whyJoinItems.isNotEmpty
+                      ? (isRtl
+                          ? whyJoinItems.first.title.ar
+                          : whyJoinItems.first.title.en)
+                      : '',
+                  1 => internsTitle,
+                  2 => teamTitle,
+                  _ => '',
+                };
                 return GestureDetector(
                   onTap: () => onTabChange(i),
                   child: MouseRegion(
@@ -249,23 +265,37 @@ class _DesktopBody extends StatelessWidget {
                               color: selected ? primary : secondary,
                             ),
                             child: Center(
-                              child: SvgPicture.asset(
-                                _tabs[i].icon,
-                                width: tabIconSz,
-                                height: tabIconSz,
-                                fit: BoxFit.scaleDown,
-                                colorFilter: ColorFilter.mode(
-                                  selected
-                                      ? Colors.white
-                                      : primary,
-                                  BlendMode.srcIn,
-                                ),
-                              ),
+                              child: tabIconUrl.isNotEmpty
+                                  ? SvgPicture.network(
+                                      tabIconUrl,
+                                      width: tabIconSz,
+                                      height: tabIconSz,
+                                      fit: BoxFit.scaleDown,
+                                      colorFilter: ColorFilter.mode(
+                                        selected ? Colors.white : primary,
+                                        BlendMode.srcIn,
+                                      ),
+                                      placeholderBuilder: (_) => SizedBox(
+                                          width: tabIconSz,
+                                          height: tabIconSz),
+                                    )
+                                  : SvgPicture.asset(
+                                      _tabs[i].icon,
+                                      width: tabIconSz,
+                                      height: tabIconSz,
+                                      fit: BoxFit.scaleDown,
+                                      colorFilter: ColorFilter.mode(
+                                        selected ? Colors.white : primary,
+                                        BlendMode.srcIn,
+                                      ),
+                                    ),
                             ),
                           ),
                           SizedBox(width: 6.w),
                           Text(
-                            _tabs[i].label(isRtl),
+                            tabLabelOverride.isNotEmpty
+                                ? tabLabelOverride
+                                : _tabs[i].label(isRtl),
                             style:
                             StyleText.fontSize14Weight400.copyWith(
                               fontSize: tabFz,

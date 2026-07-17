@@ -103,6 +103,12 @@ class _CareersPageState extends State<CareersPage> {
   bool _showLoader = true;
   int _selectedTab = 0;
 
+  // Dedicated section cubit for the "Our Interns" tab header (icon + title).
+  // Kept as an explicit instance (not a global provider) to avoid clashing
+  // with the type-based CareersSectionCubit used for 'whyJoinOurTeam'.
+  final CareersSectionCubit _internsSection =
+      CareersSectionCubit(sectionKey: 'ourInterns');
+
   @override
   void initState() {
     super.initState();
@@ -119,8 +125,15 @@ class _CareersPageState extends State<CareersPage> {
           .load(); // sectionKey == 'whyJoinOurTeam'
       context.read<InternCubit>().load();
       context.read<OurTeamsCubit>().load();
+      _internsSection.load(); // sectionKey == 'ourInterns' (header icon+title)
       _readTabParam();
     });
+  }
+
+  @override
+  void dispose() {
+    _internsSection.close();
+    super.dispose();
   }
 
   @override
@@ -255,12 +268,40 @@ class _CareersPageState extends State<CareersPage> {
                         // ── Our Teams from Firebase ──────────────────────────
                         return BlocBuilder<OurTeamsCubit, OurTeamsState>(
                           builder: (context, teamsState) {
-                            final List<OurTeamItem> teams =
+                            final OurTeamsModel teamsModel =
                             switch (teamsState) {
-                              OurTeamsLoaded(:final data) => data.items,
-                              OurTeamsSaved(:final data) => data.items,
-                              _ => context.read<OurTeamsCubit>().current.items,
+                              OurTeamsLoaded(:final data) => data,
+                              OurTeamsSaved(:final data) => data,
+                              _ => context.read<OurTeamsCubit>().current,
                             };
+                            final List<OurTeamItem> teams = teamsModel.items;
+                            final String teamIconUrl =
+                                teamsModel.headerIconUrl;
+                            final String teamTitle = isRtl
+                                ? teamsModel.headerTitle.ar
+                                : teamsModel.headerTitle.en;
+
+                            // ── "Our Interns" header (icon + title) ──────────
+                            return BlocBuilder<CareersSectionCubit,
+                                CareersSectionState>(
+                              bloc: _internsSection,
+                              builder: (context, internsSecState) {
+                                final List<CareersSectionItem> internsHeader =
+                                    switch (internsSecState) {
+                                  CareersSectionLoaded(:final data) => data.items,
+                                  CareersSectionSaved(:final data) => data.items,
+                                  _ => _internsSection.current.items,
+                                };
+                                final String internsIconUrl =
+                                    internsHeader.isNotEmpty
+                                        ? internsHeader.first.iconUrl
+                                        : '';
+                                final String internsTitle =
+                                    internsHeader.isNotEmpty
+                                        ? (isRtl
+                                            ? internsHeader.first.title.ar
+                                            : internsHeader.first.title.en)
+                                        : '';
 
                             return Directionality(
                               textDirection: isRtl
@@ -297,6 +338,11 @@ class _CareersPageState extends State<CareersPage> {
                                                 whyJoinItems,
                                                 interns: interns,
                                                 teams: teams,
+                                                internsIconUrl:
+                                                internsIconUrl,
+                                                internsTitle: internsTitle,
+                                                teamIconUrl: teamIconUrl,
+                                                teamTitle: teamTitle,
                                               )
                                                   : _DesktopBody(
                                                 selectedTab: _selectedTab,
@@ -311,6 +357,11 @@ class _CareersPageState extends State<CareersPage> {
                                                 whyJoinItems,
                                                 interns: interns,
                                                 teams: teams,
+                                                internsIconUrl:
+                                                internsIconUrl,
+                                                internsTitle: internsTitle,
+                                                teamIconUrl: teamIconUrl,
+                                                teamTitle: teamTitle,
                                               ),
                                             ],
                                           ),
@@ -328,6 +379,8 @@ class _CareersPageState extends State<CareersPage> {
                                   ),
                                 ),
                               ),
+                            );
+                              },
                             );
                           },
                         );

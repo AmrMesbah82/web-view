@@ -65,7 +65,7 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
           mainAxisSize: MainAxisSize.min,
           children: [
             CustomSvg(
-              assetPath: "assets/download.svg",
+              assetPath: "assets/download 1.svg",
               width: 12.h,
               height: 16.h,
               fit: BoxFit.scaleDown,
@@ -87,9 +87,21 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
     );
   }
 
+  // Bilingual "Last Updated" label for the Terms / Privacy top row.
+  String _lastUpdatedLabel(DateTime? d) {
+    if (d == null) return widget.isRtl ? 'آخر تحديث: —' : 'Last Updated: —';
+    const months = [
+      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final String ds = '${d.day} ${months[d.month]} ${d.year}';
+    return widget.isRtl ? 'آخر تحديث: $ds' : 'Last Updated: $ds';
+  }
+
   Widget _docPanel({
     required String description,
-    required String svgUrl,
+    required DateTime? lastUpdated,
+    required String logoUrl,
     required String attachEnUrl,
     required String attachArUrl,
     required String labelEn,
@@ -105,28 +117,38 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
             color: _kSurface,
             borderRadius: BorderRadius.circular(12.r),
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  description,
-                  style: StyleText.fontSize14Weight400.copyWith(
-                    fontSize: 13.sp,
-                    height: 1.75,
+              // ── Top row: app logo (start) + last updated (end) ──
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (logoUrl.isNotEmpty)
+                    _netImg(
+                      url: logoUrl,
+                      width: 44.w,
+                      height: 44.h,
+                      fit: BoxFit.contain,
+                    ),
+                  const Spacer(),
+                  Text(
+                    _lastUpdatedLabel(lastUpdated),
+                    style: StyleText.fontSize14Weight400.copyWith(
+                      fontSize: 12.sp,
+                      color: widget.primaryColor,
+                    ),
                   ),
+                ],
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                description,
+                style: StyleText.fontSize14Weight400.copyWith(
+                  fontSize: 13.sp,
+                  height: 1.75,
                 ),
               ),
-              if (svgUrl.isNotEmpty) ...[
-                SizedBox(width: 16.w),
-                _netImg(
-                  url: svgUrl,
-                  width: 180.w,
-                  height: 180.h,
-                  fit: BoxFit.contain,
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-              ],
             ],
           ),
         ),
@@ -158,6 +180,9 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
         leftW = 280.w;
     final TermsSection terms = widget.termsModel.termsAndConditions,
         privacy = widget.termsModel.privacyPolicy;
+    // App logo (same source as the main/home branding) for the doc top row.
+    final String logoUrl =
+        context.read<HomeCmsCubit>().current.branding.logoUrl;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: hPad),
@@ -175,16 +200,38 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                   StrategySaved(:final data) => data.navigationLabel.iconUrl,
                   _ => '',
                 };
+                // CMS navigation-label title for the Strategy tab.
+                final String strategyTitleEn = switch (strategyState) {
+                  StrategyLoaded(:final data) => data.navigationLabel.title.en,
+                  StrategySaved(:final data) => data.navigationLabel.title.en,
+                  _ => '',
+                };
+                final String strategyTitleAr = switch (strategyState) {
+                  StrategyLoaded(:final data) => data.navigationLabel.title.ar,
+                  StrategySaved(:final data) => data.navigationLabel.title.ar,
+                  _ => '',
+                };
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: List.generate(_topTabs.length, (i) {
                     final bool isRtl =
                         context.read<LanguageCubit>().state.isArabic;
-                    final String label = isRtl
-                        ? (_topTabs[i].ar.isNotEmpty
-                            ? _topTabs[i].ar
-                            : _topTabs[i].en)
-                        : _topTabs[i].en;
+                    // CMS titles for Terms (tab 2) / Privacy (tab 3).
+                    final String cmsLabel = switch (i) {
+                      0 => isRtl
+                          ? widget.model.navigationLabel.title.ar
+                          : widget.model.navigationLabel.title.en,
+                      1 => isRtl ? strategyTitleAr : strategyTitleEn,
+                      2 => isRtl ? terms.title.ar : terms.title.en,
+                      _ => isRtl ? privacy.title.ar : privacy.title.en,
+                    };
+                    final String label = cmsLabel.isNotEmpty
+                        ? cmsLabel
+                        : (isRtl
+                            ? (_topTabs[i].ar.isNotEmpty
+                                ? _topTabs[i].ar
+                                : _topTabs[i].en)
+                            : _topTabs[i].en);
                     final String svgAsset = switch (i) {
                       0 => 'assets/images/about_us/about_us.svg',
                       1 => 'assets/images/about_us/Our Strategy.svg',
@@ -194,7 +241,12 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                     final String cmsIconUrl = switch (i) {
                       0 => widget.model.navigationLabel.iconUrl,
                       1 => strategyIconUrl,
-                      _ => widget.termsModel.navigationLabel.iconUrl,
+                      2 => terms.iconUrl.isNotEmpty
+                          ? terms.iconUrl
+                          : widget.termsModel.navigationLabel.iconUrl,
+                      _ => privacy.iconUrl.isNotEmpty
+                          ? privacy.iconUrl
+                          : widget.termsModel.navigationLabel.iconUrl,
                     };
                     return _DesktopTopTabItem(
                       index: i,
@@ -385,7 +437,8 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
               direction: _SlideDirection.fromBottom,
               child: _docPanel(
                 description: _ab(terms.description, widget.isRtl),
-                svgUrl: terms.svgUrl,
+                lastUpdated: widget.termsModel.lastUpdatedAt,
+                logoUrl: logoUrl,
                 attachEnUrl: terms.attachEnUrl,
                 attachArUrl: terms.attachArUrl,
                 labelEn: 'Download PDF of Terms and Conditions (ENG)',
@@ -401,7 +454,8 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
               direction: _SlideDirection.fromBottom,
               child: _docPanel(
                 description: _ab(privacy.description, widget.isRtl),
-                svgUrl: privacy.svgUrl,
+                lastUpdated: widget.termsModel.lastUpdatedAt,
+                logoUrl: logoUrl,
                 attachEnUrl: privacy.attachEnUrl,
                 attachArUrl: privacy.attachArUrl,
                 labelEn: 'Download PDF of Privacy Policy (ENG)',

@@ -1,64 +1,60 @@
+/// ******************* FILE INFO *******************
+/// File Name: textfield_2.dart
+/// Description: Input formatters + DEPRECATED SHIM. CustomValidatedTextFieldInv
+///              now delegates rendering to the single shared text field in
+///              lib/core/custom/2-custom_textfield.dart while keeping the
+///              language/capitalize formatters and legacy API.
+/// Created by: Amr Mesbah
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 
-
+import '../custom/2-custom_textfield.dart' as custom;
 import '../theme/appcolors.dart';
 import '../theme/new_theme.dart';
-
 
 class ArabicOnlyInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue,
-      TextEditingValue newValue,
-      ) {
-    // Block English letters (a-z, A-Z)
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final hasEnglishLetters = RegExp(r'[a-zA-Z]').hasMatch(newValue.text);
-
     if (hasEnglishLetters) {
-      return oldValue; // Reject if contains English letters
+      return oldValue;
     }
-
-    return newValue; // Allow everything else (Arabic, numbers, punctuation, spaces)
+    return newValue;
   }
 }
 
 class EnglishOnlyInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue,
-      TextEditingValue newValue,
-      ) {
-    // Block Arabic characters
-    final hasArabicCharacters = RegExp(r'[\u0600-\u06FF]').hasMatch(newValue.text);
-
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final hasArabicCharacters =
+        RegExp(r'[؀-ۿ]').hasMatch(newValue.text);
     if (hasArabicCharacters) {
-      return oldValue; // Reject if contains Arabic
+      return oldValue;
     }
-
-    return newValue; // Allow everything else (English, numbers, punctuation, spaces)
+    return newValue;
   }
 }
 
-// ✅ NEW: Capitalize Text Formatter
-// ✅ IMPROVED: Capitalize Text Formatter
 class CapitalizeTextFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue,
-      TextEditingValue newValue,
-      ) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     if (newValue.text.isEmpty) {
       return newValue;
     }
-
-    // Capitalize first letter of each word
     String capitalizedText = newValue.text.split(' ').map((word) {
       if (word.isEmpty) return word;
-      // Handle cases where word might start with special characters
       if (word.length == 1) return word.toUpperCase();
       return word[0].toUpperCase() + word.substring(1).toLowerCase();
     }).join(' ');
@@ -78,6 +74,8 @@ class CustomValidatedTextFieldInv extends StatelessWidget {
   final double? width;
   final int maxLines;
   final bool enabled;
+
+  /// IGNORED — no character counter in the shared design.
   final bool showCharCount;
   final ValueChanged<String>? onChanged;
   final TextDirection textDirection;
@@ -101,10 +99,8 @@ class CustomValidatedTextFieldInv extends StatelessWidget {
 
   final int? maxLength;
 
-  // ✅ NEW: Additional input formatters
   final List<TextInputFormatter>? additionalInputFormatters;
 
-  // ✅ NEW: Auto-capitalize option
   final bool autoCapitalize;
 
   const CustomValidatedTextFieldInv({
@@ -136,250 +132,111 @@ class CustomValidatedTextFieldInv extends StatelessWidget {
     this.prefixConstraints,
     this.maxLength = 500,
     this.additionalInputFormatters,
-    this.autoCapitalize = true, // ✅ Default to true for auto-capitalization
+    this.autoCapitalize = true,
   });
 
-  String _toArabicNum(int number) {
-    const arabicNums = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    return number
-        .toString()
-        .split('')
-        .map((e) => arabicNums[int.parse(e)])
-        .join();
-  }
-
   TextInputType _getKeyboardType() {
-    if (keyboardType != null) {
-      return keyboardType!;
-    }
+    if (keyboardType != null) return keyboardType!;
     return onlyDigits ? TextInputType.number : TextInputType.text;
   }
 
-  // ✅ UPDATED: Get appropriate input formatters based on text direction
   List<TextInputFormatter> _getInputFormatters() {
-    List<TextInputFormatter> formatters = [];
-
-    // Add length limiter
+    final List<TextInputFormatter> formatters = [];
     if (maxLength != null) {
       formatters.add(LengthLimitingTextInputFormatter(maxLength));
     }
-
-    // ✅ Add capitalize formatter if enabled and not Arabic and not digits-only
     if (autoCapitalize && textDirection == TextDirection.ltr && !onlyDigits) {
       formatters.add(CapitalizeTextFormatter());
     }
-
-    // Add language-specific formatter
     if (textDirection == TextDirection.rtl) {
       formatters.add(ArabicOnlyInputFormatter());
     } else if (textDirection == TextDirection.ltr && !onlyDigits) {
       formatters.add(EnglishOnlyInputFormatter());
     }
-
-    // Add digits-only formatter if needed
     if (onlyDigits) {
       formatters.add(FilteringTextInputFormatter.digitsOnly);
     }
-
-    // ✅ Add any additional formatters passed from outside
     if (additionalInputFormatters != null) {
       formatters.addAll(additionalInputFormatters!);
     }
-
     return formatters;
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isArabicField = textDirection == TextDirection.rtl;
-    final bool isEnglishField = textDirection == TextDirection.ltr;
-
     final String text = controller.text;
-
-    final bool hasArabic = RegExp(r'[\u0600-\u06FF]').hasMatch(text);
-    final bool hasEnglish = RegExp(r'[a-zA-Z]').hasMatch(text);
-    final bool isNotDigits =
-        onlyDigits && text.isNotEmpty && !RegExp(r'^\d+$').hasMatch(text);
-
     final bool isEmpty = text.trim().isEmpty;
 
-    String? displayErrorText;
-    bool showError = false;
-
+    String? resolvedError;
     if (errorText != null && errorText!.isNotEmpty) {
-      displayErrorText = errorText;
-      showError = true;
-    } else {
-      showError = (submitted && isEmpty) ||
-          (!isEmpty &&
-              ((isEnglishField && hasArabic) ||
-                  (isArabicField && hasEnglish) ||
-                  isNotDigits));
-
-      if (showError) {
-        if (isEmpty) {
-          displayErrorText = textDirection == TextDirection.rtl
-              ? "هذا الحقل مطلوب"
-              : "This field is required.";
-        } else if (isEnglishField && hasArabic) {
-          displayErrorText = "Please use English characters only.";
-        }
-        else if (isArabicField && !RegExp(r'^[\u0600-\u06FF\s]+$').hasMatch(text)) {
-          displayErrorText = "الرجاء استخدام الأحرف العربية فقط.";
-        }
-        else if (isNotDigits) {
-          displayErrorText = "Only numbers are allowed.";
-        }
-      }
+      resolvedError = errorText;
+    } else if (submitted && isEmpty) {
+      resolvedError = textDirection == TextDirection.rtl
+          ? 'هذا الحقل مطلوب'
+          : 'This field is required.';
     }
 
-    final bool lightMode = Theme.of(context).brightness == Brightness.light;
-
-    Widget? buildPrefixIcon() {
-      if (prefixSvgAsset == null || prefixSvgAsset!.isEmpty) return null;
-
+    Widget? prefix;
+    if (prefixSvgAsset != null && prefixSvgAsset!.isNotEmpty) {
       final svg = SvgPicture.asset(
         prefixSvgAsset!,
         width: (prefixIconWidth ?? 16).w,
         height: (prefixIconHeight ?? 16).h,
       );
-
       final padded = Padding(
         padding: prefixPadding ?? EdgeInsets.symmetric(horizontal: 8.w),
         child: svg,
       );
-
-      if (onPrefixTap != null) {
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPrefixTap,
-          child: padded,
-        );
-      }
-      return padded;
+      prefix = onPrefixTap != null
+          ? GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onPrefixTap,
+              child: padded,
+            )
+          : padded;
     }
+
+    final field = custom.CustomTextField(
+      controller: controller,
+      hint: hint,
+      label: null,
+      enabled: enabled,
+      readOnly: readOnly,
+      onTap: onTap,
+      maxLines: maxLines,
+      maxLength: maxLength ?? 500,
+      width: width,
+      height: height,
+      textDirection: textDirection,
+      textAlign: textAlign,
+      onlyDigits: onlyDigits,
+      keyboardType: _getKeyboardType(),
+      onChanged: onChanged,
+      fillColor: fillColor ?? AppColors.background,
+      errorText: resolvedError,
+      prefixIcon: prefix,
+      contentPadding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 8.w),
+      valueStyle: textStyle ??
+          StyleText.fontSize12Weight400.copyWith(color: AppColors.text),
+      hintStyle:
+          StyleText.fontSize12Weight500.copyWith(color: const Color(0xFF9E9E9E)),
+      inputFormatters: _getInputFormatters(),
+    );
+
+    if (label == null || label!.isEmpty) return field;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (label != null && label!.isNotEmpty) ...[
-          Text(
-            label!,
-            textDirection: textDirection,
-            textAlign: textDirection == TextDirection.rtl
-                ? TextAlign.right
-                : TextAlign.left,
-            style: StyleText.fontSize14Weight400.copyWith(
-                color: AppColors.text
-            ),
-          ),
-          SizedBox(height: 6.h),
-        ],
-        SizedBox(
-          width: width?.w,
-          height: height.h,
-          child: TextFormField(
-            controller: controller,
-            cursorColor: AppColors.primary,
-            maxLines: maxLines,
-            enabled: enabled,
-            readOnly: readOnly,
-            onTap: onTap,
-            textDirection: textDirection,
-            textAlign: textAlign,
-            keyboardType: _getKeyboardType(),
-            // ✅ Use the updated method to get formatters
-            inputFormatters: _getInputFormatters(),
-            style: textStyle ??
-                StyleText.fontSize12Weight400.copyWith(
-                    color: AppColors.text
-                ),
-            onChanged: (val) {
-              if (onChanged != null) onChanged!(val);
-            },
-            decoration: InputDecoration(
-              contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 8.w),
-              hoverColor: Colors.transparent,
-              hintText: hint,
-              hintStyle: StyleText.fontSize12Weight500.copyWith(
-                color: lightMode ? ColorAppLight.grayTextSla : ColorAppDark.darkGrey,
-              ),
-              filled: true,
-              fillColor: fillColor ?? AppColors.background,
-              isDense: true,
-              counterText: '',
-              prefixIcon: buildPrefixIcon(),
-              prefixIconConstraints: prefixConstraints ??
-                  BoxConstraints(
-                    minWidth: (prefixIconWidth ?? 16).w + 16.w,
-                    minHeight: (prefixIconHeight ?? 16).h,
-                  ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4.r),
-                borderSide: BorderSide(
-                    color: showError ? Colors.red : Colors.transparent,
-                    width: 1
-                ),
-              ),
-              disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4.r),
-                borderSide: const BorderSide(color: Colors.transparent, width: 1),
-              ),
-
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4.r),
-                borderSide: BorderSide(
-                    color: showError ? Colors.red : AppColors.primary,
-                    width: 1
-                ),
-              ),
-            ),
-          ),
+        Text(
+          label!,
+          textDirection: textDirection,
+          textAlign:
+              textDirection == TextDirection.rtl ? TextAlign.right : TextAlign.left,
+          style: StyleText.fontSize14Weight400.copyWith(color: AppColors.text),
         ),
-
-        if (showError || showCharCount)
-          SizedBox(
-            height: 15.h,
-            child: Padding(
-              padding: EdgeInsets.only(top: 4.h),
-              child: Row(
-                children: [
-                  if (showError && displayErrorText != null)
-                    Expanded(
-                      child: Text(
-                        displayErrorText!,
-                        textDirection: textDirection,
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          color: Colors.red,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )
-                  else if (!showError && showCharCount)
-                    Expanded(
-                      child: Align(
-                        alignment: textDirection == TextDirection.rtl
-                            ? Alignment.centerLeft
-                            : Alignment.centerRight,
-                        child: Text(
-                          textDirection == TextDirection.rtl
-                              ? "${_toArabicNum(maxLength ?? 500)}/${_toArabicNum(controller.text.length)}"
-                              : "${controller.text.length}/${maxLength ?? 500}",
-                          style: TextStyle(
-                            fontSize: 10.sp,
-                            color: controller.text.length >= (maxLength ?? 500)
-                                ? Colors.red
-                                : Colors.grey,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
+        SizedBox(height: 6.h),
+        field,
       ],
     );
   }

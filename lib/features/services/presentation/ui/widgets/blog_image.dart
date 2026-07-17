@@ -27,9 +27,9 @@ class _BlogImage extends StatelessWidget {
         child: url.isNotEmpty
             ? SvgPicture.network(
           url,
-          width:  width,
-          height: height,
-          fit:    BoxFit.cover,
+          // width:  width,
+          // height: height,
+          fit:    BoxFit.contain,
           placeholderBuilder: (_) => Container(
             width:  width,
             height: height,

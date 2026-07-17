@@ -28,7 +28,7 @@ class _PhoneField extends StatelessWidget {
       widthIcon:  16,
       heightIcon: 16,
       width:  isMobile ? 100.w : 110.w,
-      height: 32,
+      height: 36,
       borderRadius: 4,
       hint: Text(
           isRtl ? 'أدخل رقم هاتفك' : 'Enter your number',
@@ -42,7 +42,7 @@ class _PhoneField extends StatelessWidget {
         controller:    controller,
         submitted:     submitted,
         primaryColor:  primaryColor,
-        height:        32,
+        height:        36,
         onlyDigits:    true,
         textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
         textAlign:     isRtl ? TextAlign.right   : TextAlign.left,

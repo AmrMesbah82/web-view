@@ -10,6 +10,10 @@ class _MobileBody extends StatelessWidget {
   final List<CareersSectionItem> whyJoinItems;
   final List<InternModel> interns;
   final List<OurTeamItem> teams;
+  final String internsIconUrl;
+  final String internsTitle;
+  final String teamIconUrl;
+  final String teamTitle;
 
   const _MobileBody({
     required this.selectedTab,
@@ -21,6 +25,10 @@ class _MobileBody extends StatelessWidget {
     required this.whyJoinItems,
     required this.interns,
     required this.teams,
+    this.internsIconUrl = '',
+    this.internsTitle = '',
+    this.teamIconUrl = '',
+    this.teamTitle = '',
   });
 
   @override
@@ -81,6 +89,18 @@ class _MobileBody extends StatelessWidget {
               primary: primary,
               secondary: secondary,
               isRtl: isRtl,
+              whyJoinIconUrl: whyJoinItems.isNotEmpty
+                  ? whyJoinItems.first.iconUrl
+                  : '',
+              whyJoinTitle: whyJoinItems.isNotEmpty
+                  ? (isRtl
+                      ? whyJoinItems.first.title.ar
+                      : whyJoinItems.first.title.en)
+                  : '',
+              internsIconUrl: internsIconUrl,
+              internsTitle: internsTitle,
+              teamIconUrl: teamIconUrl,
+              teamTitle: teamTitle,
             ),
           ),
           SizedBox(height: 16.h),

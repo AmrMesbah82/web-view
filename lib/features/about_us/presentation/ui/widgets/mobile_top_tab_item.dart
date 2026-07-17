@@ -45,12 +45,7 @@ class _MobileTopTabItemState extends State<_MobileTopTabItem> {
           decoration: BoxDecoration(
             color: sel ? Colors.transparent : (_hovered ? hoverBg : Colors.transparent),
             borderRadius: BorderRadius.circular(8.r),
-            border: Border(
-              bottom: BorderSide(
-                color: sel ? widget.primaryColor : Colors.transparent,
-                width: 2,
-              ),
-            ),
+
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

@@ -43,8 +43,8 @@ class _SocialIconScaled extends StatelessWidget {
             width: 20.w,
             height: 20.w,
             fit: BoxFit.contain,
-            // Remove the Cache-Control header — it can trigger CORS preflight
-            colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn),
+            // Render the uploaded logo in its OWN colors — do NOT tint it,
+            // or a multi-color logo collapses into a solid brand-color blob.
             placeholderBuilder: (_) => Icon(
               Icons.link,
               size: 16.sp,

@@ -64,32 +64,6 @@ class _DesktopOurTeamTab extends StatelessWidget {
 
     return Column(
       children: [
-        _Reveal(
-          delay: const Duration(milliseconds: 60),
-          direction: _SlideDirection.fromLeft,
-          duration: const Duration(milliseconds: 600),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: _t(
-                          'Meet Our Teams', 'تعرّف على فرقنا', isRtl),
-                      style: StyleText.fontSize24Weight600.copyWith(
-                        fontSize: meetFz,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 18.h),
         ...rows,
       ],
     );

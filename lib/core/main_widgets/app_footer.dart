@@ -567,7 +567,8 @@ class _SocialIconWidget extends StatelessWidget {
       width:  20.w,
       height: 20.w,
       fit:    BoxFit.contain,
-      colorFilter: ColorFilter.mode(borderColor, BlendMode.srcIn),
+      // Show the uploaded logo in its own colors — tinting it with srcIn
+      // flattens a multi-color logo into a solid brand-color blob.
       placeholderBuilder: (_) => SizedBox(width: _ic, height: _ic),
     )
         : Icon(Icons.link, size: _ic, color: borderColor);

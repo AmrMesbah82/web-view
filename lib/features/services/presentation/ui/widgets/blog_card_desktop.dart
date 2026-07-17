@@ -48,17 +48,33 @@ class _BlogCardDesktopState extends State<_BlogCardDesktop> {
                       mainAxisSize:       MainAxisSize.max,
                       mainAxisAlignment:  MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_tb(widget.post.question, widget.isRtl),
+                        Text(FormatHelper.capitalize(_tb(widget.post.question, widget.isRtl)),
                             style: StyleText.fontSize12Weight500
                                 .copyWith(
                                 fontSize:   15.sp,
                                 fontWeight: FontWeight.w600)),
                         SizedBox(height: 10.h),
-                        Text('• • • • • • • • • • •',
-                            style: TextStyle(
-                                color:         _kDivider,
-                                fontSize:      9.sp,
-                                letterSpacing: 2)),
+                        Builder(builder: (_) {
+                          final shortDesc =
+                              _tb(widget.post.shortDescription, widget.isRtl);
+                          if (shortDesc.trim().isEmpty) {
+                            return Text('• • • • • • • • • • •',
+                                style: TextStyle(
+                                    color:         _kDivider,
+                                    fontSize:      9.sp,
+                                    letterSpacing: 2));
+                          }
+                          return Text(
+                            shortDesc,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign:
+                                widget.isRtl ? TextAlign.right : TextAlign.left,
+                            style: AppTextStyles.font14BlackCairoRegular.copyWith(
+                                color:    AppColors.secondaryBlack,
+                                fontSize: 12.sp),
+                          );
+                        }),
                         SizedBox(height: 10.h),
                       ],
                     ),

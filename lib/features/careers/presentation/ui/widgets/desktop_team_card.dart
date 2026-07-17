@@ -102,7 +102,7 @@ class _DesktopTeamCardState extends State<_DesktopTeamCard> {
                   Text(
                     desc,
                     textAlign: TextAlign.center,
-                    style: StyleText.fontSize12Weight400.copyWith(
+                    style: StyleText.fontSize12Weight600.copyWith(
                       fontSize: descFz,
                       height: 1.6,
                       color:

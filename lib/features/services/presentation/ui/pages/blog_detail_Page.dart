@@ -11,11 +11,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 import '../../../../../core/main_widgets/app_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/appcolors.dart';
 import '../../../../../core/theme/text.dart';
+import '../../../../../core/widgets/format_heper.dart';
 import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
@@ -35,6 +37,7 @@ const Color _kFallbackPrimary   = Color(0xFF2D8C4E);
 const Color _kFallbackSecondary = Color(0xFFE8F5EE);
 const Color _kDivider           = Color(0xFFDDE8DD);
 const Color _kSurface           = Color(0xFFFFFFFF);
+const Color _kFallbackBackground = Color(0xFFF1F2ED);
 
 Color _parseColor(String hex, {Color fallback = _kFallbackPrimary}) {
   final h = hex.replaceAll('#', '');
@@ -92,6 +95,17 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
           _ => _kFallbackSecondary,
         };
 
+        // Page background comes from the admin (branding.backgroundColor).
+        final Color background = switch (homeState) {
+          HomeCmsLoaded(:final data) => _parseColor(
+              data.branding.backgroundColor,
+              fallback: _kFallbackBackground),
+          HomeCmsSaved(:final data) => _parseColor(
+              data.branding.backgroundColor,
+              fallback: _kFallbackBackground),
+          _ => _kFallbackBackground,
+        };
+
         return BlocBuilder<LanguageCubit, LanguageState>(
           builder: (context, langState) {
             final bool isRtl = langState.isArabic;
@@ -103,7 +117,7 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
                   // ── Loading ─────────────────────────────────────
                   if (blogState is BlogLoading) {
                     return Scaffold(
-                      backgroundColor: AppColors.background,
+                      backgroundColor: background,
                       body: Column(
                         children: [
                           AppNavbar(currentRoute: '/services'),
@@ -117,7 +131,7 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
                   // ── Error ───────────────────────────────────────
                   if (blogState is BlogError) {
                     return Scaffold(
-                      backgroundColor: Color(0xFFF1F2ED),
+                      backgroundColor: background,
                       body: Column(
                         children: [
                           AppNavbar(currentRoute: '/services'),
@@ -143,7 +157,7 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
 
                   if (posts.isEmpty) {
                     return Scaffold(
-                      backgroundColor: Color(0xFFF1F2ED),
+                      backgroundColor: background,
                       body: Column(
                         children: [
                           AppNavbar(currentRoute: '/services'),
@@ -171,7 +185,7 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
                   final bool isMobile = w < _BP.mobile;
 
                   return Scaffold(
-                    backgroundColor: Color(0xFFF1F2ED),
+                    backgroundColor: background,
                     body: Column(
                       children: [
                         // ✅ Navbar — fixed at top

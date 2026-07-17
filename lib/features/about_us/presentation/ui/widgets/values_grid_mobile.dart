@@ -22,14 +22,7 @@ class _ValuesGridMobileState extends State<_ValuesGridMobile> {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: 16.h),
         child: Center(
-          child: Text(
-            'No values added yet.',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 11.sp,
-              color: Colors.grey[500],
-            ),
-          ),
+          child: CustomSvg(assetPath: "assets/null.svg")
         ),
       );
     final double innerW =

@@ -33,33 +33,23 @@ class _DropdownField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _FormLabel(label: label),
-        SizedBox(height: 3.h),
-        if (isSearchable)
-          _SearchableDropdown(
-            hint:         hint,
-            value:        value,
-            items:        items,
-            onChanged:    onChanged,
-            isRtl:        isRtl,
-            isMobile:     isMobile,
-            primaryColor: primaryColor,
-            hasError:     showError,
-          )
-        else
-          CustomDropdownFormFieldInvMaster(
-            selectedValue: value,
-            items:         items,
-            onChanged:     onChanged,
-            primaryColor: primaryColor,
-            width:         double.infinity,
-            height:        32,
-            borderRadius:  4,
-            widthIcon:     16,
-            heightIcon:    16,
-            hint: Text(hint,
-                style: StyleText.fontSize12Weight400
-                    .copyWith(color: AppColors.secondaryBlack)),
-          ),
+        SizedBox(height: 6.h),
+        // Every dropdown (incl. searchable Location) now uses the shared
+        // custom dropdown widget.
+        CustomDropdownFormFieldInvMaster(
+          selectedValue: value,
+          items:         items,
+          onChanged:     onChanged,
+          primaryColor:  primaryColor,
+          width:         double.infinity,
+          height:        36,
+          borderRadius:  4,
+          widthIcon:     16,
+          heightIcon:    16,
+          hint: Text(hint,
+              style: StyleText.fontSize12Weight400
+                  .copyWith(color: AppColors.secondaryBlack)),
+        ),
         if (showError) ...[
           SizedBox(height: 2.h),
           Text(requiredMsg,

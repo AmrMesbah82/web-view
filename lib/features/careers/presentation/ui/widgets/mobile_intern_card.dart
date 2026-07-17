@@ -57,7 +57,7 @@ class _MobileInternCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: StyleText.fontSize12Weight500.copyWith(
                     fontSize: 10.sp,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: Colors.black87,
                   ),
                 ),
@@ -71,6 +71,27 @@ class _MobileInternCard extends StatelessWidget {
                     height: 1.3,
                   ),
                 ),
+                // ── Position ───────────────────────────────────────────
+                if (data.position.isNotEmpty) ...[
+                  SizedBox(height: 5.h),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 8.w, vertical: 3.h),
+                    decoration: BoxDecoration(
+                      color: primary,
+                      borderRadius: BorderRadius.circular(5.r),
+                    ),
+                    child: Text(
+                      data.position,
+                      textAlign: TextAlign.center,
+                      style: StyleText.fontSize10Weight400.copyWith(
+                        fontSize: 10.sp,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
                 SizedBox(height: 6.h),
                 Wrap(
                   spacing: 3.w,
@@ -104,12 +125,26 @@ class _MobileInternCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  data.joinDateLabel,
-                  style: StyleText.fontSize11Weight400.copyWith(
-                    fontSize: 9.sp,
-                    color: Colors.black45,
-                  ),
+
+
+                Row(
+                  children: [
+                    Text(
+                      "Joined as intern: ",
+                      style: StyleText.fontSize11Weight400.copyWith(
+                        fontSize: 10.sp,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+
+                    Text(
+                      data.joinDateLabel,
+                      style: StyleText.fontSize11Weight400.copyWith(
+                        fontSize: 10.sp,
+                        color: AppColors.text,
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: 8.h),
                 Text(
@@ -123,7 +158,7 @@ class _MobileInternCard extends StatelessWidget {
                 SizedBox(height: 6.h),
                 Text(
                   data.whatHaveILearned,
-                  style: StyleText.fontSize12Weight400.copyWith(
+                  style: StyleText.fontSize12Weight600.copyWith(
                     fontSize: 10.sp,
                     height: 1.6,
                     color: Colors.black54,

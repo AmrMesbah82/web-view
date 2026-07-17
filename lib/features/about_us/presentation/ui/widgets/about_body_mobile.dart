@@ -53,6 +53,9 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
         : TermsOfServiceModel.empty();
     final TermsSection terms = termsModel.termsAndConditions,
         privacy = termsModel.privacyPolicy;
+    // App logo (same source as the main/home branding) for the doc top row.
+    final String logoUrl =
+        context.read<HomeCmsCubit>().current.branding.logoUrl;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -75,15 +78,27 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
                     final String cmsIconUrl = switch (i) {
                       0 => widget.model.navigationLabel.iconUrl,
                       1 => strategyIconUrl,
-                      _ => termsModel.navigationLabel.iconUrl,
+                      2 => terms.iconUrl.isNotEmpty
+                          ? terms.iconUrl
+                          : termsModel.navigationLabel.iconUrl,
+                      _ => privacy.iconUrl.isNotEmpty
+                          ? privacy.iconUrl
+                          : termsModel.navigationLabel.iconUrl,
+                    };
+                    final String cmsLabel = switch (i) {
+                      2 => widget.isRtl ? terms.title.ar : terms.title.en,
+                      3 => widget.isRtl ? privacy.title.ar : privacy.title.en,
+                      _ => '',
                     };
                     return _MobileTopTabItem(
                       index: i,
-                      label: widget.isRtl
-                          ? (_topTabs[i].ar.isNotEmpty
-                          ? _topTabs[i].ar
-                          : _topTabs[i].en)
-                          : _topTabs[i].en,
+                      label: cmsLabel.isNotEmpty
+                          ? cmsLabel
+                          : (widget.isRtl
+                              ? (_topTabs[i].ar.isNotEmpty
+                                  ? _topTabs[i].ar
+                                  : _topTabs[i].en)
+                              : _topTabs[i].en),
                       svgAsset: _svgAssets[i],
                       iconUrl: cmsIconUrl,
                       isSelected: i == _selectedTopTab,
@@ -186,10 +201,7 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
                                 Container(
                                   width: double.infinity,
                                   padding: EdgeInsets.all(12.r),
-                                  decoration: BoxDecoration(
-                                    color: _kSurface,
-                                    borderRadius: BorderRadius.circular(12.r),
-                                  ),
+                               
                                   child: Center(
                                     child: _netImg(
                                       url: strategicHouseUrl,
@@ -235,7 +247,8 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
               direction: _SlideDirection.fromBottom,
               child: _MobileDocPanel(
                 description: _ab(terms.description, widget.isRtl),
-                svgUrl: terms.svgUrl,
+                lastUpdated: termsModel.lastUpdatedAt,
+                logoUrl: logoUrl,
                 attachEnUrl: terms.attachEnUrl,
                 attachArUrl: terms.attachArUrl,
                 labelEn: 'Download PDF of Terms and Conditions (ENG)',
@@ -250,7 +263,8 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
               direction: _SlideDirection.fromBottom,
               child: _MobileDocPanel(
                 description: _ab(privacy.description, widget.isRtl),
-                svgUrl: privacy.svgUrl,
+                lastUpdated: termsModel.lastUpdatedAt,
+                logoUrl: logoUrl,
                 attachEnUrl: privacy.attachEnUrl,
                 attachArUrl: privacy.attachArUrl,
                 labelEn: 'Download PDF of Privacy Policy (ENG)',

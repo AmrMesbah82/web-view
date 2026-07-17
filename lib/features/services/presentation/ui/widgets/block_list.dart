@@ -19,34 +19,40 @@ class _BlockList extends StatelessWidget {
   Widget build(BuildContext context) {
     int numberingCounter = 0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: blocks.map((block) {
-        final String text = _tb(block.content, isRtl);
+    // Numbering/bullet blocks are split on line breaks so a multi-line paste
+    // (a list copied from Word, etc.) renders one numbered/bulleted line per
+    // row instead of a single prefix + mashed text. Numbering continues across
+    // consecutive numbering blocks and resets on a paragraph or bullet block.
+    final List<Widget> children = [];
 
-        switch (block.type) {
+    for (final block in blocks) {
+      final String text = _tb(block.content, isRtl);
 
-        // ── Paragraph ───────────────────────────────────────────────
-          case BlogBlockType.paragraph:
-            numberingCounter = 0;
-            return Padding(
-              padding: EdgeInsets.only(bottom: isMobile ? 10 : 10.h),
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize:   fontSize,
-                  height:     1.7,
-                  color:      AppColors.secondaryBlack,
-                ),
+      switch (block.type) {
+
+      // ── Paragraph ───────────────────────────────────────────────
+        case BlogBlockType.paragraph:
+          numberingCounter = 0;
+          if (text.trim().isEmpty) break;
+          children.add(Padding(
+            padding: EdgeInsets.only(bottom: isMobile ? 10 : 10.h),
+            child: Text(
+              text,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize:   fontSize,
+                height:     1.7,
+                color:      AppColors.secondaryBlack,
               ),
-            );
+            ),
+          ));
 
-        // ── Numbered list item ───────────────────────────────────────
-          case BlogBlockType.numbering:
+      // ── Numbered list item(s) ────────────────────────────────────
+        case BlogBlockType.numbering:
+          for (final line in _lines(text)) {
             numberingCounter++;
             final int idx = numberingCounter;
-            return Padding(
+            children.add(Padding(
               padding: EdgeInsets.only(bottom: isMobile ? 10 : 10.h),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +69,7 @@ class _BlockList extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      text,
+                      line,
                       style: TextStyle(
                         fontFamily: 'Cairo',
                         fontSize:   fontSize,
@@ -74,12 +80,14 @@ class _BlockList extends StatelessWidget {
                   ),
                 ],
               ),
-            );
+            ));
+          }
 
-        // ── Bullet point ─────────────────────────────────────────────
-          case BlogBlockType.bulletPoint:
-            numberingCounter = 0;
-            return Padding(
+      // ── Bullet point(s) ──────────────────────────────────────────
+        case BlogBlockType.bulletPoint:
+          numberingCounter = 0;
+          for (final line in _lines(text)) {
+            children.add(Padding(
               padding: EdgeInsets.only(bottom: isMobile ? 10 : 10.h),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +109,7 @@ class _BlockList extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      text,
+                      line,
                       style: TextStyle(
                         fontFamily: 'Cairo',
                         fontSize:   fontSize,
@@ -112,11 +120,23 @@ class _BlockList extends StatelessWidget {
                   ),
                 ],
               ),
-            );
-        }
-      }).toList(),
+            ));
+          }
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
     );
   }
+
+  // Splits block text into non-empty trimmed lines.
+  List<String> _lines(String text) => text
+      .split('\n')
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty)
+      .toList();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
