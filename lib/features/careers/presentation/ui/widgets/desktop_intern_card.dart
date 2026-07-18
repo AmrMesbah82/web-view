@@ -155,7 +155,7 @@ class _DesktopInternCard extends StatelessWidget {
                       ),
 
                       Text(
-                        data.joinDateLabel,
+                        data.joinDateLabelFor(isRtl),
                         style: StyleText.fontSize11Weight600.copyWith(
                           fontSize: joinFz,
                           color: AppColors.text,

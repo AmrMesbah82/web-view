@@ -91,6 +91,26 @@ abstract class FormDateTimeHelper {
     return months[month - 1];
   }
 
+  /// Converts Western digits (0-9) in [input] to Arabic-Indic digits (٠-٩).
+  /// Non-digit characters are left untouched.
+  static String toArabicDigits(String input) {
+    const western = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const arabic  = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    var out = input;
+    for (var i = 0; i < western.length; i++) {
+      out = out.replaceAll(western[i], arabic[i]);
+    }
+    return out;
+  }
+
+  /// Bilingual "d MMM yyyy" date — localized month name AND numerals.
+  /// EN → "12 Mar 2026", AR → "١٢ مارس ٢٠٢٦".
+  static String formatDayMonthYear(DateTime date, {required bool arabic}) {
+    final month = getMonthName(date.month, arabic: arabic);
+    final text  = '${date.day} $month ${date.year}';
+    return arabic ? toArabicDigits(text) : text;
+  }
+
   static String formatDuration(Duration duration) {
     final months = duration.inDays ~/ 30;
     if (months >= 1) {

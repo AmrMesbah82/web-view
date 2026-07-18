@@ -435,8 +435,18 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                 logoUrl: logoUrl,
                 attachEnUrl: terms.attachEnUrl,
                 attachArUrl: terms.attachArUrl,
-                labelEn: 'Download PDF of Terms and Conditions (ENG)',
-                labelAr: 'Download PDF of Terms and Conditions (ARB)',
+                labelEn: _downloadDocLabel(
+                  isRtl: widget.isRtl,
+                  titleEn: _kTermsTitleEn,
+                  titleAr: _kTermsTitleAr,
+                  isArabicFile: false,
+                ),
+                labelAr: _downloadDocLabel(
+                  isRtl: widget.isRtl,
+                  titleEn: _kTermsTitleEn,
+                  titleAr: _kTermsTitleAr,
+                  isArabicFile: true,
+                ),
               ),
             ),
 
@@ -452,8 +462,18 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                 logoUrl: logoUrl,
                 attachEnUrl: privacy.attachEnUrl,
                 attachArUrl: privacy.attachArUrl,
-                labelEn: 'Download PDF of Privacy Policy (ENG)',
-                labelAr: 'Download PDF of Privacy Policy (ARB)',
+                labelEn: _downloadDocLabel(
+                  isRtl: widget.isRtl,
+                  titleEn: _kPrivacyTitleEn,
+                  titleAr: _kPrivacyTitleAr,
+                  isArabicFile: false,
+                ),
+                labelAr: _downloadDocLabel(
+                  isRtl: widget.isRtl,
+                  titleEn: _kPrivacyTitleEn,
+                  titleAr: _kPrivacyTitleAr,
+                  isArabicFile: true,
+                ),
               ),
             ),
 

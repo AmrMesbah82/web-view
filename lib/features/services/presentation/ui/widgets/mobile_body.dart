@@ -54,72 +54,83 @@ class _MobileBody extends StatelessWidget {
           const SizedBox(height: 24),
 
           // ── Title (question) ──────────────────────────────────────────
-          Text(
-            _tb(selected.question, isRtl),
-            style: StyleText.fontSize14Weight400.copyWith(
-              fontFamily: 'Cairo',
-              fontSize:   18,
-              fontWeight: FontWeight.w700,
-              color:      primary,
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.r),
             ),
-          ),
-          const SizedBox(height: 16),
-
-          // ── icon + heading + date LEFT, image RIGHT ───────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-
-                    Text(
-                      _formatDate(selected.createdAt, isRtl),
-                      style: StyleText.fontSize14Weight400.copyWith(
-                        fontFamily: 'Cairo',
-                        fontSize:   12,
-                        color:      Colors.black45,
-                      ),
+            child: Padding(
+              padding:  EdgeInsets.symmetric(horizontal: 10.sp,vertical: 10.sp),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _tb(selected.question, isRtl),
+                    style: StyleText.fontSize14Weight400.copyWith(
+                      fontSize:   18,
+                      fontWeight: FontWeight.w700,
+                      color:      primary,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── icon + heading + date LEFT, image RIGHT ───────────────────
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                            Text(
+                              _formatDate(selected.createdAt, isRtl),
+                              style: StyleText.fontSize14Weight400.copyWith(
+                                fontSize:   12,
+                                color:      Colors.black45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // ✅ SVG-only image
+                      _BlogImage(
+                        url:           selected.imageUrl,
+                        width:         130,
+                        height:        110,
+                        radius:        10,
+                        fallbackColor: secondary,
+                        primaryColor:  primary,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ── Short description ─────────────────────────────────────────
+                  Text(
+                    _tb(selected.shortDescription, isRtl),
+                    style: StyleText.fontSize14Weight400.copyWith(
+                      fontSize:   13,
+                      height:     1.7,
+                      color:      Colors.black54,
+                    ),
+                  ),
+
+                  // ── Full article content — always shown (no Read More / Read Less)
+                  const SizedBox(height: 20),
+                  _BlockList(
+                    blocks:   selected.blocks,
+                    isRtl:    isRtl,
+                    fontSize: 13,
+                    isMobile: true,
+                    primary:  primary,
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-
-              // ✅ SVG-only image
-              _BlogImage(
-                url:           selected.imageUrl,
-                width:         130,
-                height:        110,
-                radius:        10,
-                fallbackColor: secondary,
-                primaryColor:  primary,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // ── Short description ─────────────────────────────────────────
-          Text(
-            _tb(selected.shortDescription, isRtl),
-            style: StyleText.fontSize14Weight400.copyWith(
-              fontFamily: 'Cairo',
-              fontSize:   13,
-              height:     1.7,
-              color:      Colors.black54,
             ),
-          ),
-
-          // ── Full article content — always shown (no Read More / Read Less)
-          const SizedBox(height: 20),
-          _BlockList(
-            blocks:   selected.blocks,
-            isRtl:    isRtl,
-            fontSize: 13,
-            isMobile: true,
-            primary:  primary,
           ),
           const SizedBox(height: 32),
         ],

@@ -138,7 +138,7 @@ class _MobileInternCard extends StatelessWidget {
                     ),
 
                     Text(
-                      data.joinDateLabel,
+                      data.joinDateLabelFor(isRtl),
                       style: StyleText.fontSize11Weight400.copyWith(
                         fontSize: 10.sp,
                         color: AppColors.text,

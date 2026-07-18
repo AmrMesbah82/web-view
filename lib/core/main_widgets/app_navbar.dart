@@ -119,15 +119,25 @@ String _normRoute(String path) {
   return s.toLowerCase();
 }
 
-/// The route the user is actually on. Prefers the live router location so the
-/// highlight stays correct even when a page passes a stale or mismatched
-/// `currentRoute`; falls back to that value when there's no GoRouter in scope
-/// (e.g. the admin/dashboard preview which drives the navbar via onItemTap).
-String _activeRoute(BuildContext context, String fallback) {
+/// Whether [itemRoute] is the currently selected tab.
+///
+/// A page can deliberately declare which tab it belongs to — the blog detail
+/// page lives at '/blog/:index' but passes currentRoute: '/services' so the
+/// Services tab stays selected. That explicit value therefore always wins.
+/// The live router location is only consulted as a secondary match, which keeps
+/// the highlight correct when the URL carries a query string (e.g.
+/// '/careers?tab=interns') or when a page passes nothing useful.
+bool _isRouteActive(
+    BuildContext context, String itemRoute, String currentRoute) {
+  final String item = _normRoute(itemRoute);
+
+  if (item == _normRoute(currentRoute)) return true;
+
   try {
-    return _normRoute(GoRouterState.of(context).uri.path);
+    return item == _normRoute(GoRouterState.of(context).uri.path);
   } catch (_) {
-    return _normRoute(fallback);
+    // No GoRouter in scope (admin/dashboard preview drives it via onItemTap).
+    return false;
   }
 }
 
@@ -472,8 +482,7 @@ class _FullScreenDrawer extends StatelessWidget {
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                       children: navItems.map((e) {
                         final bool isActive =
-                            _activeRoute(context, currentRoute) ==
-                                _normRoute(e.route);
+                            _isRouteActive(context, e.route, currentRoute);
                         return GestureDetector(
                           onTap: () {
                             Navigator.of(context).pop();
@@ -620,7 +629,7 @@ class _NavItemState extends State<_NavItem> {
   Widget build(BuildContext context) {
     final Color hoverBg = _lightTint(widget.primary);
     final bool isActive =
-        _activeRoute(context, widget.currentRoute) == _normRoute(widget.route);
+        _isRouteActive(context, widget.route, widget.currentRoute);
 
     return BlocBuilder<LanguageCubit, LanguageState>(
       builder: (context, langState) {

@@ -1,6 +1,8 @@
 // ******************* FILE INFO *******************
 // File Name: intern_model.dart
 
+import '../../../../core/widgets/format_helper.dart';
+
 class InternModel {
   final String id;
   final String photoUrl;
@@ -26,14 +28,15 @@ class InternModel {
 
   String get fullName => '$firstName $lastName'.trim();
 
-  String get joinDateLabel {
+  /// Bilingual join date — localized month name AND numerals.
+  /// EN → "12 Mar 2026", AR → "١٢ مارس ٢٠٢٦".
+  String joinDateLabelFor(bool isRtl) {
     if (joinedDate == null) return '';
-    final months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return ' ${joinedDate!.day} ${months[joinedDate!.month]} ${joinedDate!.year}';
+    return FormDateTimeHelper.formatDayMonthYear(joinedDate!, arabic: isRtl);
   }
+
+  /// English-only variant, kept for any caller without a language context.
+  String get joinDateLabel => joinDateLabelFor(false);
 
   InternModel copyWith({
     String? id,

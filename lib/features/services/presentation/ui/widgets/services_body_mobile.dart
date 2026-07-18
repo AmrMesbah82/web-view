@@ -35,12 +35,10 @@ class _ServicesBodyMobile extends StatelessWidget {
             direction: _SlideDirection.fromLeft,
             duration:  const Duration(milliseconds: 600),
             child: Text(FormatHelper.capitalize(sectionTitle),
-                style: StyleText.fontSize14Weight400.copyWith(
-                    fontFamily: 'Cairo',
-                    fontSize:   14.sp,
-                    fontWeight: FontWeight.w800,
-                    color:      primaryColor,
-                    height:     1.4)),
+                style: StyleText.fontSize14Weight700.copyWith(
+                    color: primaryColor,
+                    fontWeight: FontWeight.w800
+                ))
           ),
           SizedBox(height: 14.h),
 
@@ -64,8 +62,9 @@ class _ServicesBodyMobile extends StatelessWidget {
             direction: _SlideDirection.fromLeft,
             duration:  const Duration(milliseconds: 600),
             child: Text(importantReads,
-                style: StyleText.fontSize16Weight700.copyWith(
-                  color: primaryColor
+                style: StyleText.fontSize14Weight700.copyWith(
+                  color: primaryColor,
+                  fontWeight: FontWeight.w800
                 ))
           ),
           SizedBox(height: 14.h),
@@ -150,7 +149,7 @@ Widget _svgBlogImage({
         url,
         width:  width,
         height: height,
-        fit:    BoxFit.cover,
+        fit:    BoxFit.fill,
         placeholderBuilder: (_) => Container(
           color: _kGreenLight,
           child: Center(
