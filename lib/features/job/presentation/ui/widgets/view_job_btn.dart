@@ -29,7 +29,7 @@ class _ViewJobBtnState extends State<_ViewJobBtn> {
           ),
           child: Text(
             widget.label,
-            style: TextStyle(
+            style: StyleText.fontSize14Weight400.copyWith(
               fontFamily: 'Cairo',
               fontSize: 13.sp,
               fontWeight: FontWeight.w700,

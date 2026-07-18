@@ -40,11 +40,11 @@ class _ServiceCardDesktopState extends State<_ServiceCardDesktop> {
                 primaryColor:   widget.primaryColor,
                 secondaryColor: widget.secondaryColor),
             SizedBox(height: 10.h),
-            Text(_t(widget.item.title, widget.isRtl),
+            Text(FormatHelper.capitalize(_t(widget.item.title, widget.isRtl)),
                 style: StyleText.fontSize14Weight400
                     .copyWith(fontSize: 13.sp)),
             SizedBox(height: 6.h),
-            Text(_t(widget.item.description, widget.isRtl),
+            Text(FormatHelper.capitalize(_t(widget.item.description, widget.isRtl)),
                 style: StyleText.fontSize12Weight500.copyWith(
                     color:    AppColors.secondaryBlack,
                     fontSize: 11.sp,

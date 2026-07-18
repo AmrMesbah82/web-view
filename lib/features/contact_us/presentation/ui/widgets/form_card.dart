@@ -90,7 +90,7 @@ class _FormCard extends StatelessWidget {
     if (isMobile) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [a, SizedBox(height: 15.sp), b],
+        children: [a, SizedBox(height: 3.sp), b],
       );
     }
     return Row(
@@ -249,7 +249,7 @@ class _FormCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: isMobile ? 15.sp : 18.h),
+          SizedBox(height: isMobile ? 7.5.sp : 9.h),
 
           // ── First Name / Last Name (mobile: stacked) ──
           _pair(
@@ -274,7 +274,7 @@ class _FormCard extends StatelessWidget {
               textAlign:     align,
             ),
           ),
-          if (isMobile) SizedBox(height: 15.sp),
+          if (isMobile) SizedBox(height: 7.5.sp),
 
           // ── Email / Phone (mobile: stacked; phone keeps code+number row) ──
           _pair(
@@ -301,7 +301,7 @@ class _FormCard extends StatelessWidget {
               primaryColor:  primaryColor,
             ),
           ),
-          if (isMobile) SizedBox(height: 15.sp),
+          if (isMobile) SizedBox(height: 3.sp),
 
           // ── Location / Entity Name (mobile: stacked) ──
           _pair(
@@ -328,7 +328,7 @@ class _FormCard extends StatelessWidget {
               textAlign:     align,
             ),
           ),
-          if (isMobile) SizedBox(height: 15.sp),
+          if (isMobile) SizedBox(height: 7.5.sp),
 
           // ── Entity Type / Entity Size (mobile: stacked) ──
           _pair(
@@ -356,7 +356,7 @@ class _FormCard extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: isMobile ? 15.sp : 15.h),
+          SizedBox(height: isMobile ? 7.5.sp : 7.5.h),
 
           // ── Subject (full width) ──
           CustomValidatedTextFieldMaster(
@@ -370,7 +370,7 @@ class _FormCard extends StatelessWidget {
               textDirection: dir,
               textAlign:     align),
 
-          if (isMobile) SizedBox(height: 15.sp),
+          if (isMobile) SizedBox(height: 7.5.sp),
 
           // ── Message (full width) ──
           CustomValidatedTextFieldMaster(

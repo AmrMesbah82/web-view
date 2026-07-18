@@ -96,12 +96,18 @@ Color _lightTint(Color primary) => primary.withOpacity(0.12);
 // ── CMS-driven nav items, filtered by status ──────────────────────────────────
 List<({String label, String route, String svgAsset})> _getVisibleNavItems(
     String languageCode, HomeCmsState cmsState) {
-  // The top navbar is intentionally FIXED to the standard tabs and their
-  // standard routes (Home → /, Services → /services, About → /about,
-  // Contact → /contact, Careers → /careers). Editing a nav button's
-  // "Navigate To" route in the admin only changes the middle hero buttons
-  // (home_hero_cards) — it must NOT move or duplicate the navbar tabs.
-  final List<NavButtonModel> navButtons = HomePageModel.defaultModel.navButtons;
+  // Drive the navbar DIRECTLY from the admin-configured nav buttons, so the
+  // count, names, order, routes and visibility all reflect the CMS exactly.
+  // Fall back to the default tabs only until the CMS has loaded (so we never
+  // show extra/hardcoded tabs like "Careers" that the admin removed).
+  List<NavButtonModel> navButtons = switch (cmsState) {
+    HomeCmsLoaded(:final data) => data.navButtons,
+    HomeCmsSaved(:final data)  => data.navButtons,
+    _                          => const <NavButtonModel>[],
+  };
+  if (navButtons.isEmpty) {
+    navButtons = HomePageModel.defaultModel.navButtons;
+  }
 
   final bool isAr = languageCode == 'ar';
 
@@ -109,12 +115,12 @@ List<({String label, String route, String svgAsset})> _getVisibleNavItems(
       .where((btn) => btn.status)
       .where((btn) => btn.route.isNotEmpty)
       .map((btn) => (
-  label: isAr
-      ? (btn.name.ar.isNotEmpty ? btn.name.ar : btn.name.en)
-      : (btn.name.en.isNotEmpty ? btn.name.en : btn.name.ar),
-  route:    btn.route,
-  svgAsset: _kSvgMap[btn.route] ?? 'assets/drawer/home_drawer.svg',
-  ))
+            label: isAr
+                ? (btn.name.ar.isNotEmpty ? btn.name.ar : btn.name.en)
+                : (btn.name.en.isNotEmpty ? btn.name.en : btn.name.ar),
+            route:    btn.route,
+            svgAsset: _kSvgMap[btn.route] ?? 'assets/drawer/home_drawer.svg',
+          ))
       .toList();
 }
 

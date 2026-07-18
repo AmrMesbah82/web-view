@@ -73,7 +73,7 @@ class _JobCardState extends State<_JobCard> {
                   child: Text(
                     title.isEmpty ? l.untitled : title,
                     textAlign: l.isAr ? TextAlign.right : TextAlign.left,
-                    style: TextStyle(
+                    style: StyleText.fontSize14Weight400.copyWith(
                       fontSize: 20.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.black87,
@@ -100,7 +100,7 @@ class _JobCardState extends State<_JobCard> {
                               borderRadius: BorderRadius.circular(12.r)),
                           title: Text(
                             l.linkCopied,
-                            style: TextStyle(
+                            style: StyleText.fontSize16Weight700.copyWith(
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w700,
                               color: _kGreen,
@@ -116,7 +116,7 @@ class _JobCardState extends State<_JobCard> {
                             ),
                             child: Text(
                               url,
-                              style: TextStyle(
+                              style: StyleText.fontSize14Weight400.copyWith(
                                 fontSize: 12.sp,
                                 color: Colors.black87,
                               ),
@@ -184,7 +184,7 @@ class _JobCardState extends State<_JobCard> {
                 children: [
                   Text(
                     l.skillsLabel,
-                    style: TextStyle(
+                    style: StyleText.fontSize15Weight600.copyWith(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
@@ -205,7 +205,7 @@ class _JobCardState extends State<_JobCard> {
                         ),
                         child: Text(
                           _pick(s.name.en, s.name.ar),
-                          style: TextStyle(
+                          style: StyleText.fontSize14Weight400.copyWith(
                             fontSize: 13.sp,
                             color: Colors.black87,
                           ),
@@ -234,7 +234,7 @@ class _JobCardState extends State<_JobCard> {
                     SizedBox(width: 4.w),
                     Text(
                       l.locationLabel,
-                      style: TextStyle(
+                      style: StyleText.fontSize14Weight400.copyWith(
                         fontSize: 15.sp,
                         color: Colors.black45,
                       ),

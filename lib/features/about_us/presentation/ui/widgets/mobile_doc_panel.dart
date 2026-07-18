@@ -15,16 +15,16 @@ class _MobileDocPanel extends StatelessWidget {
     required this.primaryColor,
   });
 
-  String _lastUpdatedLabel(BuildContext context) {
+  ({String label, String value}) _lastUpdatedParts(BuildContext context) {
     final bool isRtl = Directionality.of(context) == TextDirection.rtl;
-    if (lastUpdated == null) return isRtl ? 'آخر تحديث: —' : 'Last Updated: —';
+    final String label = isRtl ? 'آخر تحديث: ' : 'Last Updated: ';
+    if (lastUpdated == null) return (label: label, value: '—');
     const months = [
       '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     final d = lastUpdated!;
-    final ds = '${d.day} ${months[d.month]} ${d.year}';
-    return isRtl ? 'آخر تحديث: $ds' : 'Last Updated: $ds';
+    return (label: label, value: '${d.day} ${months[d.month]} ${d.year}');
   }
 
   Widget _downloadBtn(String label, String url) {
@@ -49,7 +49,7 @@ class _MobileDocPanel extends StatelessWidget {
               Flexible(
                 child: Text(
                   label,
-                  style: TextStyle(
+                  style: StyleText.fontSize14Weight400.copyWith(
                     fontFamily: 'Cairo',
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w500,
@@ -78,7 +78,6 @@ class _MobileDocPanel extends StatelessWidget {
           children: [
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(14.r),
               decoration: BoxDecoration(
                 color: _kSurface,
                 borderRadius: BorderRadius.circular(12.r),
@@ -98,18 +97,29 @@ class _MobileDocPanel extends StatelessWidget {
                           fit: BoxFit.contain,
                         ),
                       const Spacer(),
-                      Text(
-                        _lastUpdatedLabel(context),
-                        style: StyleText.fontSize10Weight400.copyWith(
-                          color: primaryColor
-                        )
-                      ),
+                      Builder(builder: (context) {
+                        final p = _lastUpdatedParts(context);
+                        return RichText(
+                          text: TextSpan(children: [
+                            TextSpan(
+                              text: p.label,
+                              style: StyleText.fontSize10Weight400.copyWith(
+                                  color: AppColors.secondaryText),
+                            ),
+                            TextSpan(
+                              text: p.value,
+                              style: StyleText.fontSize10Weight400.copyWith(
+                                  color: AppColors.text),
+                            ),
+                          ]),
+                        );
+                      }),
                     ],
                   ),
                   SizedBox(height: 12.h),
                   Text(
                     description,
-                    style: TextStyle(
+                    style: StyleText.fontSize11Weight400.copyWith(
                       fontFamily: 'Cairo',
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w400,

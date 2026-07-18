@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:website_app/core/widgets/navigator.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 
 class CareersStatCardData {
@@ -89,7 +90,7 @@ class _StatCard extends StatelessWidget {
               children: [
                 Text(
                   data.label,
-                  style: TextStyle(
+                  style: StyleText.fontSize11Weight400.copyWith(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w400,
                     color: const Color(0xFF888888),
@@ -100,7 +101,7 @@ class _StatCard extends StatelessWidget {
                 SizedBox(height: 2.h),
                 Text(
                   data.value.toString(),
-                  style: TextStyle(
+                  style: StyleText.fontSize14Weight400.copyWith(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF333333),

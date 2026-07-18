@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:website_app/core/widgets/custom_dropdown.dart';
 
 import '../../features/job/data/models/application_model.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 class _C {
   static const Color primary = Color(0xFF008037);
@@ -173,7 +174,7 @@ class _ApplicationFilterDialogState extends State<_ApplicationFilterDialog> {
       borderRadius:  8,
       hint: Text(
         hint,
-        style: TextStyle(
+        style: StyleText.fontSize12Weight400.copyWith(
           fontSize:   12.sp,
           color:      _C.hint,
           fontWeight: FontWeight.w400,
@@ -213,7 +214,7 @@ class _ApplicationFilterDialogState extends State<_ApplicationFilterDialog> {
                 SizedBox(width: 10.w),
                 Text(
                   'Sort',
-                  style: TextStyle(
+                  style: StyleText.fontSize14Weight400.copyWith(
                     fontSize:   20.sp,
                     fontWeight: FontWeight.w700,
                     color:      _C.label,
@@ -293,7 +294,7 @@ class _ApplicationFilterDialogState extends State<_ApplicationFilterDialog> {
                       ),
                       child: Text(
                         'Reset',
-                        style: TextStyle(
+                        style: StyleText.fontSize13Weight600.copyWith(
                           fontSize:   13.sp,
                           fontWeight: FontWeight.w600,
                           color:      _C.label,
@@ -317,7 +318,7 @@ class _ApplicationFilterDialogState extends State<_ApplicationFilterDialog> {
                       ),
                       child: Text(
                         'Apply',
-                        style: TextStyle(
+                        style: StyleText.fontSize13Weight600.copyWith(
                           fontSize:   13.sp,
                           fontWeight: FontWeight.w600,
                           color:      Colors.white,

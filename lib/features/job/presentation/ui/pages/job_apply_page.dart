@@ -517,7 +517,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                                 children: [
                                   Text(
                                     _t('Applying For Job', 'التقديم على وظيفة', isRtl),
-                                    style: TextStyle(
+                                    style: StyleText.fontSize14Weight400.copyWith(
                                       fontFamily: 'Cairo',
                                       fontSize: 36.sp,
                                       fontWeight: FontWeight.w700,
@@ -623,7 +623,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                                     isRtl,
                                   ),
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                  style: StyleText.fontSize14Weight400.copyWith(
                                     fontFamily: 'Cairo',
                                     fontSize: 18.sp,
                                     fontWeight: FontWeight.w700,
@@ -638,7 +638,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                                     isRtl,
                                   ),
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                  style: StyleText.fontSize14Weight400.copyWith(
                                     fontFamily: 'Cairo',
                                     fontSize: 13.sp,
                                     height: 1.6,
@@ -674,7 +674,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
       children: [
         Text(
           title.isEmpty ? _t('Untitled', 'بدون عنوان', isRtl) : title,
-          style: TextStyle(
+          style: StyleText.fontSize16Weight700.copyWith(
             fontFamily: 'Cairo',
             fontSize: 16.sp,
             fontWeight: FontWeight.w700,
@@ -730,7 +730,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
           children: [
             Text(
               _t('Skills:', 'المهارات:', isRtl),
-              style: TextStyle(
+              style: StyleText.fontSize13Weight500.copyWith(
                 fontFamily: 'Cairo',
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w500,
@@ -756,7 +756,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                     ),
                     child: Text(
                       _biText(s['name'] as Map<String, dynamic>?, isRtl),
-                      style: TextStyle(
+                      style: StyleText.fontSize14Weight400.copyWith(
                         fontFamily: 'Cairo',
                         fontSize: 12.sp,
                         color: _kLabel,
@@ -783,7 +783,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
       children: [
         Text(
           _t('Personal Information', 'المعلومات الشخصية', isRtl),
-          style: TextStyle(
+          style: StyleText.fontSize16Weight700.copyWith(
             fontFamily: 'Cairo',
             fontSize: 16.sp,
             fontWeight: FontWeight.w700,
@@ -882,7 +882,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
       children: [
         Text(
           _t('Profile Information', 'معلومات الملف الشخصي', isRtl),
-          style: TextStyle(
+          style: StyleText.fontSize16Weight700.copyWith(
             fontFamily: 'Cairo',
             fontSize: 16.sp,
             fontWeight: FontWeight.w700,
@@ -915,7 +915,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
         // ── Label ──
         Text(
           doc.name,
-          style: TextStyle(
+          style: StyleText.fontSize13Weight500.copyWith(
             fontFamily: 'Cairo',
             fontSize: 13.sp,
             fontWeight: FontWeight.w500,
@@ -949,7 +949,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                       SizedBox(height: 6.h),
                       Text(
                         doc.fileName!,
-                        style: TextStyle(
+                        style: StyleText.fontSize14Weight400.copyWith(
                           fontFamily: 'Cairo',
                           fontSize: 12.sp,
                           color: _kLabel,
@@ -974,7 +974,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                         'اسحب وأفلت ملف PDF هنا',
                         isRtl,
                       ),
-                      style: TextStyle(
+                      style: StyleText.fontSize14Weight400.copyWith(
                         fontFamily: 'Cairo',
                         fontSize: 12.sp,
                         color: Colors.black54,
@@ -992,7 +992,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                       ),
                       child: Text(
                         _t('Browse Files', 'استعراض الملفات', isRtl),
-                        style: TextStyle(
+                        style: StyleText.fontSize12Weight600.copyWith(
                           fontFamily: 'Cairo',
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w600,
@@ -1037,7 +1037,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
               'نوع الملف غير صالح. يرجى رفع ملف PDF فقط.',
               isRtl,
             ),
-            style: TextStyle(
+            style: StyleText.fontSize14Weight400.copyWith(
               fontFamily: 'Cairo',
               fontSize: 11.sp,
               color: Colors.red,
@@ -1098,7 +1098,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
           )
               : Text(
             _t('SEND', 'إرسال', isRtl),
-            style: TextStyle(
+            style: StyleText.fontSize16Weight700.copyWith(
               fontFamily: 'Cairo',
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
@@ -1139,7 +1139,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
         children: [
           TextSpan(
             text: '$label ',
-            style: TextStyle(
+            style: StyleText.fontSize13Weight500.copyWith(
               fontFamily: 'Cairo',
               fontSize: 13.sp,
               fontWeight: FontWeight.w500,
@@ -1148,7 +1148,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
           ),
           TextSpan(
             text: value,
-            style: TextStyle(
+            style: StyleText.fontSize13Weight600.copyWith(
               fontFamily: 'Cairo',
               fontSize: 13.sp,
               fontWeight: FontWeight.w600,

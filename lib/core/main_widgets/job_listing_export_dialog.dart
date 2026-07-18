@@ -452,7 +452,7 @@ class _JobListingExportDialogState extends State<_JobListingExportDialog> {
                 SizedBox(height: 6.sp),
                 Text(
                   '${widget.applications.length} applicant(s) will be exported',
-                  style: TextStyle(
+                  style: StyleText.fontSize14Weight400.copyWith(
                     fontSize: 12.sp,
                     color: const Color(0xFFAAAAAA),
                   ),
@@ -462,7 +462,7 @@ class _JobListingExportDialogState extends State<_JobListingExportDialog> {
                 // ── File name input ──
                 Text(
                   'File Name',
-                  style: TextStyle(
+                  style: StyleText.fontSize12Weight500.copyWith(
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF333333),
@@ -477,10 +477,10 @@ class _JobListingExportDialogState extends State<_JobListingExportDialog> {
                   ),
                   child: TextField(
                     controller: _fileNameController,
-                    style: TextStyle(fontSize: 13.sp),
+                    style: StyleText.fontSize14Weight400.copyWith(fontSize: 13.sp),
                     decoration: InputDecoration(
                       hintText: 'Enter file name',
-                      hintStyle: TextStyle(
+                      hintStyle: StyleText.fontSize14Weight400.copyWith(
                         fontSize: 13.sp,
                         color: const Color(0xFFAAAAAA),
                       ),
@@ -490,7 +490,7 @@ class _JobListingExportDialogState extends State<_JobListingExportDialog> {
                       ),
                       border: InputBorder.none,
                       suffixText: '.pdf',
-                      suffixStyle: TextStyle(
+                      suffixStyle: StyleText.fontSize14Weight400.copyWith(
                         fontSize: 12.sp,
                         color: const Color(0xFF999999),
                       ),
@@ -518,7 +518,7 @@ class _JobListingExportDialogState extends State<_JobListingExportDialog> {
                           ),
                           child: Text(
                             'Discard',
-                            style: TextStyle(
+                            style: StyleText.fontSize14Weight600.copyWith(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w600,
                               color: _isExporting
@@ -555,7 +555,7 @@ class _JobListingExportDialogState extends State<_JobListingExportDialog> {
                           )
                               : Text(
                             'Download',
-                            style: TextStyle(
+                            style: StyleText.fontSize14Weight600.copyWith(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,

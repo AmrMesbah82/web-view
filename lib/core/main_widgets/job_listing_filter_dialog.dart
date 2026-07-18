@@ -19,6 +19,7 @@ import 'package:website_app/core/widgets/date_picker.dart';
 
 import '../../features/home/presentation/controller/home_cubit.dart';
 import '../../features/home/presentation/controller/home_state.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 
 
@@ -225,7 +226,7 @@ class _JobListingFilterDialogState
       primaryColor:  primary,   // ← CMS branding color
       hint: Text(
         hint,
-        style: TextStyle(
+        style: StyleText.fontSize13Weight400.copyWith(
           fontSize:   13.sp,
           color:      _C.hint,
           fontWeight: FontWeight.w400,
@@ -275,7 +276,7 @@ class _JobListingFilterDialogState
                     SizedBox(width: 12.w),
                     Text(
                       'Filter',
-                      style: TextStyle(
+                      style: StyleText.fontSize22Weight700.copyWith(
                         fontSize:   22.sp,
                         fontWeight: FontWeight.w700,
                         color:      _C.label,
@@ -345,7 +346,7 @@ class _JobListingFilterDialogState
                                 borderRadius: BorderRadius.circular(10.r)),
                           ),
                           child: Text('Reset',
-                              style: TextStyle(
+                              style: StyleText.fontSize15Weight600.copyWith(
                                   fontSize:   15.sp,
                                   fontWeight: FontWeight.w600,
                                   color:      Colors.black)),
@@ -365,7 +366,7 @@ class _JobListingFilterDialogState
                                 borderRadius: BorderRadius.circular(10.r)),
                           ),
                           child: Text('Apply',
-                              style: TextStyle(
+                              style: StyleText.fontSize15Weight600.copyWith(
                                   fontSize:   15.sp,
                                   fontWeight: FontWeight.w600,
                                   color:      Colors.white)),
@@ -414,7 +415,7 @@ class _DatePickerField extends StatelessWidget {
             Expanded(
               child: Text(
                 hasValue ? dateLabel : 'Date',
-                style: TextStyle(
+                style: StyleText.fontSize13Weight400.copyWith(
                   fontSize:   13.sp,
                   color:      hasValue ? _C.label : _C.hint,
                   fontWeight: FontWeight.w400,

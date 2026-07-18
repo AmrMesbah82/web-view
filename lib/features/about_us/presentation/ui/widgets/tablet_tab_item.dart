@@ -69,7 +69,7 @@ class _TabletTabItemState extends State<_TabletTabItem> {
               Flexible(
                 child: Text(
                   widget.label,
-                  style: TextStyle(
+                  style: StyleText.fontSize12Weight600.copyWith(
                     fontFamily: 'Cairo',
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w600,

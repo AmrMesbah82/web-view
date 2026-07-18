@@ -74,7 +74,7 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
             SizedBox(width: 6.w),
             Text(
               label,
-              style: TextStyle(
+              style: StyleText.fontSize12Weight500.copyWith(
                 fontFamily: 'Cairo',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w500,
@@ -379,7 +379,7 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                               children: [
                                 Text(
                                   isRtl ? 'البيت الاستراتيجي' : 'Strategic House',
-                                  style: TextStyle(
+                                  style: StyleText.fontSize14Weight400.copyWith(
                                     fontFamily: 'Cairo',
                                     fontSize: 18.sp,
                                     fontWeight: FontWeight.w700,
@@ -413,7 +413,7 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                               child: Center(
                                 child: Text(
                                   isRtl ? 'لا يوجد محتوى بعد' : 'No content yet',
-                                  style: TextStyle(
+                                  style: StyleText.fontSize14Weight400.copyWith(
                                     fontFamily: 'Cairo',
                                     fontSize: 14.sp,
                                     color: Colors.grey[500],

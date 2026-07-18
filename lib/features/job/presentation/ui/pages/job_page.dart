@@ -14,6 +14,7 @@ import '../../../../home/presentation/controller/lang_state.dart';
 import '../../../data/models/job_model.dart';
 import '../../controller/job_cubit.dart';
 import '../../controller/job_state.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 part '../widgets/localization_helper.dart';
 part '../widgets/filter_tab.dart';
@@ -30,7 +31,7 @@ const Color _kDivider    = Color(0xFFDDE8DD);
 Color _parseColor(String hex, {required Color fallback}) {
   final h = hex.replaceAll('#', '');
   if (h.length == 6) {
-    final value = int.tryParse('FF\$h', radix: 16);
+    final value = int.tryParse('FF$h', radix: 16);
     if (value != null) return Color(value);
   }
   return fallback;
@@ -208,7 +209,7 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                             child: Text(
                                               l.heroTitle,
                                               textAlign: l.isAr ? TextAlign.right : TextAlign.left,
-                                              style: TextStyle(
+                                              style: StyleText.fontSize14Weight400.copyWith(
                                                 fontSize: 40.sp,
                                                 fontWeight: FontWeight.w700,
                                                 color: _kGreen,
@@ -256,7 +257,7 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                             child: Text(
                                               l.sectionTitle,
                                               textAlign: l.isAr ? TextAlign.right : TextAlign.left,
-                                              style: TextStyle(
+                                              style: StyleText.fontSize22Weight700.copyWith(
                                                 fontSize: 22.sp,
                                                 fontWeight: FontWeight.w700,
                                                 color: Colors.black45,
@@ -283,14 +284,14 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                                     Expanded(
                                                       child: Text(
                                                         l.errorMsg,
-                                                        style: TextStyle(fontSize: 12.sp, color: const Color(0xFFE53935)),
+                                                        style: StyleText.fontSize14Weight400.copyWith(fontSize: 12.sp, color: const Color(0xFFE53935)),
                                                       ),
                                                     ),
                                                     GestureDetector(
                                                       onTap: () => context.read<JobListingCubit>().loadJobs(),
                                                       child: Text(
                                                         l.retry,
-                                                        style: TextStyle(
+                                                        style: StyleText.fontSize12Weight600.copyWith(
                                                           fontSize: 12.sp,
                                                           fontWeight: FontWeight.w600,
                                                           color: _kGreen,
@@ -323,7 +324,7 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                                       )
                                                           .display,
                                                     ),
-                                                    style: TextStyle(fontSize: 14.sp, color: Colors.black45),
+                                                    style: StyleText.fontSize14Weight400.copyWith(fontSize: 14.sp, color: Colors.black45),
                                                   ),
                                                 ),
                                               ]

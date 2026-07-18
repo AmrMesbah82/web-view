@@ -28,7 +28,7 @@ class _ValuesGridTabletState extends State<_ValuesGridTablet> {
         child: Center(
           child: Text(
             'No values added yet.',
-            style: TextStyle(
+            style: StyleText.fontSize14Weight400.copyWith(
               fontFamily: 'Cairo',
               fontSize: 12.sp,
               color: Colors.grey[500],

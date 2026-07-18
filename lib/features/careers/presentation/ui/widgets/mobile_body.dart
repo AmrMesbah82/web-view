@@ -46,7 +46,8 @@ class _MobileBody extends StatelessWidget {
             child: Text(
               _t('Careers', 'الوظائف', isRtl),
               style: StyleText.fontSize28Weight600.copyWith(
-                fontSize: 28.sp,
+                fontSize: 30.sp,
+                fontWeight: FontWeight.w700,
                 color: primary,
               ),
             ),

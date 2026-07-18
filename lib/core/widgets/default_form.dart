@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/appcolors.dart';
 import '../theme/text.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 
 
@@ -154,7 +155,7 @@ class DefaultFormField extends StatelessWidget {
                 hintStyle:
                 hintStyle ?? AppTextStyles.font12RegularSecondaryTextCairo,
                 isCollapsed: collapsed ?? false,
-                errorStyle: const TextStyle(fontSize: 0),
+                errorStyle: StyleText.fontSize14Weight400.copyWith(fontSize: 0),
                 labelText: labelText,
                 prefixIcon: prefixIcon != null
                     ? Container(

@@ -18,7 +18,7 @@ class _MobileStatsSection extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.circular(8.r),
       ),
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.only(top: 16.sp, right: 16.sp,left: 16.sp),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: statistics

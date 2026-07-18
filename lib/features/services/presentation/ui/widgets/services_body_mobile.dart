@@ -34,8 +34,8 @@ class _ServicesBodyMobile extends StatelessWidget {
             delay:     const Duration(milliseconds: 80),
             direction: _SlideDirection.fromLeft,
             duration:  const Duration(milliseconds: 600),
-            child: Text(sectionTitle,
-                style: TextStyle(
+            child: Text(FormatHelper.capitalize(sectionTitle),
+                style: StyleText.fontSize14Weight400.copyWith(
                     fontFamily: 'Cairo',
                     fontSize:   14.sp,
                     fontWeight: FontWeight.w800,
@@ -64,7 +64,7 @@ class _ServicesBodyMobile extends StatelessWidget {
             direction: _SlideDirection.fromLeft,
             duration:  const Duration(milliseconds: 600),
             child: Text(importantReads,
-                style: TextStyle(
+                style: StyleText.fontSize14Weight400.copyWith(
                     fontFamily: 'Cairo',
                     fontSize:   18.sp,
                     fontWeight: FontWeight.w800,

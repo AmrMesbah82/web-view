@@ -29,7 +29,7 @@ class _ValuesGridDesktopState extends State<_ValuesGridDesktop> {
         child: Center(
           child: Text(
             'No values added yet.',
-            style: TextStyle(
+            style: StyleText.fontSize14Weight400.copyWith(
               fontFamily: 'Cairo',
               fontSize: 13.sp,
               color: Colors.grey[500],

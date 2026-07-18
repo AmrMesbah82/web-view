@@ -35,6 +35,7 @@ import '../../../../careers/data/models/careers_section_model.dart' hide BiText;
 import '../../controller/home_cubit.dart';
 import '../../controller/home_state.dart';
 import '../../controller/lang_state.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 
 
@@ -61,7 +62,7 @@ const Color _kDefaultBackground = Color(0xFFF5F5F5);
 Color _hexColor(String hex, {required Color fallback}) {
   final h = hex.replaceAll('#', '');
   if (h.length == 6) {
-    final value = int.tryParse('FF\$h', radix: 16);
+    final value = int.tryParse('FF$h', radix: 16);
     if (value != null) return Color(value);
   }
   return fallback;
@@ -259,13 +260,13 @@ class _HomePageState extends State<HomePage> {
                   Text(state.message,
                       textAlign: TextAlign.center,
                       style:
-                      TextStyle(color: Colors.red, fontSize: 14.sp)),
+                      StyleText.fontSize14Weight400.copyWith(color: Colors.red, fontSize: 14.sp)),
                   SizedBox(height: 16.h),
                   ElevatedButton(
                     onPressed: () =>
                         context.read<HomeCmsCubit>().load(),
                     child:
-                    Text('Retry', style: TextStyle(fontSize: 14.sp)),
+                    Text('Retry', style: StyleText.fontSize14Weight400.copyWith(fontSize: 14.sp)),
                   ),
                 ],
               ),

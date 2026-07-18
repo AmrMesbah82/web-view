@@ -59,7 +59,7 @@ class _BlogCardDesktopState extends State<_BlogCardDesktop> {
                               _tb(widget.post.shortDescription, widget.isRtl);
                           if (shortDesc.trim().isEmpty) {
                             return Text('• • • • • • • • • • •',
-                                style: TextStyle(
+                                style: StyleText.fontSize14Weight400.copyWith(
                                     color:         _kDivider,
                                     fontSize:      9.sp,
                                     letterSpacing: 2));

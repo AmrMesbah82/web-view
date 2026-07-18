@@ -10,11 +10,23 @@ class _BlogCardMobile extends StatelessWidget {
     required this.primaryColor,
   });
 
+  // Localize Western digits (0-9) to Arabic-Indic (٠-٩).
+  String _arDigits(String s) {
+    const ar = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    final buf = StringBuffer();
+    for (final ch in s.split('')) {
+      final code = ch.codeUnitAt(0);
+      buf.write(code >= 48 && code <= 57 ? ar[code - 48] : ch);
+    }
+    return buf.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final String dateStr = post.createdAt != null
         ? isRtl
-        ? '${post.createdAt!.day} ${_monthNameAr(post.createdAt!.month)} ${post.createdAt!.year}'
+        ? _arDigits(
+            '${post.createdAt!.day} ${_monthNameAr(post.createdAt!.month)} ${post.createdAt!.year}')
         : '${post.createdAt!.day} ${_monthName(post.createdAt!.month)} ${post.createdAt!.year}'
         : '';
 
@@ -38,7 +50,7 @@ class _BlogCardMobile extends StatelessWidget {
                   post.imageUrl,
                   width:  double.infinity,
                   height: 80.h,
-                  fit:    BoxFit.cover,
+                  fit:    BoxFit.contain,
                   placeholderBuilder: (_) => Container(
                     color: _kGreenLight,
                     child: Center(
@@ -54,26 +66,21 @@ class _BlogCardMobile extends StatelessWidget {
             ),
             SizedBox(height: 12.h),
             Text(_tb(post.question, isRtl),
-                style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize:   14.sp,
-                    fontWeight: FontWeight.w600,
-                    color:      primaryColor,
-                    height:     1.4)),
+                style: StyleText.fontSize14Weight600.copyWith(
+                    color:  primaryColor,
+                    height: 1.4)),
             SizedBox(height: 8.h),
-            Text('• • • • • • • • • • • • • • • • •',
-                style: TextStyle(
-                    color:         _kDivider,
-                    fontSize:      8.sp,
-                    letterSpacing: 1.5)),
+            Text(_tb(post.shortDescription, isRtl),
+                style: StyleText.fontSize10Weight400.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color:      AppColors.text,
+                    height:     1.4)),
             SizedBox(height: 8.h),
             Row(
               children: [
                 Text(dateStr,
-                    style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize:   12.sp,
-                        color:      AppColors.secondaryBlack)),
+                    style: StyleText.fontSize12Weight400.copyWith(
+                        color: AppColors.secondaryBlack)),
                 const Spacer(),
                 _ReadMoreBtnMobile(
                   label:        isRtl ? 'اقرأ المزيد' : 'Read More',

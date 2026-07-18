@@ -68,7 +68,7 @@ class _DesktopTopTabItemState extends State<_DesktopTopTabItem> {
               SizedBox(width: 10.w),
               Text(
                 widget.label,
-                style: TextStyle(
+                style: StyleText.fontSize14Weight400.copyWith(
                   fontSize: 13.sp,
                   fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
                   color: sel ? widget.primaryColor : AppColors.secondaryBlack,

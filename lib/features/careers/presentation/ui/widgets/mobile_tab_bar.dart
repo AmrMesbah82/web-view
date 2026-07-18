@@ -28,7 +28,7 @@ class _MobileTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double boxSize = 48.w;
+    final double boxSize = 35.sp;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -74,19 +74,19 @@ class _MobileTabBar extends StatelessWidget {
                       child: tabIconUrl.isNotEmpty
                           ? SvgPicture.network(
                               tabIconUrl,
-                              width: 26.sp,
-                              height: 26.sp,
+                              width: 20.sp,
+                              height: 20.sp,
                               colorFilter: ColorFilter.mode(
                                 selected ? Colors.white : primary,
                                 BlendMode.srcIn,
                               ),
                               placeholderBuilder: (_) =>
-                                  SizedBox(width: 26.sp, height: 26.sp),
+                                  SizedBox(width: 20.sp, height: 20.sp),
                             )
                           : SvgPicture.asset(
                               _tabs[i].icon,
-                              width: 26.sp,
-                              height: 26.sp,
+                              width: 20.sp,
+                              height: 20.sp,
                               colorFilter: ColorFilter.mode(
                                 selected ? Colors.white : primary,
                                 BlendMode.srcIn,

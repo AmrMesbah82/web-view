@@ -144,9 +144,9 @@ class _MobileAccordionItemState extends State<_MobileAccordionItem> {
                   ],
                   if (widget.tab.tabIndex != 2)
                     Text(
-                      widget.tab.fullText,
+                      FormatHelper.capitalize(widget.tab.fullText),
                       style: StyleText.fontSize13Weight400.copyWith(
-                        fontSize: 10.sp,
+                        fontSize: 14.sp,
                         height: 1.7,
                       ),
                     ),

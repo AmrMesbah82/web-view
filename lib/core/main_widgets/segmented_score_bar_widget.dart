@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 class ScoreSegment {
   final String label;
@@ -84,7 +85,7 @@ class SegmentedScoreBarWidget extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(
+                  style: StyleText.fontSize14Weight700.copyWith(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
@@ -104,7 +105,7 @@ class SegmentedScoreBarWidget extends StatelessWidget {
                   children: [
                     Text(
                       seg.label,
-                      style: TextStyle(
+                      style: StyleText.fontSize14Weight400.copyWith(
                         fontSize: 11.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.black54,
@@ -116,7 +117,7 @@ class SegmentedScoreBarWidget extends StatelessWidget {
                     SizedBox(height: 4.sp),
                     Text(
                       seg.value.toString(),
-                      style: TextStyle(
+                      style: StyleText.fontSize14Weight400.copyWith(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w700,
                         color: Colors.black87,

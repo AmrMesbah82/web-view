@@ -21,11 +21,8 @@ class _ReadMoreBtnMobile extends StatelessWidget {
             color:        primaryColor,
             borderRadius: BorderRadius.circular(7.r)),
         child: Text(label,
-            style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize:   12.sp,
-                fontWeight: FontWeight.w600,
-                color:      Colors.white)),
+            style: StyleText.fontSize12Weight600.copyWith(
+                color: Colors.white)),
       ),
     );
   }

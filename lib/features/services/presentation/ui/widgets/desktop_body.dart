@@ -67,7 +67,7 @@ class _DesktopBody extends StatelessWidget {
             ),
             width: pageW,
             child: Padding(
-              padding:  EdgeInsets.symmetric(horizontal: 15.sp, vertical: 10.sp),
+              padding:  EdgeInsets.only(right: 15.sp, left: 15.sp, top: 10.sp),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -146,7 +146,7 @@ class _DesktopBody extends StatelessWidget {
                     isMobile: false,
                     primary:  primary,
                   ),
-                  SizedBox(height: 40.h),
+
                 ],
               ),
             ),

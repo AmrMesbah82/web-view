@@ -7,6 +7,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/appcolors.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 Widget customButton({
   required String title,
@@ -38,7 +39,7 @@ Widget customButton({
         child: Text(
           title,
           style: textStyle ??
-              TextStyle(
+              StyleText.fontSize14Weight400.copyWith(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
                 color: textColor ?? (isDark ? Colors.white : Colors.black),

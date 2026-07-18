@@ -45,7 +45,7 @@ class _ServicesBodyTablet extends StatelessWidget {
             direction: _SlideDirection.fromLeft,
             duration:  const Duration(milliseconds: 600),
             child: Text(sectionTitle,
-                style: TextStyle(
+                style: StyleText.fontSize14Weight400.copyWith(
                     fontFamily: 'Cairo',
                     fontSize:   16.sp,
                     fontWeight: FontWeight.w800,
@@ -97,7 +97,7 @@ class _ServicesBodyTablet extends StatelessWidget {
             direction: _SlideDirection.fromLeft,
             duration:  const Duration(milliseconds: 600),
             child: Text(importantReads,
-                style: TextStyle(
+                style: StyleText.fontSize14Weight400.copyWith(
                     fontFamily: 'Cairo',
                     fontSize:   18.sp,
                     fontWeight: FontWeight.w800,

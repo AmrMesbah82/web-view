@@ -38,7 +38,7 @@ class _BlockList extends StatelessWidget {
             padding: EdgeInsets.only(bottom: isMobile ? 10 : 10.h),
             child: Text(
               text,
-              style: TextStyle(
+              style: StyleText.fontSize14Weight400.copyWith(
                 fontFamily: 'Cairo',
                 fontSize:   fontSize,
                 height:     1.7,
@@ -59,7 +59,7 @@ class _BlockList extends StatelessWidget {
                 children: [
                   Text(
                     '$idx.  ',
-                    style: TextStyle(
+                    style: StyleText.fontSize14Weight400.copyWith(
                       fontFamily: 'Cairo',
                       fontSize:   fontSize,
                       height:     1.7,
@@ -70,7 +70,7 @@ class _BlockList extends StatelessWidget {
                   Expanded(
                     child: Text(
                       line,
-                      style: TextStyle(
+                      style: StyleText.fontSize14Weight400.copyWith(
                         fontFamily: 'Cairo',
                         fontSize:   fontSize,
                         height:     1.7,
@@ -110,7 +110,7 @@ class _BlockList extends StatelessWidget {
                   Expanded(
                     child: Text(
                       line,
-                      style: TextStyle(
+                      style: StyleText.fontSize14Weight400.copyWith(
                         fontFamily: 'Cairo',
                         fontSize:   fontSize,
                         height:     1.7,

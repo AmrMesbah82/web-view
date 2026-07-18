@@ -190,10 +190,7 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
                               children: [
                                 Text(
                                   isRtl ? 'البيت الاستراتيجي' : 'Strategic House',
-                                  style: TextStyle(
-                                    fontFamily: 'Cairo',
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w700,
+                                  style: StyleText.fontSize14Weight700.copyWith(
                                     color: widget.primaryColor,
                                   ),
                                 ),
@@ -224,9 +221,7 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
                               child: Center(
                                 child: Text(
                                   isRtl ? 'لا يوجد محتوى بعد' : 'No content yet',
-                                  style: TextStyle(
-                                    fontFamily: 'Cairo',
-                                    fontSize: 12.sp,
+                                  style: StyleText.fontSize12Weight400.copyWith(
                                     color: Colors.grey[500],
                                   ),
                                 ),

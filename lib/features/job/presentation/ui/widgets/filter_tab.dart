@@ -36,7 +36,7 @@ class _FilterTabState extends State<_FilterTab> {
           ),
           child: Text(
             widget.label,
-            style: TextStyle(
+            style: StyleText.fontSize13Weight600.copyWith(
               fontSize: 13.sp,
               fontWeight: FontWeight.w600,
               color: widget.isSelected

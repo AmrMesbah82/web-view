@@ -48,8 +48,8 @@ class _ValueDetailPanel extends StatelessWidget {
           SizedBox(height: 10.h),
           if (title.isNotEmpty) ...[
             Text(
-              title,
-              style: TextStyle(
+              FormatHelper.capitalize(title),
+              style: StyleText.fontSize14Weight700.copyWith(
                 fontFamily: 'Cairo',
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w700,
@@ -60,8 +60,8 @@ class _ValueDetailPanel extends StatelessWidget {
           ],
           if (shortDesc.isNotEmpty) ...[
             Text(
-              shortDesc,
-              style: TextStyle(
+              FormatHelper.capitalize(shortDesc),
+              style: StyleText.fontSize12Weight500.copyWith(
                 fontFamily: 'Cairo',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w500,
@@ -73,8 +73,8 @@ class _ValueDetailPanel extends StatelessWidget {
           ],
           if (fullDesc.isNotEmpty)
             Text(
-              fullDesc,
-              style: TextStyle(
+              FormatHelper.capitalize(fullDesc),
+              style: StyleText.fontSize11Weight400.copyWith(
                 fontFamily: 'Cairo',
                 fontSize: 11.sp,
                 fontWeight: FontWeight.w400,

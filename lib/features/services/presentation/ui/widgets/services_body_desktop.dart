@@ -69,7 +69,7 @@ class _ServicesBodyDesktopState extends State<_ServicesBodyDesktop> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: Text(sectionTitle,
+                  child: Text(FormatHelper.capitalize(sectionTitle),
                       style: StyleText.fontSize22Weight700.copyWith(
                           fontSize:   30.sp,
                           color:      widget.primaryColor,
@@ -139,7 +139,7 @@ class _ServicesBodyDesktopState extends State<_ServicesBodyDesktop> {
                     widget.isRtl
                         ? 'لم تتم إضافة خدمات بعد.'
                         : 'No services added yet.',
-                    style: TextStyle(
+                    style: StyleText.fontSize14Weight400.copyWith(
                         fontFamily: 'Cairo',
                         fontSize:   12.sp,
                         color:      _kDivider)),

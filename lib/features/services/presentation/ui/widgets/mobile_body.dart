@@ -58,7 +58,7 @@ class _MobileBody extends StatelessWidget {
           // ── Title (question) ──────────────────────────────────────────
           Text(
             _tb(selected.question, isRtl),
-            style: TextStyle(
+            style: StyleText.fontSize14Weight400.copyWith(
               fontFamily: 'Cairo',
               fontSize:   18,
               fontWeight: FontWeight.w700,
@@ -90,7 +90,7 @@ class _MobileBody extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(
                       _tb(selected.descriptionTitle, isRtl),
-                      style: const TextStyle(
+                      style: StyleText.fontSize14Weight400.copyWith(
                         fontFamily: 'Cairo',
                         fontSize:   14,
                         fontWeight: FontWeight.w700,
@@ -100,7 +100,7 @@ class _MobileBody extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       _formatDate(selected.createdAt, isRtl),
-                      style: const TextStyle(
+                      style: StyleText.fontSize14Weight400.copyWith(
                         fontFamily: 'Cairo',
                         fontSize:   12,
                         color:      Colors.black45,
@@ -128,7 +128,7 @@ class _MobileBody extends StatelessWidget {
           // ── Short description ─────────────────────────────────────────
           Text(
             _tb(selected.shortDescription, isRtl),
-            style: const TextStyle(
+            style: StyleText.fontSize14Weight400.copyWith(
               fontFamily: 'Cairo',
               fontSize:   13,
               height:     1.7,
@@ -145,7 +145,7 @@ class _MobileBody extends StatelessWidget {
               expanded
                   ? (isRtl ? 'اقرأ أقل'    : 'Read Less')
                   : (isRtl ? 'اقرأ المزيد' : 'Read More'),
-              style: TextStyle(
+              style: StyleText.fontSize14Weight400.copyWith(
                 fontFamily:      'Cairo',
                 fontSize:        13,
                 fontWeight:      FontWeight.w600,

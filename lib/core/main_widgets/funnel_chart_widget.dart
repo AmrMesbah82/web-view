@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 class FunnelChartItem {
   final String label;
@@ -85,7 +86,7 @@ class FunnelChartWidget extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(
+                  style: StyleText.fontSize14Weight700.copyWith(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
@@ -121,7 +122,7 @@ class FunnelChartWidget extends StatelessWidget {
                           Expanded(
                             child: Text(
                               item.label,
-                              style: TextStyle(
+                              style: StyleText.fontSize14Weight400.copyWith(
                                 fontSize: 11.sp,
                                 color: Colors.black87,
                               ),
@@ -212,7 +213,7 @@ class _FunnelPainter extends CustomPainter {
       final textPainter = TextPainter(
         text: TextSpan(
           text: items[i].value.toString(),
-          style: const TextStyle(
+          style: StyleText.fontSize14Weight400.copyWith(
             color: Colors.white,
             fontSize: 12,
             fontWeight: FontWeight.w600,

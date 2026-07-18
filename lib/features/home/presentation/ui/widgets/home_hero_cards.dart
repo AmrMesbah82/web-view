@@ -21,7 +21,7 @@ class _HeroCardsSection extends StatelessWidget {
 Color _sectionColor(String hex) {
   final h = hex.replaceAll('#', '');
   if (h.length == 6) {
-    final value = int.tryParse('FF\$h', radix: 16);
+    final value = int.tryParse('FF$h', radix: 16);
     if (value != null) return Color(value);
   }
   return _kDefaultPrimary;

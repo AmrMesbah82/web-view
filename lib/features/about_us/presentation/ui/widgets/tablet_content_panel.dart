@@ -84,7 +84,7 @@ class _TabletContentPanel extends StatelessWidget {
                       children: [
                         Text(
                           isRtl ? 'البيت الاستراتيجي' : 'Strategic House',
-                          style: TextStyle(
+                          style: StyleText.fontSize16Weight700.copyWith(
                             fontFamily: 'Cairo',
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w700,
@@ -121,7 +121,7 @@ class _TabletContentPanel extends StatelessWidget {
                       child: Center(
                         child: Text(
                           isRtl ? 'لا يوجد محتوى بعد' : 'No content yet',
-                          style: TextStyle(
+                          style: StyleText.fontSize14Weight400.copyWith(
                             fontFamily: 'Cairo',
                             fontSize: 13.sp,
                             color: Colors.grey[500],

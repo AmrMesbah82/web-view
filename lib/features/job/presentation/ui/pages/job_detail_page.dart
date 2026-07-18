@@ -22,6 +22,7 @@ import '../../../../about_us/presentation/controller/about_us_company_state.dart
 import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
+import 'package:website_app/core/theme/new_theme.dart';
 
 part '../widgets/labels.dart';
 
@@ -198,7 +199,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                   // ── Title ──
                                   Text(
                                     title,
-                                    style: TextStyle(
+                                    style: StyleText.fontSize14Weight400.copyWith(
 
                                       fontSize: 36.sp,
                                       fontWeight: FontWeight.w700,
@@ -221,7 +222,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                       children: [
                                         Text(
                                           title,
-                                          style: TextStyle(
+                                          style: StyleText.fontSize14Weight400.copyWith(
 
                                             fontSize: 18.sp,
                                             fontWeight: FontWeight.w700,
@@ -276,7 +277,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                             children: [
                                               Text(
                                                 labels.skills,
-                                                style: TextStyle(
+                                                style: StyleText.fontSize14Weight600.copyWith(
 
                                                   fontSize: 14.sp,
                                                   fontWeight: FontWeight.w600,
@@ -309,7 +310,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                                       ),
                                                       child: Text(
                                                         s,
-                                                        style: TextStyle(
+                                                        style: StyleText.fontSize14Weight400.copyWith(
 
                                                           fontSize: 13.sp,
                                                           color: Colors
@@ -408,7 +409,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                         children: [
                                           Text(
                                             labels.benefits,
-                                            style: TextStyle(
+                                            style: StyleText.fontSize14Weight400.copyWith(
 
                                               fontSize: 18.sp,
                                               fontWeight: FontWeight.w700,
@@ -441,7 +442,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                                     width: 180.w,
                                                     child: Text(
                                                       bTitle,
-                                                      style: TextStyle(
+                                                      style: StyleText.fontSize14Weight600.copyWith(
 
                                                         fontSize: 14.sp,
                                                         fontWeight:
@@ -454,7 +455,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                                   Expanded(
                                                     child: Text(
                                                       bDesc,
-                                                      style: TextStyle(
+                                                      style: StyleText.fontSize14Weight400.copyWith(
 
                                                         fontSize: 13.sp,
                                                         height: 1.6,
@@ -502,7 +503,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                               ),
                                               title: Text(
                                                 labels.linkCopied,
-                                                style: TextStyle(
+                                                style: StyleText.fontSize16Weight700.copyWith(
 
                                                   fontSize: 16.sp,
                                                   fontWeight: FontWeight.w700,
@@ -526,7 +527,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                                 ),
                                                 child: Text(
                                                   url,
-                                                  style: TextStyle(
+                                                  style: StyleText.fontSize14Weight400.copyWith(
 
                                                     fontSize: 12.sp,
                                                     color: Colors.black87,
@@ -558,7 +559,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                               SizedBox(width: 6.w),
                                               Text(
                                                 labels.share,
-                                                style: TextStyle(
+                                                style: StyleText.fontSize13Weight600.copyWith(
                                                   fontSize: 13.sp,
                                                   fontWeight: FontWeight.w600,
                                                   color: Colors.white,
@@ -588,7 +589,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                             children: [
                                               Text(
                                                 labels.apply,
-                                                style: TextStyle(
+                                                style: StyleText.fontSize14Weight400.copyWith(
 
                                                   fontSize: 13.sp,
                                                   fontWeight: FontWeight.w700,
@@ -650,7 +651,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         children: [
           TextSpan(
             text: '$label ',
-            style: TextStyle(
+            style: StyleText.fontSize14Weight500.copyWith(
 
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
@@ -659,7 +660,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
           ),
           TextSpan(
             text: value,
-            style: TextStyle(
+            style: StyleText.fontSize14Weight600.copyWith(
 
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
@@ -689,7 +690,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         children: [
           Text(
             title,
-            style: TextStyle(
+            style: StyleText.fontSize14Weight400.copyWith(
 
               fontSize: 18.sp,
               fontWeight: FontWeight.w700,
@@ -702,7 +703,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
               padding: EdgeInsets.only(bottom: 6.h),
               child: Text(
                 line.trim(),
-                style: TextStyle(
+                style: StyleText.fontSize14Weight400.copyWith(
 
                   fontSize: 13.sp,
                   height: 1.6,

@@ -42,7 +42,7 @@ const Color _kFallbackBackground = Color(0xFFF1F2ED);
 Color _parseColor(String hex, {Color fallback = _kFallbackPrimary}) {
   final h = hex.replaceAll('#', '');
   if (h.length == 6) {
-    final value = int.tryParse('FF\$h', radix: 16);
+    final value = int.tryParse('FF$h', radix: 16);
     if (value != null) return Color(value);
   }
   return fallback;
@@ -139,7 +139,7 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
                             child: Center(
                               child: Text(
                                 blogState.message,
-                                style: const TextStyle(fontFamily: 'Cairo', color: Colors.red),
+                                style: StyleText.fontSize14Weight400.copyWith(fontFamily: 'Cairo', color: Colors.red),
                               ),
                             ),
                           ),
@@ -165,7 +165,7 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
                             child: Center(
                               child: Text(
                                 isRtl ? 'لا توجد مقالات منشورة.' : 'No published posts.',
-                                style: const TextStyle(fontFamily: 'Cairo', color: Colors.black54),
+                                style: StyleText.fontSize14Weight400.copyWith(fontFamily: 'Cairo', color: Colors.black54),
                               ),
                             ),
                           ),

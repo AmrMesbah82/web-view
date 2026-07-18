@@ -34,8 +34,8 @@ class _ServiceCardMobile extends StatelessWidget {
                   secondaryColor: secondaryColor),
               SizedBox(width: 10.w),
               Expanded(
-                child: Text(_t(item.title, isRtl),
-                    style: TextStyle(
+                child: Text(FormatHelper.capitalize(_t(item.title, isRtl)),
+                    style: StyleText.fontSize13Weight600.copyWith(
                         fontFamily: 'Cairo',
                         fontSize:   13.sp,
                         fontWeight: FontWeight.w600,
@@ -44,8 +44,8 @@ class _ServiceCardMobile extends StatelessWidget {
             ],
           ),
           SizedBox(height: 8.h),
-          Text(_t(item.description, isRtl),
-              style: TextStyle(
+          Text(FormatHelper.capitalize(_t(item.description, isRtl)),
+              style: StyleText.fontSize12Weight400.copyWith(
                   fontFamily: 'Cairo',
                   fontSize:   12.sp,
                   fontWeight: FontWeight.w400,

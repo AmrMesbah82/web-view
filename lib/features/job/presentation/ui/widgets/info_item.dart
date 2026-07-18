@@ -12,7 +12,7 @@ class _InfoItem extends StatelessWidget {
         children: [
           TextSpan(
             text: '$label: ',
-            style: TextStyle(
+            style: StyleText.fontSize14Weight500.copyWith(
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: Colors.black87,
@@ -20,7 +20,7 @@ class _InfoItem extends StatelessWidget {
           ),
           TextSpan(
             text: value,
-            style: TextStyle(
+            style: StyleText.fontSize14Weight600.copyWith(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: _kGreen,

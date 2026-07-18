@@ -133,7 +133,7 @@ class _ServicesPageState extends State<ServicesPage> {
   Color _hexColor(String hex, {required Color fallback}) {
     final h = hex.replaceAll('#', '');
     if (h.length == 6) {
-      final value = int.tryParse('FF\$h', radix: 16);
+      final value = int.tryParse('FF$h', radix: 16);
       if (value != null) return Color(value);
     }
     return fallback;

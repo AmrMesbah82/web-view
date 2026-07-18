@@ -54,11 +54,11 @@ class _ValueGridCardState extends State<_ValueGridCard> {
     );
 
     final Widget titleWidget = Text(
-      widget.title,
+      FormatHelper.capitalize(widget.title),
       textAlign: widget.rowLayout ? TextAlign.start : TextAlign.center,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(
+      style: StyleText.fontSize14Weight400.copyWith(
         fontFamily: 'Cairo',
         fontSize: widget.fontSize,
         fontWeight: FontWeight.w600,
