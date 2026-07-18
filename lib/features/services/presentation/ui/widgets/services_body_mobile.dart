@@ -64,12 +64,9 @@ class _ServicesBodyMobile extends StatelessWidget {
             direction: _SlideDirection.fromLeft,
             duration:  const Duration(milliseconds: 600),
             child: Text(importantReads,
-                style: StyleText.fontSize14Weight400.copyWith(
-                    fontFamily: 'Cairo',
-                    fontSize:   18.sp,
-                    fontWeight: FontWeight.w800,
-                    color:      primaryColor,
-                    height:     1.4)),
+                style: StyleText.fontSize16Weight700.copyWith(
+                  color: primaryColor
+                ))
           ),
           SizedBox(height: 14.h),
 

@@ -130,7 +130,7 @@ class _MobileInternCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      "Joined as intern: ",
+                      _t('Joined as intern: ', 'انضم كمتدرب: ', isRtl),
                       style: StyleText.fontSize11Weight400.copyWith(
                         fontSize: 10.sp,
                         color: AppColors.secondaryText,

@@ -18,6 +18,68 @@ String _ab(AboutBilingualText b, bool isRtl) {
   return v.isNotEmpty ? v : b.en;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Bilingual date + numerals
+// ══════════════════════════════════════════════════════════════════════════════
+
+const List<String> _kMonthsEn = [
+  '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+const List<String> _kMonthsAr = [
+  '', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+];
+
+const List<String> _kWesternDigits = ['0','1','2','3','4','5','6','7','8','9'];
+const List<String> _kArabicDigits  = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+
+/// Converts Western digits (0-9) to Arabic-Indic digits (٠-٩) when [isRtl].
+/// Returns the input unchanged for English.
+String _localizeDigits(String input, bool isRtl) {
+  if (!isRtl) return input;
+  var out = input;
+  for (var i = 0; i < _kWesternDigits.length; i++) {
+    out = out.replaceAll(_kWesternDigits[i], _kArabicDigits[i]);
+  }
+  return out;
+}
+
+/// The "Last Updated: " / "آخر تحديث: " prefix.
+String _lastUpdatedPrefix(bool isRtl) => isRtl ? 'آخر تحديث: ' : 'Last Updated: ';
+
+/// Formats a date bilingually with localized month names AND numerals:
+/// EN → "12 Mar 2026", AR → "١٢ مارس ٢٠٢٦". Null renders as an em dash.
+String _formatAboutDate(DateTime? d, bool isRtl) {
+  if (d == null) return '—';
+  final months = isRtl ? _kMonthsAr : _kMonthsEn;
+  return _localizeDigits('${d.day} ${months[d.month]} ${d.year}', isRtl);
+}
+
+/// Label for a document download button, localized to the UI language.
+///
+/// The button text follows the selected language, while the suffix states which
+/// language the FILE itself is in — so an Arabic visitor sees
+/// "تحميل ملف الشروط والأحكام (إنجليزي)" for the English PDF.
+String _downloadDocLabel({
+  required bool isRtl,
+  required String titleEn,
+  required String titleAr,
+  required bool isArabicFile,
+}) {
+  if (isRtl) {
+    return 'تحميل ملف $titleAr (${isArabicFile ? 'عربي' : 'إنجليزي'})';
+  }
+  return 'Download PDF of $titleEn (${isArabicFile ? 'ARB' : 'ENG'})';
+}
+
+// Document titles used by the Terms / Privacy download buttons.
+const String _kTermsTitleEn   = 'Terms and Conditions';
+const String _kTermsTitleAr   = 'الشروط والأحكام';
+const String _kPrivacyTitleEn = 'Privacy Policy';
+const String _kPrivacyTitleAr = 'سياسة الخصوصية';
+
 Color _parseColor(String hex, {required Color fallback}) {
   final h = hex.replaceAll('#', '');
   if (h.length == 6) {

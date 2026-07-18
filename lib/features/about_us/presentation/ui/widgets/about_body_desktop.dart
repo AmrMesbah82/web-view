@@ -74,8 +74,8 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
             SizedBox(width: 6.w),
             Text(
               label,
+              // StyleText resolves the admin-selected EN/AR font.
               style: StyleText.fontSize12Weight500.copyWith(
-                fontFamily: 'Cairo',
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w500,
                 color: widget.primaryColor,
@@ -88,15 +88,9 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
   }
 
   // Bilingual "Last Updated" label for the Terms / Privacy top row.
-  String _lastUpdatedLabel(DateTime? d) {
-    if (d == null) return widget.isRtl ? 'آخر تحديث: —' : 'Last Updated: —';
-    const months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    final String ds = '${d.day} ${months[d.month]} ${d.year}';
-    return widget.isRtl ? 'آخر تحديث: $ds' : 'Last Updated: $ds';
-  }
+  // Month names and numerals are both localized (AR → ١٢ مارس ٢٠٢٦).
+  String _lastUpdatedLabel(DateTime? d) =>
+      '${_lastUpdatedPrefix(widget.isRtl)}${_formatAboutDate(d, widget.isRtl)}';
 
   Widget _docPanel({
     required String description,

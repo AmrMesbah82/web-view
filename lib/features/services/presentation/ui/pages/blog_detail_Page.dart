@@ -3,8 +3,9 @@
 // Updated: All blog data now sourced from Firebase via BlogCubit / BlogPostModel.
 //          Branding colors still come from HomeCmsCubit.
 //          Supports bilingual (EN / AR), all block types (paragraph,
-//          numbering, bulletPoint), Read More / Read Less, responsive
-//          Mobile + Desktop layouts.
+//          numbering, bulletPoint), responsive Mobile + Desktop layouts.
+//          Full article content is always shown (no Read More / Read Less).
+//          All rendered text is passed through FormatHelper.capitalize.
 //          BLOG IMAGE: SVG-only — no Image.network fallback ✅
 
 import 'package:flutter/material.dart';
@@ -61,7 +62,6 @@ class BlogDetailPage extends StatefulWidget {
 
 class _BlogDetailPageState extends State<BlogDetailPage> {
   String? _selectedPostId;
-  bool    _expanded = false;
 
   @override
   void initState() {
@@ -201,28 +201,22 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
                                     ? _MobileBody(
                                   posts: posts,
                                   selected: selectedPost,
-                                  expanded: _expanded,
                                   isRtl: isRtl,
                                   primary: primary,
                                   secondary: secondary,
                                   onTabChange: (id) => setState(() {
                                     _selectedPostId = id;
-                                    _expanded = false;
                                   }),
-                                  onToggleExpand: () => setState(() => _expanded = !_expanded),
                                 )
                                     : _DesktopBody(
                                   posts: posts,
                                   selected: selectedPost,
-                                  expanded: _expanded,
                                   isRtl: isRtl,
                                   primary: primary,
                                   secondary: secondary,
                                   onTabChange: (id) => setState(() {
                                     _selectedPostId = id;
-                                    _expanded = false;
                                   }),
-                                  onToggleExpand: () => setState(() => _expanded = !_expanded),
                                 ),
                               ],
                             ),

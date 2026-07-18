@@ -17,14 +17,10 @@ class _MobileDocPanel extends StatelessWidget {
 
   ({String label, String value}) _lastUpdatedParts(BuildContext context) {
     final bool isRtl = Directionality.of(context) == TextDirection.rtl;
-    final String label = isRtl ? 'آخر تحديث: ' : 'Last Updated: ';
-    if (lastUpdated == null) return (label: label, value: '—');
-    const months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    final d = lastUpdated!;
-    return (label: label, value: '${d.day} ${months[d.month]} ${d.year}');
+    return (
+      label: _lastUpdatedPrefix(isRtl),
+      value: _formatAboutDate(lastUpdated, isRtl),
+    );
   }
 
   Widget _downloadBtn(String label, String url) {
@@ -49,8 +45,9 @@ class _MobileDocPanel extends StatelessWidget {
               Flexible(
                 child: Text(
                   label,
+                  // StyleText already resolves the admin-selected EN/AR font,
+                  // so no hardcoded fontFamily here.
                   style: StyleText.fontSize14Weight400.copyWith(
-                    fontFamily: 'Cairo',
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w500,
                     color: primaryColor,
@@ -87,7 +84,7 @@ class _MobileDocPanel extends StatelessWidget {
                 children: [
                   // ── Top row: app logo (start) + last updated (end) ──
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (logoUrl.isNotEmpty)
                         _netImg(
@@ -120,7 +117,6 @@ class _MobileDocPanel extends StatelessWidget {
                   Text(
                     description,
                     style: StyleText.fontSize11Weight400.copyWith(
-                      fontFamily: 'Cairo',
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w400,
                       color: AppColors.secondaryBlack,

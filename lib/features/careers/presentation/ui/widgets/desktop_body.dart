@@ -87,7 +87,10 @@ class _DesktopBody extends StatelessWidget {
             direction: _SlideDirection.fromBottom,
             duration: const Duration(milliseconds: 650),
             child: Container(
-              padding: EdgeInsets.all(cardPad),
+              padding: EdgeInsets.symmetric(
+                horizontal: 10.sp,
+                vertical: 5.sp,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14.r),

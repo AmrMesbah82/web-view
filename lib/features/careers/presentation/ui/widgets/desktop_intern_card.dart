@@ -147,7 +147,7 @@ class _DesktopInternCard extends StatelessWidget {
                     children: [
 
                       Text(
-                        "Joined as Intern: ",
+                        _t('Joined as Intern: ', 'انضم كمتدرب: ', isRtl),
                         style: StyleText.fontSize12Weight600.copyWith(
                           fontSize: joinFz,
                           color: AppColors.secondaryText,

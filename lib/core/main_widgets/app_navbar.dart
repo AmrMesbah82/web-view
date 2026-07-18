@@ -52,13 +52,23 @@ const Map<String, String> _kSvgMap = {
 };
 
 // ── Extract primary color from CMS state ─────────────────────────────────────
-Color _primaryFromState(HomeCmsState state) {
-  final String hex = switch (state) {
+// NOTE: this must never fall back to a transparent color. The primary color is
+// what paints the SELECTED tab's background — when the CMS state is briefly
+// Loading/Initial (e.g. during a background refresh) an empty hex used to fall
+// back to Colors.transparent, which made the active tab highlight disappear.
+// We now fall back to the cubit's in-memory model (which defaults to #008037).
+Color _primaryFromState(HomeCmsState state, [BuildContext? context]) {
+  String hex = switch (state) {
     HomeCmsLoaded(:final data) => data.branding.primaryColor,
     HomeCmsSaved(:final data)  => data.branding.primaryColor,
     _                          => '',
   };
-  return _hexColor(hex, _WebColors.primary);
+
+  if (hex.isEmpty && context != null) {
+    hex = context.read<HomeCmsCubit>().current.branding.primaryColor;
+  }
+
+  return _hexColor(hex, AppColors.primary);
 }
 
 // ✅ Extract navbar background color from CMS state (headerFooterColor)
@@ -92,6 +102,34 @@ Color _hexColor(String hex, Color fallback) {
 }
 
 Color _lightTint(Color primary) => primary.withOpacity(0.12);
+
+// ── Route matching ───────────────────────────────────────────────────────────
+// Normalise a path so '/services', '/services/', '/Services' and
+// '/services?section=x' all compare equal. Without this, a tab could fail to
+// highlight simply because the URL carried a query string or trailing slash.
+String _normRoute(String path) {
+  var s = path.trim();
+  final q = s.indexOf('?');
+  if (q != -1) s = s.substring(0, q);
+  final h = s.indexOf('#');
+  if (h != -1) s = s.substring(0, h);
+  if (s.isEmpty) return '/';
+  if (!s.startsWith('/')) s = '/$s';
+  if (s.length > 1 && s.endsWith('/')) s = s.substring(0, s.length - 1);
+  return s.toLowerCase();
+}
+
+/// The route the user is actually on. Prefers the live router location so the
+/// highlight stays correct even when a page passes a stale or mismatched
+/// `currentRoute`; falls back to that value when there's no GoRouter in scope
+/// (e.g. the admin/dashboard preview which drives the navbar via onItemTap).
+String _activeRoute(BuildContext context, String fallback) {
+  try {
+    return _normRoute(GoRouterState.of(context).uri.path);
+  } catch (_) {
+    return _normRoute(fallback);
+  }
+}
 
 // ── CMS-driven nav items, filtered by status ──────────────────────────────────
 List<({String label, String route, String svgAsset})> _getVisibleNavItems(
@@ -162,7 +200,7 @@ class AppNavbar extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<HomeCmsCubit, HomeCmsState>(
       builder: (context, cmsState) {
-        final Color primary  = _primaryFromState(cmsState);
+        final Color primary  = _primaryFromState(cmsState, context);
         final Color navbarBg = _navbarBgFromState(cmsState); // ✅ CMS-driven bg
         final double w       = MediaQuery.of(context).size.width;
 
@@ -433,7 +471,9 @@ class _FullScreenDrawer extends StatelessWidget {
                       key:     ValueKey(langState.locale.languageCode),
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                       children: navItems.map((e) {
-                        final bool isActive = currentRoute == e.route;
+                        final bool isActive =
+                            _activeRoute(context, currentRoute) ==
+                                _normRoute(e.route);
                         return GestureDetector(
                           onTap: () {
                             Navigator.of(context).pop();
@@ -575,11 +615,12 @@ class _NavItem extends StatefulWidget {
 
 class _NavItemState extends State<_NavItem> {
   bool _hovered = false;
-  bool get _isActive => widget.currentRoute == widget.route;
 
   @override
   Widget build(BuildContext context) {
     final Color hoverBg = _lightTint(widget.primary);
+    final bool isActive =
+        _activeRoute(context, widget.currentRoute) == _normRoute(widget.route);
 
     return BlocBuilder<LanguageCubit, LanguageState>(
       builder: (context, langState) {
@@ -604,7 +645,7 @@ class _NavItemState extends State<_NavItem> {
                 vertical:   widget.compact ? 6.h  : 7.h,
               ),
               decoration: BoxDecoration(
-                color: _isActive
+                color: isActive
                     ? widget.primary
                     : (_hovered ? hoverBg : hoverBg.withOpacity(0)),
                 borderRadius: BorderRadius.circular(8.r),
@@ -616,10 +657,10 @@ class _NavItemState extends State<_NavItem> {
                     : TextDirection.ltr,
                 style: StyleText.fontSize14Weight400.copyWith(
                   fontSize:   widget.compact ? 11.sp : 13.sp,
-                  fontWeight: _isActive
+                  fontWeight: isActive
                       ? AppFontWeights.medium
                       : AppFontWeights.regular,
-                  color: _isActive
+                  color: isActive
                       ? Colors.white
                       : (_hovered ? widget.primary : AppColors.text),
                 ),

@@ -3,22 +3,18 @@ part of '../pages/blog_detail_page.dart';
 class _DesktopBody extends StatelessWidget {
   final List<BlogPostModel>  posts;
   final BlogPostModel        selected;
-  final bool                 expanded;
   final bool                 isRtl;
   final Color                primary;
   final Color                secondary;
   final ValueChanged<String> onTabChange;
-  final VoidCallback         onToggleExpand;
 
   const _DesktopBody({
     required this.posts,
     required this.selected,
-    required this.expanded,
     required this.isRtl,
     required this.primary,
     required this.secondary,
     required this.onTabChange,
-    required this.onToggleExpand,
   });
 
   @override
@@ -102,7 +98,8 @@ class _DesktopBody extends StatelessWidget {
                             SizedBox(height: 10.h),
                             // shortDescription
                             Text(
-                              _tb(selected.shortDescription, isRtl),
+                              FormatHelper.capitalize(
+                                  _tb(selected.shortDescription, isRtl)),
                               style: AppTextStyles.font12BlackCairoRegular
                                   .copyWith(
                                 fontSize: 13.sp,
@@ -113,7 +110,8 @@ class _DesktopBody extends StatelessWidget {
                             SizedBox(height: 10.h),
                             // date
                             Text(
-                              _formatDate(selected.createdAt, isRtl),
+                              FormatHelper.capitalize(
+                                  _formatDate(selected.createdAt, isRtl)),
                               style: AppTextStyles.font10BlackCairoRegular
                                   .copyWith(
                                 fontSize: 12.sp,
