@@ -24,7 +24,12 @@ class AboutCompanyCubit extends Cubit<AboutCompanyState> {
   //  LOAD
   // ══════════════════════════════════════════════════════════════════════════
 
-  Future<void> loadAboutCompany() async {
+  Future<void> loadAboutCompany({bool force = false}) async {
+    // Serve cached company data instantly on navigation.
+    if (!force && _cachedData != null) {
+      emit(AboutCompanyLoaded(_cachedData!));
+      return;
+    }
     try {
       emit(AboutCompanyLoading());
 

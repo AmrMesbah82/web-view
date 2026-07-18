@@ -51,6 +51,21 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
   /// The admin app now stores these ONLY in the mainPage collection — they
   /// are no longer part of the homePage document.
   /// Falls back to the home doc's own values if Main was never published.
+  /// Synchronous merge of already-fetched main-page branding over the home
+  /// model. Kept separate from the fetch so load() can fetch the home doc and
+  /// the main doc concurrently instead of one after the other.
+  HomePageModel _mergeBranding(HomePageModel home, HomePageModel mainData) {
+    return home.copyWith(
+      branding: mainData.branding,
+      footerColumns: mainData.footerColumns.isNotEmpty
+          ? mainData.footerColumns
+          : home.footerColumns,
+      socialLinks: mainData.socialLinks.isNotEmpty
+          ? mainData.socialLinks
+          : home.socialLinks,
+    );
+  }
+
   Future<HomePageModel> _applyMainBranding(HomePageModel home) async {
     if (_mainRepo == null) return home;
     try {
@@ -124,18 +139,74 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
-  Future<void> load() async {
+  bool _loadedOnce = false;
+
+  Future<void> load({bool force = false}) async {
+    // ── Navigation fast-path ──────────────────────────────────────────────
+    // The branding/home data is already fetched once at app start and lives in
+    // memory. Every page calls load() on navigation; without this guard each
+    // navigation threw the good in-memory data away and did TWO blocking
+    // Source.server round-trips behind a full-screen loader (the ~5s stall).
+    // When we already have data we serve it instantly and refresh silently in
+    // the background so pages appear immediately and stay up to date.
+    final bool hasData =
+        _loadedOnce || state is HomeCmsLoaded || state is HomeCmsSaved;
+    if (hasData && !force) {
+      _refreshSilently();
+      return;
+    }
+
     emit(HomeCmsLoading());
     try {
-      final fetched = await _repo.fetchHomePageFresh();
+      // Fetch the home doc and the main-branding doc concurrently (was two
+      // sequential server round-trips → the biggest chunk of first-load time).
+      final homeFuture = _repo.fetchHomePageFresh();
+      final mainFuture = _mainRepo?.fetchHomePageFresh();
 
-      final result = await _applyMainBranding(_mergeDefaults(fetched));
+      HomePageModel result = _mergeDefaults(await homeFuture);
+      if (mainFuture != null) {
+        try {
+          result = _mergeBranding(result, await mainFuture);
+        } catch (_) {
+          // Keep home values if the main/branding doc fails.
+        }
+      }
 
       _model = result;
+      _loadedOnce = true;
       _applyFontsToStorage(_model.branding);
       emit(HomeCmsLoaded(_model));
     } catch (e, st) {
       emit(HomeCmsError('Failed to load home page: $e'));
+    }
+  }
+
+  /// Refresh from the server WITHOUT emitting a loading state — no full-screen
+  /// loader and no whole-tree rebuild. Updates the UI in place and only touches
+  /// fonts (the expensive Get.forceAppUpdate) when they actually changed.
+  Future<void> _refreshSilently() async {
+    try {
+      final homeFuture = _repo.fetchHomePageFresh();
+      final mainFuture = _mainRepo?.fetchHomePageFresh();
+
+      HomePageModel result = _mergeDefaults(await homeFuture);
+      if (mainFuture != null) {
+        try {
+          result = _mergeBranding(result, await mainFuture);
+        } catch (_) {}
+      }
+      if (isClosed) return;
+
+      final bool fontsChanged =
+          result.branding.englishFont != _model.branding.englishFont ||
+          result.branding.arabicFont != _model.branding.arabicFont;
+
+      _model = result;
+      _loadedOnce = true;
+      if (fontsChanged) _applyFontsToStorage(_model.branding);
+      emit(HomeCmsLoaded(_model));
+    } catch (_) {
+      // Keep the currently displayed data on any failure.
     }
   }
 

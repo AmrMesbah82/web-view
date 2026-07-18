@@ -111,7 +111,7 @@ List<({String label, String route, String svgAsset})> _getVisibleNavItems(
 
   final bool isAr = languageCode == 'ar';
 
-  return navButtons
+  final items = navButtons
       .where((btn) => btn.status)
       .where((btn) => btn.route.isNotEmpty)
       .map((btn) => (
@@ -122,6 +122,22 @@ List<({String label, String route, String svgAsset})> _getVisibleNavItems(
             svgAsset: _kSvgMap[btn.route] ?? 'assets/drawer/home_drawer.svg',
           ))
       .toList();
+
+  // ── Always expose a "Home" tab that routes to '/'. The admin's nav items
+  // (Services / About / Contact / Careers) don't include Home, so without this
+  // there was no way to navigate back to the home page except the logo.
+  // Only inject it when the CMS hasn't already defined a '/' route, to avoid
+  // showing a duplicate Home tab.
+  final bool hasHome = items.any((e) => e.route == '/');
+  if (!hasHome) {
+    items.insert(0, (
+      label:    isAr ? 'الرئيسية' : 'Home',
+      route:    '/',
+      svgAsset: _kSvgMap['/'] ?? 'assets/drawer/home_drawer.svg',
+    ));
+  }
+
+  return items;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

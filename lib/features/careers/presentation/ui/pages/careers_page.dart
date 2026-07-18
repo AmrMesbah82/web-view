@@ -162,14 +162,12 @@ class _CareersPageState extends State<CareersPage> {
           final careersState = context.read<CareersCmsCubit>().state;
           final careersReady = careersState is CareersCmsLoaded ||
               careersState is CareersCmsError;
-          if (careersReady) {
-            Future.delayed(const Duration(milliseconds: 800), () {
-              if (mounted) setState(() => _showLoader = false);
-            });
+          if (careersReady && mounted && _showLoader) {
+            setState(() => _showLoader = false);
           }
         }
         if (state is HomeCmsError && state.lastData == null) {
-          setState(() => _showLoader = false);
+          if (mounted && _showLoader) setState(() => _showLoader = false);
         }
       },
       builder: (context, homeState) {
@@ -209,6 +207,21 @@ class _CareersPageState extends State<CareersPage> {
           _ => AppColors.background,
         };
 
+        // ── Readiness-based reveal ────────────────────────────────────────
+        // Dismiss the loader as soon as the data is available (it is usually
+        // already in memory from app start), instead of waiting on a state
+        // transition + artificial 800ms delay on every navigation.
+        final bool homeReadyNow =
+            homeState is HomeCmsLoaded || homeState is HomeCmsSaved;
+        final careersStateNow = context.read<CareersCmsCubit>().state;
+        final bool careersReadyNow = careersStateNow is CareersCmsLoaded ||
+            careersStateNow is CareersCmsError;
+        if (_showLoader && homeReadyNow && careersReadyNow) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _showLoader) setState(() => _showLoader = false);
+          });
+        }
+
         if (_showLoader) {
           return BlocListener<CareersCmsCubit, CareersCmsState>(
             listener: (context, careersState) {
@@ -217,10 +230,8 @@ class _CareersPageState extends State<CareersPage> {
                       context.read<HomeCmsCubit>().state is HomeCmsSaved;
               final careersReady = careersState is CareersCmsLoaded ||
                   careersState is CareersCmsError;
-              if (homeReady && careersReady) {
-                Future.delayed(const Duration(milliseconds: 800), () {
-                  if (mounted) setState(() => _showLoader = false);
-                });
+              if (homeReady && careersReady && mounted && _showLoader) {
+                setState(() => _showLoader = false);
               }
             },
             child: _SvgPulseLoader(

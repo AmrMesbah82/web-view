@@ -36,7 +36,9 @@ class JobListingCubit extends Cubit<JobListingState> {
   //  LOAD ALL JOBS (one-time fetch)
   // ══════════════════════════════════════════════════════════════════════════
 
-  Future<void> loadJobs() async {
+  Future<void> loadJobs({bool force = false}) async {
+    // Jobs already fetched (app start / previous visit) → serve from memory.
+    if (!force && state is JobListingLoaded) return;
     try {
       emit(JobListingLoading());
       _allJobs = await _repo.fetchAllJobs();

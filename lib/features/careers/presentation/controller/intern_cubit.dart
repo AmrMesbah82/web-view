@@ -20,7 +20,8 @@ class InternCubit extends Cubit<InternState> {
   List<InternModel> get interns => List.unmodifiable(_interns);
 
   // ── Load all ──────────────────────────────────────────────────────────────
-  Future<void> load() async {
+  Future<void> load({bool force = false}) async {
+    if (!force && state is InternLoaded) return;
     emit(InternLoading());
     try {
       _interns = await _repo.fetchAll();

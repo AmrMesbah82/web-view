@@ -27,7 +27,12 @@ class ServiceCmsCubit extends Cubit<ServiceCmsState> {
   String _generateId() => 'ji_${DateTime.now().microsecondsSinceEpoch}';
 
   // ── Load (cache-first) ────────────────────────────────────────────────────
-  Future<void> load() async {
+  Future<void> load({bool force = false}) async {
+    // Already have data in memory (loaded once at app start) → don't re-fetch
+    // behind a loader on every navigation.
+    if (!force && (state is ServiceCmsLoaded || state is ServiceCmsSaved)) {
+      return;
+    }
     emit(ServiceCmsLoading());
     try {
       _model = await _repo.fetchServicePage();

@@ -20,7 +20,9 @@ import 'blog_state.dart';
     List<BlogPostModel> get posts => _posts;
 
     // ── Load all ──────────────────────────────────────────────────────────────
-    Future<void> load() async {
+    Future<void> load({bool force = false}) async {
+      // Serve already-loaded posts instantly on navigation.
+      if (!force && state is BlogLoaded) return;
       emit(BlogLoading());
       try {
         _posts = await _repo.fetchAllPosts();

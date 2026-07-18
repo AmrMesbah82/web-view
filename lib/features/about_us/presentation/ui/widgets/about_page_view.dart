@@ -61,8 +61,8 @@ class _AboutPageViewState extends State<_AboutPageView> {
       for (final v in model.values)
         if (v.iconUrl.isNotEmpty) v.iconUrl,
     ];
-    await _preloadImages(urls);
-    await Future.delayed(const Duration(milliseconds: 100));
+    await _preloadImages(urls)
+        .timeout(const Duration(milliseconds: 700), onTimeout: () {});
     if (mounted) setState(() => _showLoader = false);
   }
 

@@ -30,7 +30,11 @@ class CareersSectionCubit extends Cubit<CareersSectionState> {
   CareersSectionModel get current => _model;
 
   // ── Load ────────────────────────────────────────────────────────────────────
-  Future<void> load() async {
+  Future<void> load({bool force = false}) async {
+    if (!force &&
+        (state is CareersSectionLoaded || state is CareersSectionSaved)) {
+      return;
+    }
     emit(CareersSectionLoading());
     try {
       _model = await _repo.load(sectionKey);

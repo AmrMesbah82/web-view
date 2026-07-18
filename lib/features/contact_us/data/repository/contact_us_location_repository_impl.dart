@@ -23,10 +23,18 @@ class ContactUsCmsRepoImpl implements ContactUsCmsRepo {
   @override
   Future<ContactUsCmsModel> load() async {
     try {
-      final doc = await _firestore
-          .collection(_collectionName)
-          .doc(_docId)
-          .get();
+      final ref = _firestore.collection(_collectionName).doc(_docId);
+      // Cache-first: instant on navigation after the first load; only hits the
+      // server when nothing is cached yet.
+      DocumentSnapshot<Map<String, dynamic>> doc;
+      try {
+        doc = await ref.get(const GetOptions(source: Source.cache));
+        if (!doc.exists) {
+          doc = await ref.get(const GetOptions(source: Source.server));
+        }
+      } catch (_) {
+        doc = await ref.get(const GetOptions(source: Source.server));
+      }
 
       if (!doc.exists || doc.data() == null) {
         return _defaultModel();

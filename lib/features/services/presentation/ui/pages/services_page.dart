@@ -116,8 +116,9 @@ class _ServicesPageState extends State<ServicesPage> {
     if (_preloadStarted) return;
     _preloadStarted = true;
 
-    await _preloadSvgImages(urls);
-    await Future.delayed(const Duration(milliseconds: 100));
+    // Cap the preload so a slow icon can't stall the reveal.
+    await _preloadSvgImages(urls)
+        .timeout(const Duration(milliseconds: 700), onTimeout: () {});
 
     if (mounted) {
       setState(() => _showLoader = false);
@@ -206,15 +207,13 @@ class _ServicesPageState extends State<ServicesPage> {
                     homeReady && servicesReady && blogReady;
 
                 if (allDataReady && !_preloadStarted) {
+                  // Preload only the vector icons (logo + journey SVGs). Blog
+                  // post images are raster and render through their own Image
+                  // widgets with placeholders — pushing them through the SVG
+                  // preloader just made the page wait on big downloads.
                   final List<String> allUrls = [
                     if (logoUrl.isNotEmpty) logoUrl,
                     ...model.journeyItems.map((e) => e.iconUrl),
-                    // ✅ FIX: was .take(3) — now uses _kMaxBlogPosts
-                    if (blogState is BlogLoaded)
-                      ...blogState.posts
-                          .where((p) => p.status == 'published')
-                          .take(_kMaxBlogPosts)
-                          .map((p) => p.imageUrl),
                   ];
                   _preloadAndReveal(allUrls);
                 }

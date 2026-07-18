@@ -59,8 +59,9 @@ class _ContactPageViewState extends State<_ContactPageView> {
     if (_preloadStarted) return;
     _preloadStarted = true;
 
-    svg.cache.clear();
-
+    // NOTE: do NOT clear svg.cache here — it wiped the cached SVGs for every
+    // other page too, forcing a full re-download on the next navigation. The
+    // preload below already fetches any icons that aren't cached yet.
 
     final List<String> allUrls = [
       if (logoUrl.isNotEmpty) logoUrl,
@@ -74,8 +75,8 @@ class _ContactPageViewState extends State<_ContactPageView> {
         cmsData.confirmMessage.svgUrl,
     ];
 
-    await _preloadSvgImages(allUrls);
-    await Future.delayed(const Duration(milliseconds: 100));
+    await _preloadSvgImages(allUrls)
+        .timeout(const Duration(milliseconds: 700), onTimeout: () {});
     if (mounted) setState(() => _showLoader = false);
   }
 

@@ -24,7 +24,8 @@ class OurTeamsCubit extends Cubit<OurTeamsState> {
   OurTeamsModel get current => _current;
 
   // ── Load ────────────────────────────────────────────────────────────────────
-  Future<void> load() async {
+  Future<void> load({bool force = false}) async {
+    if (!force && (state is OurTeamsLoaded || state is OurTeamsSaved)) return;
     emit(OurTeamsLoading());
     try {
       _current = await _repo.load();

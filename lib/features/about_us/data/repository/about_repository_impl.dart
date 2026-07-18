@@ -32,11 +32,24 @@ class AboutRepoImpl implements AboutRepo {
     return _db.collection(collection).doc(doc);
   }
 
+  /// Cache-first read: return the locally cached doc instantly when available
+  /// (so navigation is fast), and only hit the server on the first load or when
+  /// nothing is cached yet.
+  Future<DocumentSnapshot<Map<String, dynamic>>> _getCacheFirst(
+      DocumentReference<Map<String, dynamic>> ref) async {
+    try {
+      final cached = await ref.get(const GetOptions(source: Source.cache));
+      if (cached.exists) return cached;
+    } catch (_) {
+      // Not cached yet — fall through to a server read.
+    }
+    return ref.get(const GetOptions(source: Source.server));
+  }
+
   @override
   Future<AboutPageModel> fetchAboutPage() async {
     try {
-      final snap = await _ref(_aboutDoc)
-          .get(const GetOptions(source: Source.server));
+      final snap = await _getCacheFirst(_ref(_aboutDoc));
       if (!snap.exists || snap.data() == null) {
         return AboutPageModel.empty();
       }
@@ -75,8 +88,7 @@ class AboutRepoImpl implements AboutRepo {
   @override
   Future<OurStrategyModel> fetchStrategy() async {
     try {
-      final snap = await _ref(_strategyDoc)
-          .get(const GetOptions(source: Source.server));
+      final snap = await _getCacheFirst(_ref(_strategyDoc));
       if (!snap.exists || snap.data() == null) {
         return OurStrategyModel.empty();
       }
@@ -115,8 +127,7 @@ class AboutRepoImpl implements AboutRepo {
   @override
   Future<TermsOfServiceModel> fetchTerms() async {
     try {
-      final snap = await _ref(_termsDoc)
-          .get(const GetOptions(source: Source.server));
+      final snap = await _getCacheFirst(_ref(_termsDoc));
       if (!snap.exists || snap.data() == null) {
         return TermsOfServiceModel.empty();
       }

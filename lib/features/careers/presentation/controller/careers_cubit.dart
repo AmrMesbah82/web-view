@@ -42,7 +42,12 @@ class CareersCmsCubit extends Cubit<CareersCmsState> {
 
   // ── Load CMS content from Firestore ───────────────────────────────────────
 
-  Future<void> load() async {
+  Future<void> load({bool force = false}) async {
+    // Data already loaded (loadRealData at app start / previous visit) →
+    // don't refetch behind a loader on navigation.
+    if (!force && (state is CareersCmsLoaded || state is CareersCmsSaved)) {
+      return;
+    }
     emit(CareersCmsLoading());
     try {
       final model = await _repo.fetch();

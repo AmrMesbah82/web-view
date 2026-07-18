@@ -207,8 +207,11 @@ class _HomePageState extends State<HomePage> {
         if (sl.iconUrl.isNotEmpty) sl.iconUrl,
     ];
 
-    await _preloadSvgImages(allUrls);
-    await Future.delayed(const Duration(milliseconds: 100));
+    // Don't let a slow/broken icon URL hold the whole page hostage — reveal
+    // after at most 700ms; any icons still downloading finish into the cache
+    // and render a moment later.
+    await _preloadSvgImages(allUrls)
+        .timeout(const Duration(milliseconds: 700), onTimeout: () {});
     if (mounted) {
       setState(() => _showLoader = false);
       WidgetsBinding.instance
