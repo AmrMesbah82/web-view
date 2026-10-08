@@ -53,7 +53,7 @@ class _MobileInternCard extends StatelessWidget {
                 ),
                 SizedBox(height: 6.h),
                 Text(
-                  data.fullName,
+                  data.fullNameFor(isRtl), // BUG-74
                   textAlign: TextAlign.center,
                   style: StyleText.fontSize12Weight500.copyWith(
                     fontSize: 10.sp,
@@ -63,16 +63,16 @@ class _MobileInternCard extends StatelessWidget {
                 ),
                 SizedBox(height: 3.h),
                 Text(
-                  data.degrees,
+                  data.degreesFor(isRtl),
                   textAlign: TextAlign.center,
                   style: StyleText.fontSize10Weight400.copyWith(
                     fontSize: 9.sp,
-                    color: Colors.black45,
+                    color: const Color(0xFF797979) /* Figma grey */,
                     height: 1.3,
                   ),
                 ),
                 // ── Position ───────────────────────────────────────────
-                if (data.position.isNotEmpty) ...[
+                if (data.positionFor(isRtl).isNotEmpty) ...[
                   SizedBox(height: 5.h),
                   Container(
                     padding: EdgeInsets.symmetric(
@@ -82,7 +82,7 @@ class _MobileInternCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(5.r),
                     ),
                     child: Text(
-                      data.position,
+                      data.positionFor(isRtl),
                       textAlign: TextAlign.center,
                       style: StyleText.fontSize10Weight400.copyWith(
                         fontSize: 10.sp,
@@ -157,7 +157,7 @@ class _MobileInternCard extends StatelessWidget {
                 ),
                 SizedBox(height: 6.h),
                 Text(
-                  data.whatHaveILearned,
+                  data.whatHaveILearnedFor(isRtl),
                   style: StyleText.fontSize12Weight600.copyWith(
                     fontSize: 10.sp,
                     height: 1.6,

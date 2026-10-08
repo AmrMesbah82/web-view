@@ -51,14 +51,12 @@ class _ComingSoonPage extends StatelessWidget {
                 children: [
                   // Logo
                   if (data.branding.logoUrl.isNotEmpty) ...[
-                    SvgPicture.network(
+                    _SmartNetworkImage( // BUG-68
                       data.branding.logoUrl,
                       width:  80.w,
                       height: 80.w,
                       fit:    BoxFit.contain,
-                      colorFilter: ColorFilter.mode(primary, BlendMode.srcIn),
-                      placeholderBuilder: (_) =>
-                          SizedBox(width: 80.w, height: 80.w),
+                      svgColorFilter: ColorFilter.mode(primary, BlendMode.srcIn),
                     ),
                     SizedBox(height: 24.h),
                   ],

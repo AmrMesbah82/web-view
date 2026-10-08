@@ -4,6 +4,7 @@ class _UrlValidatedTextField extends StatefulWidget {
   final String label, hint;
   final TextEditingController controller;
   final bool submitted, isRtl;
+  final bool isRequired;
   final Color primaryColor;
 
   const _UrlValidatedTextField({
@@ -13,6 +14,7 @@ class _UrlValidatedTextField extends StatefulWidget {
     required this.submitted,
     required this.isRtl,
     required this.primaryColor,
+    this.isRequired = true,
   });
 
   @override
@@ -65,70 +67,26 @@ class _UrlValidatedTextFieldState extends State<_UrlValidatedTextField> {
   Widget build(BuildContext context) {
     final showError = _hasError && widget.controller.text.trim().isNotEmpty;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.label,
-          style: StyleText.fontSize14Weight400.copyWith(
-            color: AppColors.text,
-          ),
-        ),
-        SizedBox(height: 6.h),
-        Container(
-          height: 36.h,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(4.r),
-            border: Border.all(
-              color: showError ? Colors.red : Colors.transparent,
-              width: 1,
-            ),
-          ),
-          child: TextField(
-            controller: widget.controller,
-            style: StyleText.fontSize12Weight400.copyWith(
-              color: AppColors.text,
-            ),
-            textDirection: TextDirection.ltr,
-            textAlign: TextAlign.start,
-            decoration: InputDecoration(
-              hintText: widget.hint,
-              hintStyle: StyleText.fontSize12Weight400.copyWith(
-                color: AppColors.secondaryBlack,
-              ),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 12.w,
-                vertical: 14.h,
-              ),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4.r),
-                borderSide: BorderSide(
-                  color: showError ? Colors.red : widget.primaryColor,
-                  width: 1.5,
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (showError) ...[
-          SizedBox(height: 4.h),
-          Text(
-            _t(
-              'Please enter a valid URL (e.g., https://example.com)',
-              'يرجى إدخال رابط صالح (مثال: https://example.com)',
-              widget.isRtl,
-            ),
-            style: StyleText.fontSize12Weight400.copyWith(
-              color: Colors.red,
-              fontSize: 11.sp,
-            ),
-          ),
-        ],
-        SizedBox(height: 2.h),
-      ],
+    return Padding(
+      padding: EdgeInsets.only(bottom: 2.h),
+      child: CustomTextField(
+        label: widget.label,
+        hint: widget.hint,
+        controller: widget.controller,
+        height: 36,
+        fillColor: Colors.white,
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.start,
+        // Empty-field "required" error only when the admin flagged it required
+        submitted: widget.submitted && widget.isRequired,
+        errorText: showError
+            ? _t(
+                'Please enter a valid URL (e.g., https://example.com)',
+                'يرجى إدخال رابط صالح (مثال: https://example.com)',
+                widget.isRtl,
+              )
+            : null,
+      ),
     );
   }
 }

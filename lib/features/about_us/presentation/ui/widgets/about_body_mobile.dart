@@ -30,6 +30,17 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
     );
   }
 
+  @override
+  void didUpdateWidget(covariant _AboutBodyMobile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A tab asked for from outside after the first build — the admin Terms
+    // preview switching between Terms and Privacy. Null means "no request".
+    final int? topTab = widget.initialTopTab;
+    if (topTab != null && topTab != oldWidget.initialTopTab) {
+      setState(() => _selectedTopTab = topTab);
+    }
+  }
+
   final List<BiText> _topTabs = [
     BiText(ar: 'من نحن', en: 'About Us'),
     BiText(ar: 'استراتيجيتنا', en: 'Our Strategy'),
@@ -220,7 +231,7 @@ class _AboutBodyMobileState extends State<_AboutBodyMobile> {
                               ),
                               child: Center(
                                 child: Text(
-                                  isRtl ? 'لا يوجد محتوى بعد' : 'No content yet',
+                                  isRtl ? 'هذا المحتوى سيتوفر قريبًا' : 'This content will be available soon.', // BUG-17
                                   style: StyleText.fontSize12Weight400.copyWith(
                                     color: Colors.grey[500],
                                   ),

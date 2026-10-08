@@ -120,7 +120,7 @@ class _TabletContentPanel extends StatelessWidget {
                       ),
                       child: Center(
                         child: Text(
-                          isRtl ? 'لا يوجد محتوى بعد' : 'No content yet',
+                          isRtl ? 'هذا المحتوى سيتوفر قريبًا' : 'This content will be available soon.', // BUG-17
                           style: StyleText.fontSize14Weight400.copyWith(
                             fontFamily: 'Cairo',
                             fontSize: 13.sp,

@@ -18,11 +18,7 @@ class _BlogCardDesktopState extends State<_BlogCardDesktop> {
 
   @override
   Widget build(BuildContext context) {
-    final String dateStr = widget.post.createdAt != null
-        ? widget.isRtl
-        ? '${_monthNameAr(widget.post.createdAt!.month)} ${widget.post.createdAt!.day} ${widget.post.createdAt!.year}'
-        : '${_monthName(widget.post.createdAt!.month)} ${widget.post.createdAt!.day} ${widget.post.createdAt!.year}'
-        : '';
+    final String dateStr = _formatDate(widget.post.createdAt, widget.isRtl); // BUG-145
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -35,9 +31,13 @@ class _BlogCardDesktopState extends State<_BlogCardDesktop> {
         child: Padding(
           padding: EdgeInsets.symmetric(
               horizontal: 16.w, vertical: 16.h),
+          // BUG-139: max + spaceBetween → the footer row is pinned to the
+          // bottom when the row gives the card a fixed height (shrink-wraps
+          // otherwise).
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize:       MainAxisSize.min,
+            mainAxisSize:       MainAxisSize.max,
+            mainAxisAlignment:  MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,7 +48,7 @@ class _BlogCardDesktopState extends State<_BlogCardDesktop> {
                       mainAxisSize:       MainAxisSize.max,
                       mainAxisAlignment:  MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(FormatHelper.capitalize(_tb(widget.post.question, widget.isRtl)),
+                        Text(_tb(widget.post.question, widget.isRtl),
                             style: StyleText.fontSize12Weight500
                                 .copyWith(
                                 fontSize:   15.sp,
@@ -88,8 +88,9 @@ class _BlogCardDesktopState extends State<_BlogCardDesktop> {
                       primaryColor: widget.primaryColor),
                 ],
               ),
-              SizedBox(height: 14.h),
-              Row(
+              Padding(
+                padding: EdgeInsets.only(top: 14.h),
+                child: Row(
                 children: [
                   Text(dateStr,
                       style: AppTextStyles.font14BlackCairoRegular
@@ -102,6 +103,7 @@ class _BlogCardDesktopState extends State<_BlogCardDesktop> {
                       primaryColor: widget.primaryColor,
                       postId: widget.post.id),
                 ],
+              ),
               ),
             ],
           ),

@@ -27,7 +27,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:website_app/features/home/data/models/home_model.dart';
 
 import '../../../../../core/custom_svg.dart';
+import '../../../../../core/widgets/smart_network_image.dart';
 import '../../../../../core/main_widgets/app_footer.dart';
+import '../../../../../core/widgets/scroll_with_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/app_wight.dart';
 import '../../../../../core/theme/appcolors.dart';
@@ -49,6 +51,14 @@ part '../widgets/home_cms_nav_btn.dart';
 part '../widgets/home_hero_cards.dart';
 part '../widgets/home_cms_footer.dart';
 part '../widgets/home_shared_widgets.dart';
+
+// BUG-65: used from a part file — referenced here so an IDE
+// "Optimize Imports" can't drop the import.
+typedef _ScrollWithFooter = ScrollWithFooter;
+
+// BUG-68: referenced in this file (not only in the part files) so an IDE
+// "Optimize Imports" can't drop the smart_network_image import.
+typedef _SmartNetworkImage = SmartNetworkImage;
 
 // ── Breakpoints ───────────────────────────────────────────────────────────────
 class _BP {
@@ -164,7 +174,16 @@ Future<void> _preloadSvgImages(List<String> urls) async {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.showFooter = true});
+
+  /// Whether to render the site footer at the bottom of the page.
+  ///
+  /// Always true for real visitors — the footer is part of the page. It exists
+  /// for the ADMIN's Home preview, which renders this exact widget inside a
+  /// short fixed-height device frame: there the pinned footer ate most of the
+  /// frame and covered the content the editor was trying to look at.
+  final bool showFooter;
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -311,6 +330,7 @@ class _HomePageState extends State<HomePage> {
               isRtl:        langState.isArabic,
               navbarHeight: _navbarHeight,
               navbarKey:    _navbarKey,
+              showFooter:   widget.showFooter,
             );
           },
         );

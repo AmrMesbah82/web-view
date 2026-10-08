@@ -1,5 +1,10 @@
+// BUG-51: Twilio credentials must NEVER be compiled into the website — they
+// were readable by anyone in main.dart.js. They now live only as Cloud
+// Functions secrets (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN /
+// TWILIO_VERIFY_SERVICE_SID). Rotate the old token in the Twilio console.
+//
+// This file is kept (empty) only so old imports still compile.
+@Deprecated('Twilio is called from Cloud Functions only (BUG-51).')
 class TwilioConstants {
-  static String twilioAccountSid = 'ACc23f524862d62fa6c0ec717d64ae26db';
-  static String twilioAuthToken = '20423304dc3ef921aea58050f777805d';
-  static String twilioVerifyServiceSid = 'VA60739eb128c5bdf4d985033e993d8e50';
+  TwilioConstants._();
 }

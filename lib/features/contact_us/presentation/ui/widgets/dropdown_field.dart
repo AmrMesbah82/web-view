@@ -8,6 +8,7 @@ class _DropdownField extends StatelessWidget {
   final bool submitted, isRtl, isMobile;
   final Color primaryColor;
   final bool isSearchable;
+  final bool required; // BUG-128
 
   const _DropdownField({
     required this.label,
@@ -20,19 +21,20 @@ class _DropdownField extends StatelessWidget {
     required this.isMobile,
     required this.primaryColor,
     this.isSearchable = false,
+    this.required = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final bool showError = submitted && (value == null || value!.isEmpty);
     final String requiredMsg = _t(context,
-        en: 'This field is required',
+        en: 'This field is required.', // BUG-33: same wording as text fields
         ar: 'هذا الحقل مطلوب');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _FormLabel(label: label),
+        _FormLabel(label: label, required: required),
         SizedBox(height: 6.h),
         // Every dropdown (incl. searchable Location) now uses the shared
         // custom dropdown widget.
@@ -49,13 +51,9 @@ class _DropdownField extends StatelessWidget {
           hint: Text(hint,
               style: StyleText.fontSize12Weight400
                   .copyWith(color: AppColors.secondaryBlack)),
+          // BUG-131: red border + the same message style as text fields.
+          errorText: showError ? requiredMsg : null,
         ),
-        if (showError) ...[
-          SizedBox(height: 2.h),
-          Text(requiredMsg,
-              style: StyleText.fontSize12Weight400
-                  .copyWith(color: Colors.red, fontSize: 11.sp)),
-        ],
         SizedBox(height: 2.h),
       ],
     );

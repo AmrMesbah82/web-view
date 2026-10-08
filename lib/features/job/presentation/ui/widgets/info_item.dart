@@ -3,7 +3,10 @@ part of '../pages/job_page.dart';
 class _InfoItem extends StatelessWidget {
   final String label;
   final String value;
-  const _InfoItem({required this.label, required this.value});
+
+  /// Branding primary color from CMS model data (falls back to _kGreen).
+  final Color? primary;
+  const _InfoItem({required this.label, required this.value, this.primary});
 
   @override
   Widget build(BuildContext context) {
@@ -19,11 +22,11 @@ class _InfoItem extends StatelessWidget {
             ),
           ),
           TextSpan(
-            text: value,
+            text: FormatHelper.capitalize(value),
             style: StyleText.fontSize14Weight600.copyWith(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
-              color: _kGreen,
+              color: primary ?? _kGreen,
             ),
           ),
         ],

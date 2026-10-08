@@ -19,57 +19,73 @@ class _PhoneField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget dropdown = CustomDropdownFormFieldInvMaster(
-      selectedValue: selectedCode,
-      items: _kCountryCodes,
-      primaryColor: primaryColor,
-      onChanged: onCodeChanged,
-      dropdownColor: Colors.white,
-      widthIcon: 16,
-      heightIcon: 16,
-      width: 110.w,
-      height: 36,
-      borderRadius: 4,
-      hint: Text(
-        isRtl ? 'الرمز' : 'Code',
-        style: StyleText.fontSize12Weight400
-            .copyWith(color: AppColors.secondaryBlack),
-      ),
-    );
-
-    final Widget input = Expanded(
-      child: CustomValidatedTextFieldMaster(
-        hint: _t('Text Here', 'اكتب هنا', isRtl),
-        controller: controller,
-        submitted: submitted,
-        primaryColor: primaryColor,
-        height: 36,
-        fillColor: Colors.white,
-        onlyDigits: true,
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.start,
-      ),
-    );
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        // BUG-132: same label widget / style / gap as CustomTextField, so the
+        // phone box lines up with "Email" (was 7 px higher). No "*" (Figma).
+        requiredLabel(
           label,
-          style: StyleText.fontSize14Weight400.copyWith(
-            color: AppColors.text,
-          ),
+          style: StyleText.fontSize14Weight500.copyWith(color: AppColors.text),
         ),
         SizedBox(height: 6.h),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          textDirection: TextDirection.ltr,
-          children: [
-            dropdown,
-            SizedBox(width: 8.w),
-            input,
-          ],
-        ),
+        LayoutBuilder(builder: (context, c) {
+          // BUG-116 / BUG-133: the picker never takes more than 40 % of the
+          // row (the number box was 37 px wide on phones).
+          final double maxCode = 110.w < 80.0 ? 80.0 : 110.w;
+          final double codeW =
+              (c.maxWidth * 0.4).clamp(80.0, maxCode).toDouble();
+          // BUG-147: the code reads "+20" (LTR, flag first) in Arabic too, and
+          // the row follows the page direction like the Contact form.
+          final Widget dropdown = Directionality(
+            textDirection: TextDirection.ltr,
+            child: SizedBox(
+              width: codeW,
+              child: CustomDropdown<String>(
+                value: selectedCode,
+                items: _kCountryCodes
+                    .map((c) => DropdownItem<String>(
+                        value: c['key']!, label: c['value']!))
+                    .toList(),
+                onChanged: (v) => onCodeChanged(v),
+                hint: isRtl ? 'الرمز' : 'Code',
+                fillColor: Colors.white,
+                borderRadius: BorderRadius.circular(4.r),
+                itemHeight: 36.h,
+                // BUG-132: exactly the text-field height (36).
+                fieldHeight: 36.h,
+                triggerPadding:
+                    EdgeInsets.symmetric(horizontal: 8.w, vertical: 0),
+                valueStyle:
+                    StyleText.fontSize12Weight400.copyWith(color: AppColors.text),
+                hintStyle: StyleText.fontSize12Weight400
+                    .copyWith(color: AppColors.secondaryBlack),
+              ),
+            ),
+          );
+
+          final Widget input = Expanded(
+            child: CustomTextField(
+              hint: _t('Text Here', 'أدخل النص هنا', isRtl), // Figma
+              controller: controller,
+              submitted: submitted,
+              height: 36,
+              fillColor: Colors.white,
+              onlyDigits: true,
+              textDirection: TextDirection.ltr,
+              textAlign: isRtl ? TextAlign.right : TextAlign.start,
+            ),
+          );
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              dropdown,
+              SizedBox(width: 8.w),
+              input,
+            ],
+          );
+        }),
       ],
     );
   }

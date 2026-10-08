@@ -1,49 +1,47 @@
 import 'package:cloud_functions/cloud_functions.dart';
 
+/// Result of checking an OTP code on the server.
+class OtpCheckResult {
+  final bool approved;
+
+  /// One-time token issued by the `verifyOTP` Cloud Function. It must be sent
+  /// with the contact submission (`submitContactForm`) — the server refuses a
+  /// submission without a fresh, unused token (BUG-51).
+  final String? verificationToken;
+
+  const OtpCheckResult({required this.approved, this.verificationToken});
+}
+
+/// BUG-51 / BUG-14: every Twilio call goes through our own Cloud Functions.
+/// Twilio keys stay on the server and the server decides if a code is valid.
 class TwilioRepository {
   Future<void> sendOTP(String to, String channel, String locale) async {
-
     try {
-      final callable = FirebaseFunctions.instance.httpsCallable('sendOTP');
-
-      final result = await callable.call({
-        'to': to,
-        'channel': channel,
-        'locale': locale,
-      });
-
-
-      final success = result.data['success'] as bool? ?? false;
-      if (!success) {
-        throw Exception('Cloud Function returned success=false');
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('sendOTP')
+          .call({'to': to, 'channel': channel, 'locale': locale});
+      final data = Map<String, dynamic>.from(result.data as Map);
+      if (data['success'] != true) {
+        throw Exception('The verification code could not be sent.');
       }
     } on FirebaseFunctionsException catch (e) {
-      throw Exception('Failed to send OTP: ${e.message}');
-    } catch (e) {
-      rethrow;
+      // BUG-14: surface the real failure instead of pretending it was sent.
+      throw Exception(e.message ?? 'The verification code could not be sent.');
     }
   }
 
-  Future<bool> verifyOTP(String to, String code) async {
-
+  Future<OtpCheckResult> verifyOTP(String to, String code) async {
     try {
-      final callable = FirebaseFunctions.instance.httpsCallable('verifyOTP');
-
-      final result = await callable.call({
-        'to': to,
-        'code': code,
-      });
-
-
-      final success = result.data['success'] as bool? ?? false;
-      final status = result.data['status'] as String? ?? '';
-
-
-      return success;
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('verifyOTP')
+          .call({'to': to, 'code': code});
+      final data = Map<String, dynamic>.from(result.data as Map);
+      return OtpCheckResult(
+        approved: data['success'] == true,
+        verificationToken: data['verificationToken'] as String?,
+      );
     } on FirebaseFunctionsException catch (e) {
-      throw Exception('Failed to verify OTP: ${e.message}');
-    } catch (e) {
-      rethrow;
+      throw Exception(e.message ?? 'The code could not be verified.');
     }
   }
 }

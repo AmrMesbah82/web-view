@@ -68,7 +68,7 @@ class _DesktopWhyJoinTab extends StatelessWidget {
                         StyleText.fontSize16Weight400.copyWith(
                           fontSize: textFz,
                           height: 1.7,
-                          color: Colors.black45,
+                          color: const Color(0xFF797979) /* Figma grey */,
                         ),
                       ),
                     ),
@@ -84,7 +84,7 @@ class _DesktopWhyJoinTab extends StatelessWidget {
                         StyleText.fontSize16Weight400.copyWith(
                           fontSize: textFz,
                           height: 1.7,
-                          color: Colors.black45,
+                          color: const Color(0xFF797979) /* Figma grey */,
                         ),
                       ),
                     ),

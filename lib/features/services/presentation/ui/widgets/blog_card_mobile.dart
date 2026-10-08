@@ -23,12 +23,7 @@ class _BlogCardMobile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String dateStr = post.createdAt != null
-        ? isRtl
-        ? _arDigits(
-            '${post.createdAt!.day} ${_monthNameAr(post.createdAt!.month)} ${post.createdAt!.year}')
-        : '${post.createdAt!.day} ${_monthName(post.createdAt!.month)} ${post.createdAt!.year}'
-        : '';
+    final String dateStr = _formatDate(post.createdAt, isRtl); // BUG-145
 
     return Container(
       width: double.infinity,

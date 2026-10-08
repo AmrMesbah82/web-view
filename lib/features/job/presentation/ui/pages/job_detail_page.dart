@@ -15,14 +15,21 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../core/main_widgets/app_footer.dart';
+import '../../../../../core/widgets/scroll_with_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/appcolors.dart';
+import '../../../../../core/utils/flat_codec.dart';
+import '../../../data/models/job_model.dart';
 import '../../../../about_us/presentation/controller/about_us_company_cubit.dart';
 import '../../../../about_us/presentation/controller/about_us_company_state.dart';
 import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
 import 'package:website_app/core/theme/new_theme.dart';
+import 'package:website_app/core/widgets/format_heper.dart';
+import 'package:website_app/core/widgets/format_helper.dart';
+
+import '../widgets/job_unavailable_view.dart';
 
 part '../widgets/labels.dart';
 
@@ -37,10 +44,24 @@ Color _parsePrimary(HomeCmsState state) {
   };
   final cl = hex.replaceAll('#', '');
   if (cl.length == 6) {
-    final value = int.tryParse('FF\$cl', radix: 16);
+    final value = int.tryParse('FF$cl', radix: 16);
     if (value != null) return Color(value);
   }
   return _kGreen;
+}
+
+Color _parseSecondary(HomeCmsState state) {
+  final hex = switch (state) {
+    HomeCmsLoaded(:final data) => data.branding.secondaryColor,
+    HomeCmsSaved(:final data) => data.branding.secondaryColor,
+    _ => '',
+  };
+  final cl = hex.replaceAll('#', '');
+  if (cl.length == 6) {
+    final value = int.tryParse('FF$cl', radix: 16);
+    if (value != null) return Color(value);
+  }
+  return const Color(0xFFD9D9D9);
 }
 
 Color _parseBg(HomeCmsState state) {
@@ -51,7 +72,7 @@ Color _parseBg(HomeCmsState state) {
   };
   final cl = hex.replaceAll('#', '');
   if (cl.length == 6) {
-    final value = int.tryParse('FF\$cl', radix: 16);
+    final value = int.tryParse('FF$cl', radix: 16);
     if (value != null) return Color(value);
   }
   return AppColors.background;
@@ -73,6 +94,10 @@ class _JobDetailPageState extends State<JobDetailPage> {
   Map<String, dynamic>? _job;
   bool _loading = true;
 
+  /// BUG-99: the job exists but visitors may no longer read it (removed,
+  /// draft, inactive) — the rules answer permission-denied.
+  bool _noLongerAvailable = false;
+
   @override
   void initState() {
     super.initState();
@@ -81,15 +106,30 @@ class _JobDetailPageState extends State<JobDetailPage> {
   }
 
   Future<void> _loadJob() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('jobListings')
-        .doc(widget.jobId)
-        .get(const GetOptions(source: Source.server))
-        .onError((_, __) { if (mounted) setState(() => _loading = false); return Future.error(''); });
+    final DocumentSnapshot<Map<String, dynamic>> doc;
+    try {
+      doc = await FirebaseFirestore.instance
+          .collection('jobListings')
+          .doc(widget.jobId)
+          .get(const GetOptions(source: Source.server));
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _noLongerAvailable = e.code == 'permission-denied';
+        });
+      }
+      return;
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     if (!mounted) return;
     if (doc.exists && doc.data() != null) {
       setState(() {
-        _job = doc.data()!;
+        // Admin writes the FLAT VERSIONED format — decode to the nested map
+        // this page reads (title/aboutThisPosition/requiredSkills/…).
+        _job = FlatCodec.decode(doc.data()!, JobPostModel.flatTemplate);
         _loading = false;
       });
     } else {
@@ -104,25 +144,62 @@ class _JobDetailPageState extends State<JobDetailPage> {
 
   String _str(String key) => _job?[key] as String? ?? '';
 
-  String _fmtDate(String? iso) {
+  /// BUG-141: same inner padding for every card (one text edge).
+  double get _cardPad => MediaQuery.sizeOf(context).width < 600 ? 16 : 24.sp;
+
+  // BUG-110: dates and values were always English on the Arabic page.
+  String _fmtDate(String? iso, bool isRtl) {
     if (iso == null || iso.isEmpty) return '—';
     final dt = DateTime.tryParse(iso);
     if (dt == null) return iso;
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${dt.day} ${m[dt.month - 1]} ${dt.year}';
+    return FormDateTimeHelper.formatDayMonthYear(dt, arabic: isRtl);
+  }
+
+  String _num(String text, bool isRtl) =>
+      isRtl ? FormDateTimeHelper.toArabicDigits(text) : text;
+
+  /// Figma (job page, Compensation Range "5000 - 10000"): numbers only.
+  String _salary(bool isRtl) {
+    final min = (_job!['salaryMin'] as num?)?.toInt() ?? 0;
+    final max = (_job!['salaryMax'] as num?)?.toInt() ?? 0;
+    final range = max > 0 && max != min ? '$min - $max' : '$min';
+    return _num(range, isRtl);
+  }
+
+  /// Apply button (bottom of the page, as in Figma).
+  Widget _applyButton(_Labels labels, Color primary) {
+    return GestureDetector(
+      onTap: () => context.go('/jobs/${widget.jobId}/apply'),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Semantics(
+          button: true,
+          label: labels.apply,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 10.h),
+            decoration: BoxDecoration(
+              color: primary,
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  labels.apply,
+                  style: StyleText.fontSize14Weight400.copyWith(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 6.w),
+                Icon(Icons.arrow_forward, size: 16.sp, color: Colors.white),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -130,6 +207,8 @@ class _JobDetailPageState extends State<JobDetailPage> {
     return BlocBuilder<HomeCmsCubit, HomeCmsState>(
       builder: (context, homeState) {
         final primary = _parsePrimary(homeState);
+        // ignore: unused_local_variable
+        final secondary = _parseSecondary(homeState);
         final bgColor = _parseBg(homeState);
         final isRtl = context.watch<LanguageCubit>().state.isArabic;
         final labels = _Labels(isRtl);
@@ -141,12 +220,32 @@ class _JobDetailPageState extends State<JobDetailPage> {
           );
         }
 
+        // BUG-109: unknown id → branded page (header, footer, link to jobs).
+        // BUG-99: removed / ended / draft jobs no longer open from a link.
         if (_job == null) {
-          return Scaffold(
-            backgroundColor: bgColor,
-            body: Center(child: Text(labels.jobNotFound)),
+          return JobUnavailableView(
+            reason: _noLongerAvailable
+                ? JobUnavailableReason.closed
+                : JobUnavailableReason.notFound,
           );
         }
+        final openState = jobOpenStateOfMap(_job!);
+        if (openState == JobOpenState.closed) {
+          return const JobUnavailableView(reason: JobUnavailableReason.closed);
+        }
+        if (openState == JobOpenState.notStarted) {
+          return JobUnavailableView(
+            reason: JobUnavailableReason.notStarted,
+            opensOn: DateTime.tryParse(_str('hiringStartDate')),
+          );
+        }
+
+        // BUG-134: phones got a 1000.w column (title at x≈4). 16 px margins.
+        final double screenW = MediaQuery.sizeOf(context).width;
+        final bool isPhone = screenW < 600;
+        final double contentW = isPhone ? screenW - 32 : 1000.w;
+        // BUG-141: one inner left edge for every card's text.
+        final double cardPad = isPhone ? 16 : 24.sp;
 
         final title = _biText(_job!['title'] as Map<String, dynamic>?, isRtl);
         final about = _biText(
@@ -182,28 +281,31 @@ class _JobDetailPageState extends State<JobDetailPage> {
 
                 // ✅ Content — scrolls
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: ScrollWithFooter(
                     child: SizedBox(
                       width: double.infinity,
                       child: Column(
                         children: [
                           SizedBox(height: 40.h),
 
-                          // ── Centered 1000.w column ──
+                          // ── Centered content column ──
                           Center(
                             child: SizedBox(
-                              width: 1000.w,
+                              width: contentW,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // ── Title ──
-                                  Text(
-                                    title,
-                                    style: StyleText.fontSize14Weight400.copyWith(
-
-                                      fontSize: 36.sp,
-                                      fontWeight: FontWeight.w700,
-                                      color: primary,
+                                  // ── Title ── (Figma job page: no Apply button
+                                  // here — Apply stays at the bottom.)
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: cardPad),
+                                    child: Text(
+                                      FormatHelper.capitalize(title),
+                                      style: StyleText.fontSize14Weight400.copyWith(
+                                        fontSize: isPhone ? 26 : 36.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: primary,
+                                      ),
                                     ),
                                   ),
                                   SizedBox(height: 24.h),
@@ -211,7 +313,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                   // ── Job Info Card ──
                                   Container(
                                     width: double.infinity,
-                                    padding: EdgeInsets.all(24.sp),
+                                    padding: EdgeInsets.symmetric(horizontal: cardPad, vertical: 16.sp),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(12.r),
@@ -221,7 +323,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                       CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          title,
+                                          FormatHelper.capitalize(title),
                                           style: StyleText.fontSize14Weight400.copyWith(
 
                                             fontSize: 18.sp,
@@ -234,15 +336,15 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                         SizedBox(height: 12.h),
                                         _infoRow(
                                           labels.hireDate,
-                                          _fmtDate(_str('hiringStartDate')),
+                                          _fmtDate(_str('hiringStartDate'), isRtl),
                                           labels.hireEndDate,
-                                          _fmtDate(_str('hiringEndDate')),
+                                          _fmtDate(_str('hiringEndDate'), isRtl),
                                           primary,
                                         ),
                                         SizedBox(height: 8.h),
                                         _infoRow(
                                           labels.workType,
-                                          _str('workType'),
+                                          WorkTypeExt.fromString(_str('workType')).localized(isRtl),
                                           '',
                                           '',
                                           primary,
@@ -250,17 +352,22 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                         SizedBox(height: 8.h),
                                         _infoRow(
                                           labels.employmentType,
-                                          _str('employmentType'),
+                                          EmploymentTypeExt.fromString(_str('employmentType')).localized(isRtl),
                                           labels.employmentDuration,
-                                          '${_str('employmentDurationText')} ${_str('employmentDurationType')}',
+                                          _num(
+                                            EmploymentDurationExt.fromString(_str('employmentDurationType')) == EmploymentDuration.open
+                                                ? EmploymentDuration.open.localized(isRtl)
+                                                : '${_str('employmentDurationText')} ${EmploymentDurationExt.fromString(_str('employmentDurationType')).localized(isRtl)}',
+                                            isRtl,
+                                          ),
                                           primary,
                                         ),
                                         SizedBox(height: 8.h),
                                         _infoRow(
                                           labels.experienceLevel,
-                                          _str('experienceLevel'),
+                                          ExperienceLevelExt.fromString(_str('experienceLevel')).localized(isRtl),
                                           labels.compensationRange,
-                                          '${(_job!['salaryMin'] as num?)?.toInt() ?? 0} - ${(_job!['salaryMax'] as num?)?.toInt() ?? 0}',
+                                          _salary(isRtl),
                                           primary,
                                         ),
                                         SizedBox(height: 8.h),
@@ -298,23 +405,21 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                                         12.w,
                                                         vertical: 4.h,
                                                       ),
+                                                      // BUG-113: Figma skill chip — light
+                                                      // background, grey text, no border.
                                                       decoration: BoxDecoration(
                                                         color: bgColor,
                                                         borderRadius:
                                                         BorderRadius.circular(
                                                           6.r,
                                                         ),
-                                                        border: Border.all(
-                                                          color: _kDivider,
-                                                        ),
                                                       ),
                                                       child: Text(
-                                                        s,
+                                                        FormatHelper.capitalize(s),
                                                         style: StyleText.fontSize14Weight400.copyWith(
 
                                                           fontSize: 13.sp,
-                                                          color: Colors
-                                                              .black87,
+                                                          color: const Color(0xFF797979),
                                                         ),
                                                       ),
                                                     ),
@@ -329,14 +434,6 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                     ),
                                   ),
                                   SizedBox(height: 20.h),
-
-                                  // ── About This Position ──
-                                  if (about.isNotEmpty)
-                                    _textSection(
-                                      labels.aboutThisPosition,
-                                      about,
-                                      primary,
-                                    ),
 
                                   // ── About Company (from AboutCompanyCubit) ──
                                   BlocBuilder<
@@ -375,6 +472,18 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                     },
                                   ),
 
+
+
+                                  // ── About This Position ──
+                                  if (about.isNotEmpty)
+                                    _textSection(
+                                      labels.aboutThisPosition,
+                                      about,
+                                      primary,
+                                    ),
+
+
+
                                   // ── Requirements ──
                                   if (requirements.isNotEmpty)
                                     _textSection(
@@ -396,7 +505,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                     Container(
                                       width: double.infinity,
                                       margin: EdgeInsets.only(bottom: 20.h),
-                                      padding: EdgeInsets.all(24.sp),
+                                      padding: EdgeInsets.all(cardPad),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(
@@ -441,7 +550,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                                   SizedBox(
                                                     width: 180.w,
                                                     child: Text(
-                                                      bTitle,
+                                                      FormatHelper.capitalize(bTitle),
                                                       style: StyleText.fontSize14Weight600.copyWith(
 
                                                         fontSize: 14.sp,
@@ -471,8 +580,11 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                       ),
                                     ),
 
-                                  // ── Bottom buttons ──
-                                  Row(
+                                  // ── Bottom buttons ── (BUG-141: inside the
+                                  // same text column as the cards)
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: cardPad),
+                                    child: Row(
                                     mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                     children: [
@@ -569,44 +681,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
                                           ),
                                         ),
                                       ),
-                                      GestureDetector(
-                                        onTap: () => context.go(
-                                          '/jobs/${widget.jobId}/apply',
-                                        ),
-                                        child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 24.w,
-                                            vertical: 10.h,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: primary,
-                                            borderRadius: BorderRadius.circular(
-                                              8.r,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                labels.apply,
-                                                style: StyleText.fontSize14Weight400.copyWith(
-
-                                                  fontSize: 13.sp,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                              SizedBox(width: 6.w),
-                                              Icon(
-                                                Icons.arrow_forward,
-                                                size: 16.sp,
-                                                color: Colors.white,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
+                                      _applyButton(labels, primary),
                                     ],
+                                  ),
                                   ),
                                   SizedBox(height: 64.h),
                                 ],
@@ -616,11 +693,10 @@ class _JobDetailPageState extends State<JobDetailPage> {
                         ],
                       ),
                     ),
+                    // BUG-65: footer scrolls with the page (was pinned).
+                    footer: const AppFooter(),
                   ),
                 ),
-
-                // ✅ Footer — fixed at bottom
-                const AppFooter(),
               ],
             ),
           ),
@@ -659,7 +735,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
             ),
           ),
           TextSpan(
-            text: value,
+            text: FormatHelper.capitalize(value),
             style: StyleText.fontSize14Weight600.copyWith(
 
               fontSize: 14.sp,
@@ -680,7 +756,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
     return Container(
       width: double.infinity,
       margin: EdgeInsets.only(bottom: 20.h),
-      padding: EdgeInsets.all(24.sp),
+      padding: EdgeInsets.all(_cardPad),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),

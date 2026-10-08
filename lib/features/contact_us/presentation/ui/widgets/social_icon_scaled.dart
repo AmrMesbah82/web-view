@@ -10,7 +10,12 @@ class _SocialIconScaled extends StatelessWidget {
         required this.primaryColor});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  // BUG-138: icon-only link — give it a name for screen readers.
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    link: true,
+    label: _contactSocialName(link ?? ''),
+    child: GestureDetector(
     onTap: (link?.isNotEmpty ?? false)
         ? () async {
       String raw = link!.trim();
@@ -61,5 +66,5 @@ class _SocialIconScaled extends StatelessWidget {
         ),
       ),
     ),
-  );
+  ));
 }

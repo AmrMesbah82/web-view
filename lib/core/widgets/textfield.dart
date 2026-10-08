@@ -41,6 +41,16 @@ class CustomValidatedTextFieldMaster extends StatefulWidget {
   final int maxLength;
   final int minLength;
 
+  /// BUG-14: when true, a non-empty value must look like an e-mail address.
+  final bool isEmail;
+
+  /// BUG-128: adds a red " *" to the label.
+  final bool required;
+
+  /// Extra error from the page (e.g. BUG-102 invalid phone number). The
+  /// built-in "required" / length errors win over it.
+  final String? errorText;
+
   const CustomValidatedTextFieldMaster({
     super.key,
     this.label,
@@ -62,6 +72,9 @@ class CustomValidatedTextFieldMaster extends StatefulWidget {
     this.primaryColor,
     this.maxLength = 500,
     this.minLength = 0,
+    this.isEmail = false,
+    this.required = false,
+    this.errorText,
   });
 
   @override
@@ -117,8 +130,20 @@ class _CustomValidatedTextFieldMasterState
       errorText = widget.textDirection == TextDirection.rtl
           ? 'الحد الأدنى ${widget.minLength} حرف'
           : 'Minimum ${widget.minLength} characters required.';
+    } else if (widget.submitted &&
+        widget.isEmail &&
+        !isEmpty &&
+        !isValidEmail(text)) {
+      // BUG-14: "not-an-email" used to pass.
+      errorText = widget.textDirection == TextDirection.rtl
+          ? 'يرجى إدخال بريد إلكتروني صحيح'
+          : 'Please enter a valid email.';
+    } else if (widget.errorText != null && widget.errorText!.isNotEmpty) {
+      errorText = widget.errorText;
     } else if (isNotDigits) {
-      errorText = 'Only numbers are allowed.';
+      errorText = widget.textDirection == TextDirection.rtl
+          ? 'يُسمح بالأرقام فقط.'
+          : 'Only numbers are allowed.';
     }
 
     final Color resolvedFill = widget.fillColor ??
@@ -152,9 +177,10 @@ class _CustomValidatedTextFieldMasterState
       primaryColor: widget.primaryColor,
       valueStyle: widget.textStyle ??
           StyleText.fontSize12Weight400.copyWith(color: AppColors.text),
+      // Figma placeholder: "Text Here" in #797979.
       hintStyle: widget.hintStyle ??
           StyleText.fontSize12Weight400
-              .copyWith(color: const Color(0xFF9E9E9E)),
+              .copyWith(color: const Color(0xFF797979)),
       inputFormatters: [
         LengthLimitingTextInputFormatter(widget.maxLength),
       ],
@@ -165,10 +191,10 @@ class _CustomValidatedTextFieldMasterState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        custom.requiredLabel(
           widget.label!,
+          required: widget.required,
           textDirection: widget.textDirection,
-          style: StyleText.fontSize14Weight400.copyWith(color: AppColors.text),
         ),
         SizedBox(height: 6.h),
         field,
@@ -176,3 +202,7 @@ class _CustomValidatedTextFieldMasterState
     );
   }
 }
+
+/// BUG-14: shared e-mail format check (contact form + validation on Send).
+bool isValidEmail(String value) =>
+    RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(value.trim());

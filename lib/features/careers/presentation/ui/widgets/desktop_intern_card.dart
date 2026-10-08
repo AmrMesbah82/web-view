@@ -68,7 +68,7 @@ class _DesktopInternCard extends StatelessWidget {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    data.fullName,
+                    data.fullNameFor(isRtl), // BUG-74
                     textAlign: TextAlign.center,
                     style: StyleText.fontSize14Weight700.copyWith(
                       fontSize: nameFz,
@@ -77,16 +77,16 @@ class _DesktopInternCard extends StatelessWidget {
                   ),
                   SizedBox(height: 3.h),
                   Text(
-                    data.degrees,
+                    data.degreesFor(isRtl),
                     textAlign: TextAlign.center,
                     style: StyleText.fontSize11Weight600.copyWith(
                       fontSize: degFz,
-                      color: Colors.black45,
+                      color: const Color(0xFF797979) /* Figma grey */,
                       height: 1.4,
                     ),
                   ),
                   // ── Position ─────────────────────────────────────────
-                  if (data.position.isNotEmpty) ...[
+                  if (data.positionFor(isRtl).isNotEmpty) ...[
                     SizedBox(height: 6.h),
                     Container(
                       padding: EdgeInsets.symmetric(
@@ -96,7 +96,7 @@ class _DesktopInternCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6.r),
                       ),
                       child: Text(
-                        data.position,
+                        data.positionFor(isRtl),
                         textAlign: TextAlign.center,
                         style: StyleText.fontSize13Weight600.copyWith(
                           color: Colors.white,
@@ -173,7 +173,7 @@ class _DesktopInternCard extends StatelessWidget {
                   ),
                   SizedBox(height: 6.h),
                   Text(
-                    data.whatHaveILearned,
+                    data.whatHaveILearnedFor(isRtl),
                     style: StyleText.fontSize14Weight600.copyWith(
                       fontSize: bodyFz,
                       height: 1.6,

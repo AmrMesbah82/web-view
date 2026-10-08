@@ -17,7 +17,7 @@ class _AboutHeaderMobile extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
       child: Text(
-        FormatHelper.capitalize(title),
+        title, // BUG-144: show the CMS text as typed (desktop does too)
         style: StyleText.fontSize45Weight600.copyWith(
           fontSize: 28.sp,
           fontWeight: FontWeight.w900,

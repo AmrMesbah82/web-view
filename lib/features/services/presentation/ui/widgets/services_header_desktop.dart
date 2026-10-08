@@ -26,7 +26,7 @@ class _ServicesHeaderDesktop extends StatelessWidget {
         : 'Bayanatz offers a range of services designed to support digital transformation initiatives within your organization.');
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 36.h),
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 40.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

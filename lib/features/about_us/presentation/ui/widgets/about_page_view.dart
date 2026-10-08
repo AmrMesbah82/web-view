@@ -1,7 +1,19 @@
 part of '../pages/about_us_page.dart';
 
 class _AboutPageView extends StatefulWidget {
-  const _AboutPageView();
+  const _AboutPageView({
+    this.initialTopTab,
+    this.initialSubTab,
+    this.showFooter = true,
+  });
+
+  /// Tab requested in code rather than through the URL — see [AboutPage].
+  final int? initialTopTab;
+  final int? initialSubTab;
+
+  /// Whether to draw the site footer — see [AboutPage].
+  final bool showFooter;
+
   @override
   State<_AboutPageView> createState() => _AboutPageViewState();
 }
@@ -14,6 +26,10 @@ class _AboutPageViewState extends State<_AboutPageView> {
   @override
   void initState() {
     super.initState();
+    // A tab asked for in code applies from the first frame. The live site
+    // passes nothing here and keeps reading `?tab=` below, exactly as before.
+    _initialTopTab = widget.initialTopTab;
+    _initialSubTab = widget.initialSubTab;
     Future.delayed(const Duration(seconds: 12), () {
       if (mounted && _showLoader) setState(() => _showLoader = false);
     });
@@ -24,6 +40,20 @@ class _AboutPageViewState extends State<_AboutPageView> {
   }
 
   @override
+  void didUpdateWidget(covariant _AboutPageView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The admin Terms preview switches between Terms and Privacy from outside.
+    if (widget.initialTopTab != oldWidget.initialTopTab ||
+        widget.initialSubTab != oldWidget.initialSubTab) {
+      setState(() {
+        _initialTopTab   = widget.initialTopTab;
+        _initialSubTab   = widget.initialSubTab;
+        _tabParamApplied = false;
+      });
+    }
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _readTabParam();
@@ -31,7 +61,18 @@ class _AboutPageViewState extends State<_AboutPageView> {
 
   void _readTabParam() {
     if (!mounted) return;
-    final uri = GoRouterState.of(context).uri;
+    // A caller-supplied tab wins — the URL must not override it.
+    if (widget.initialTopTab != null || widget.initialSubTab != null) return;
+    // Outside a GoRouter route — the admin previews push this page with the
+    // plain Navigator — there is no URL to read, and that is not an error.
+    final Uri? uri = () {
+      try {
+        return GoRouterState.of(context).uri;
+      } catch (_) {
+        return null;
+      }
+    }();
+    if (uri == null) return;
     final tabParam = uri.queryParameters['tab'];
     if (tabParam != null && tabParam.isNotEmpty) {
       final resolved = _resolveTabParam(tabParam);
@@ -186,7 +227,7 @@ class _AboutPageViewState extends State<_AboutPageView> {
                                 child: AppNavbar(currentRoute: '/about'),
                               ),
                               Expanded(
-                                child: SingleChildScrollView(
+                                child: _ScrollWithFooter(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.stretch,
                                     children: [
@@ -228,13 +269,14 @@ class _AboutPageViewState extends State<_AboutPageView> {
                                       ),
                                     ],
                                   ),
+                                  // BUG-65 / BUG-33 / BUG-37: footer scrolls with the page.
+                                  footer: widget.showFooter ? _Reveal(
+                                  delay: const Duration(milliseconds: 100),
+                                  direction: _SlideDirection.fromBottom,
+                                  duration: const Duration(milliseconds: 600),
+                                  child: const AppFooter(),
+                                ) : null,
                                 ),
-                              ),
-                              _Reveal(
-                                delay: const Duration(milliseconds: 100),
-                                direction: _SlideDirection.fromBottom,
-                                duration: const Duration(milliseconds: 600),
-                                child: const AppFooter(),
                               ),
                             ],
                           ),

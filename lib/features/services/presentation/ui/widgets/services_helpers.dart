@@ -23,11 +23,11 @@ String _monthNameAr(int m) => const [
   'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر','نوفمبر', 'ديسمبر',
 ][m];
 
+// BUG-145: ONE date format per language on the whole site + admin:
+// EN "29 Sep 2026", AR "٢٩ سبتمبر ٢٠٢٦" (was "September 29 2026").
 String _formatDate(DateTime? dt, bool isRtl) {
   if (dt == null) return '';
-  return isRtl
-      ? '${_monthNameAr(dt.month)} ${dt.day} ${dt.year}'
-      : '${_monthName(dt.month)} ${dt.day}, ${dt.year}';
+  return FormDateTimeHelper.formatDayMonthYear(dt, arabic: isRtl);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

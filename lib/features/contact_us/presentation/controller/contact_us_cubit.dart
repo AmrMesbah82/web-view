@@ -20,13 +20,19 @@ class ContactCubit extends Cubit<ContactState> {
 
   // ── Submit (public Contact page) ───────────────────────────────────────────
 
-  Future<void> submitContact(ContactSubmission submission) async {
+  Future<void> submitContact(
+    ContactSubmission submission, {
+    required String verificationToken,
+  }) async {
     emit(ContactSubmitting());
     try {
-      await _repo.submitContact(submission);
+      await _repo.submitContact(
+        submission,
+        verificationToken: verificationToken,
+      );
       emit(ContactSubmitted());
     } catch (e) {
-      emit(ContactError(e.toString()));
+      emit(ContactError(e.toString().replaceFirst('Exception: ', '')));
     }
   }
 

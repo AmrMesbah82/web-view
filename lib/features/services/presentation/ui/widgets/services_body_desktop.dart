@@ -142,7 +142,8 @@ class _ServicesBodyDesktopState extends State<_ServicesBodyDesktop> {
                     style: StyleText.fontSize14Weight400.copyWith(
                         fontFamily: 'Cairo',
                         fontSize:   12.sp,
-                        color:      _kDivider)),
+                        // BUG-17: was the divider colour — nearly invisible.
+                        color:      const Color(0xFF6B6B6B))),
               ),
             ),
           )
@@ -208,31 +209,46 @@ class _ServicesBodyDesktopState extends State<_ServicesBodyDesktop> {
           ),
           SizedBox(height: 14.h),
 
-          // ✅ FIX: Wrap instead of Row — supports any number of blog posts
+          // BUG-139: cards in one row now share the SAME height (rows of 3,
+          // IntrinsicHeight + stretch) and the date / "Read More" footer sits
+          // at the bottom of each card — the 3rd card's footer was 23 px
+          // higher than its neighbours when its title was shorter.
           if (widget.blogs.isNotEmpty)
-            Wrap(
-              spacing:    gap,
-              runSpacing: gap,
-              children: widget.blogs.asMap().entries.map((e) {
-                final int i = e.key;
-                final _SlideDirection dir = i == 0
-                    ? _SlideDirection.fromLeft
-                    : i == widget.blogs.length - 1
-                    ? _SlideDirection.fromRight
-                    : _SlideDirection.fromBottom;
-                return _Reveal(
-                  delay:     Duration(milliseconds: 100 + i * 120),
-                  direction: dir,
-                  duration:  const Duration(milliseconds: 700),
-                  child: SizedBox(
-                    width: blogCardW,
-                    child: _BlogCardDesktop(
-                        post:         e.value,
-                        isRtl:        widget.isRtl,
-                        primaryColor: widget.primaryColor),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (int start = 0; start < widget.blogs.length; start += 3) ...[
+                  if (start > 0) SizedBox(height: gap),
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (int i = start;
+                            i < start + 3 && i < widget.blogs.length;
+                            i++) ...[
+                          if (i > start) SizedBox(width: gap),
+                          _Reveal(
+                            delay:     Duration(milliseconds: 100 + i * 120),
+                            direction: i == 0
+                                ? _SlideDirection.fromLeft
+                                : i == widget.blogs.length - 1
+                                ? _SlideDirection.fromRight
+                                : _SlideDirection.fromBottom,
+                            duration:  const Duration(milliseconds: 700),
+                            child: SizedBox(
+                              width: blogCardW,
+                              child: _BlogCardDesktop(
+                                  post:         widget.blogs[i],
+                                  isRtl:        widget.isRtl,
+                                  primaryColor: widget.primaryColor),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                );
-              }).toList(),
+                ],
+              ],
             ),
           SizedBox(height: 36.h),
         ],

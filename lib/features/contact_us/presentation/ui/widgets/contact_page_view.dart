@@ -1,7 +1,11 @@
 part of '../pages/contact_us_page.dart';
 
 class _ContactPageView extends StatefulWidget {
-  const _ContactPageView();
+  const _ContactPageView({this.showFooter = true});
+
+  /// Whether the site footer is drawn — see [ContactPage].
+  final bool showFooter;
+
   @override
   State<_ContactPageView> createState() => _ContactPageViewState();
 }
@@ -19,7 +23,11 @@ class _ContactPageViewState extends State<_ContactPageView> {
   final _otherLanguageCtrl    = TextEditingController();
 
   String _phoneCode          = '+20';
-  String _preferredLanguage  = 'ar';     // Default: Arabic (matches Figma)
+  // BUG-127: "Arabic" was pre-selected even on the English site. The default
+  // now follows the site language until the visitor picks one.
+  String? _languageChoice;
+  String get _preferredLanguage => _languageChoice ??
+      (context.read<LanguageCubit>().state.isArabic ? 'ar' : 'en');
   String? _selectedLocation;              // Country name
   String? _selectedEntityType;
   String? _selectedEntitySize;
@@ -97,7 +105,32 @@ class _ContactPageViewState extends State<_ContactPageView> {
         _selectedEntityType != null &&
         _selectedEntitySize != null;
 
-    if (!requiredTextFilled || !dropdownsFilled || !otherLangFilled) return;
+    // BUG-102: "+20 0000000000" used to be accepted.
+    final phoneOk = isPlausiblePhone(_phoneCode, _phoneCtrl.text);
+
+    // BUG-14: e-mail must be a real address. The min-length rules shown under
+    // Subject / Message are enforced here too (Send used to ignore them).
+    final emailOk   = isValidEmail(_emailCtrl.text);
+    final lengthsOk = _subjectCtrl.text.trim().length >= 10 &&
+        _messageCtrl.text.trim().length >= 30;
+
+    // BUG-55: Entity's Type / Size are required; their fields now show
+    // "This field is required." instead of Send silently doing nothing.
+    if (!requiredTextFilled ||
+        !dropdownsFilled ||
+        !otherLangFilled ||
+        !emailOk ||
+        !phoneOk ||
+        !lengthsOk) {
+      // BUG-130: same feedback as the Apply form (fields marked + one toast).
+      final ar = context.read<LanguageCubit>().state.isArabic;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ar
+            ? 'يرجى استكمال الحقول المحددة باللون الأحمر.'
+            : 'Please complete the highlighted fields.'),
+      ));
+      return;
+    }
 
     String phoneNumber = _phoneCtrl.text.trim();
     if (phoneNumber.startsWith('0')) phoneNumber = phoneNumber.substring(1);
@@ -117,7 +150,7 @@ class _ContactPageViewState extends State<_ContactPageView> {
     );
   }
 
-  void _submitContactForm() async {
+  void _submitContactForm(String verificationToken) async {
 
 
 
@@ -145,7 +178,10 @@ class _ContactPageViewState extends State<_ContactPageView> {
       message:           _messageCtrl.text.trim(),
       submissionDate:    DateTime.now(),
     );
-    context.read<ContactCubit>().submitContact(submission);
+    context.read<ContactCubit>().submitContact(
+      submission,
+      verificationToken: verificationToken, // BUG-51
+    );
   }
 
   @override
@@ -220,18 +256,21 @@ class _ContactPageViewState extends State<_ContactPageView> {
                               phoneNumber:  otpState.phoneNumber,
                               isRtl:        isRtl,
                               primaryColor: primaryColor,
-                              onVerified: () {
+                              onVerified: (token) {
                                 Navigator.of(context).pop();
-                                _submitContactForm();
+                                _submitContactForm(token);
                               },
                             ),
                           ),
                         );
                       }
-                      if (otpState is OtpError) {
+                      // BUG-14: only a failed *send* is reported here (wrong
+                      // codes are shown inside the OTP dialog).
+                      if (otpState is OtpSendFailed) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content:         Text('OTP Error: ${otpState.message}'),
+                            // BUG-102: never a raw "INTERNAL" — bilingual text.
+                            content: Text(otpErrorMessage(otpState.message, isRtl)),
                             backgroundColor: Colors.red,
                             duration:        const Duration(seconds: 5),
                           ),
@@ -252,7 +291,7 @@ class _ContactPageViewState extends State<_ContactPageView> {
                         _otherLanguageCtrl.clear(); // ← NEW: clear on success
                         setState(() {
                           _submitted          = false;
-                          _preferredLanguage   = 'ar';
+                          _languageChoice      = null;
                           _selectedLocation    = null;
                           _selectedEntityType  = null;
                           _selectedEntitySize  = null;
@@ -278,7 +317,9 @@ class _ContactPageViewState extends State<_ContactPageView> {
                       if (state is ContactError) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content:         Text('Error: ${state.message}'),
+                            content:         Text(isRtl
+                                ? 'تعذر إرسال رسالتك الآن. يرجى المحاولة مرة أخرى بعد قليل.'
+                                : "We couldn't send your message right now. Please try again in a moment."),
                             backgroundColor: Colors.red,
                             duration:        const Duration(seconds: 5),
                           ),
@@ -332,7 +373,7 @@ class _ContactPageViewState extends State<_ContactPageView> {
 
                                     // ✅ Middle content — scrolls, takes all remaining space
                                     Expanded(
-                                      child: SingleChildScrollView(
+                                      child: _ScrollWithFooter(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.center,
                                           children: [
@@ -352,6 +393,8 @@ class _ContactPageViewState extends State<_ContactPageView> {
                                                 otherLanguageCtrl:   _otherLanguageCtrl,
                                                 submitted:           _submitted,
                                                 phoneCode:           _phoneCode,
+                                                // BUG-102
+                                                phoneInvalid:        _submitted && _phoneCtrl.text.trim().isNotEmpty && !isPlausiblePhone(_phoneCode, _phoneCtrl.text),
                                                 preferredLanguage:   _preferredLanguage,
                                                 selectedLocation:    _selectedLocation,
                                                 selectedEntityType:  _selectedEntityType,
@@ -359,7 +402,7 @@ class _ContactPageViewState extends State<_ContactPageView> {
                                                 isRtl:               isRtl,
                                                 primaryColor:        primaryColor,
                                                 onCodeChanged:       (v) => setState(() => _phoneCode = v ?? _phoneCode),
-                                                onLanguageChanged:   (v) => setState(() => _preferredLanguage = v),
+                                                onLanguageChanged:   (v) => setState(() => _languageChoice = v),
                                                 onLocationChanged:   (v) => setState(() => _selectedLocation = v),
                                                 onEntityTypeChanged: (v) => setState(() => _selectedEntityType = v),
                                                 onEntitySizeChanged: (v) => setState(() => _selectedEntitySize = v),
@@ -377,6 +420,8 @@ class _ContactPageViewState extends State<_ContactPageView> {
                                                 otherLanguageCtrl:   _otherLanguageCtrl,
                                                 submitted:           _submitted,
                                                 phoneCode:           _phoneCode,
+                                                // BUG-102
+                                                phoneInvalid:        _submitted && _phoneCtrl.text.trim().isNotEmpty && !isPlausiblePhone(_phoneCode, _phoneCtrl.text),
                                                 preferredLanguage:   _preferredLanguage,
                                                 selectedLocation:    _selectedLocation,
                                                 selectedEntityType:  _selectedEntityType,
@@ -384,7 +429,7 @@ class _ContactPageViewState extends State<_ContactPageView> {
                                                 isRtl:               isRtl,
                                                 primaryColor:        primaryColor,
                                                 onCodeChanged:       (v) => setState(() => _phoneCode = v ?? _phoneCode),
-                                                onLanguageChanged:   (v) => setState(() => _preferredLanguage = v),
+                                                onLanguageChanged:   (v) => setState(() => _languageChoice = v),
                                                 onLocationChanged:   (v) => setState(() => _selectedLocation = v),
                                                 onEntityTypeChanged: (v) => setState(() => _selectedEntityType = v),
                                                 onEntitySizeChanged: (v) => setState(() => _selectedEntitySize = v),
@@ -394,16 +439,16 @@ class _ContactPageViewState extends State<_ContactPageView> {
                                             ),
                                           ],
                                         ),
+                                        // BUG-65 / BUG-33 / BUG-37: footer scrolls with the page.
+                                        footer: widget.showFooter ? _Reveal(
+                                        delay: const Duration(milliseconds: 100),
+                                        direction: _SlideDirection.fromBottom,
+                                        duration: const Duration(milliseconds: 600),
+                                        child: const AppFooter(),
+                                      ) : null,
                                       ),
                                     ),
 
-                                    // ✅ Footer — always visible at bottom
-                                    _Reveal(
-                                      delay: const Duration(milliseconds: 100),
-                                      direction: _SlideDirection.fromBottom,
-                                      duration: const Duration(milliseconds: 600),
-                                      child: const AppFooter(),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -411,7 +456,7 @@ class _ContactPageViewState extends State<_ContactPageView> {
                               // ✅ Loading overlay
                               if (isSending)
                                 Container(
-                                  color: Colors.black45,
+                                  color: const Color(0xFF797979) /* Figma grey */,
                                   child: Center(
                                     child: Container(
                                       width: isMobile ? double.infinity : 600.w,

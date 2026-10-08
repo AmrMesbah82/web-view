@@ -7,11 +7,13 @@
 /// Module: core › custom
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/appcolors.dart';
 import '../theme/new_theme.dart';
+import '2-custom_textfield.dart' show customFieldErrorStyle;
 
 /// A dropdown item model
 class DropdownItem<T> {
@@ -62,6 +64,12 @@ class CustomDropdown<T> extends StatefulWidget {
   final VoidCallback? onOpen;
   final VoidCallback? onClose;
 
+  /// BUG-132: fixed trigger height (same as the text fields beside it).
+  final double? fieldHeight;
+
+  /// Optional focus node (BUG-123: the trigger is now keyboard-focusable).
+  final FocusNode? focusNode;
+
   const CustomDropdown({
     super.key,
     required this.items,
@@ -93,6 +101,8 @@ class CustomDropdown<T> extends StatefulWidget {
     this.emptyWidget,
     this.onOpen,
     this.onClose,
+    this.fieldHeight,
+    this.focusNode,
   });
 
   @override
@@ -114,9 +124,64 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>>
   // We read it after layout via a GlobalKey on the trigger Container.
   final _triggerKey = GlobalKey();
 
+  // ── BUG-123: keyboard support ───────────────────────────
+  // Tab used to skip every dropdown (Location, Entity's Type / Size, the
+  // phone country code). The trigger is now a focus stop:
+  //   Enter / Space → open or close,  ↑ / ↓ → previous / next option,
+  //   Esc → close.  A focus ring shows where the keyboard is.
+  FocusNode? _ownFocus;
+  FocusNode get _focus => widget.focusNode ?? (_ownFocus ??= FocusNode());
+  bool _hasFocus = false;
+
+  void _onFocusChanged() {
+    if (mounted) setState(() => _hasFocus = _focus.hasFocus);
+  }
+
+  void _step(int delta) {
+    final enabled = widget.items.where((e) => e.enabled).toList();
+    if (enabled.isEmpty) return;
+    var i = enabled.indexWhere((e) => e.value == widget.value);
+    i = i < 0
+        ? (delta > 0 ? 0 : enabled.length - 1)
+        : (i + delta).clamp(0, enabled.length - 1).toInt();
+    final next = enabled[i];
+    if (next.value != widget.value) widget.onChanged?.call(next.value);
+    if (_isOpen) {
+      // Rebuild the open list so the highlight follows.
+      _overlayEntry?.markNeedsBuild();
+    }
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      _toggleDropdown();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      _step(1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp) {
+      _step(-1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape && _isOpen) {
+      _closeOverlay();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   @override
   void initState() {
     super.initState();
+    _focus.addListener(_onFocusChanged);
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 180),
@@ -139,6 +204,8 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>>
     _overlayEntry?.remove();
     _overlayEntry = null;
     _animController.dispose();
+    _focus.removeListener(_onFocusChanged);
+    _ownFocus?.dispose();
     super.dispose();
   }
 
@@ -226,18 +293,17 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>>
           RichText(
             text: TextSpan(
               text: widget.label,
+              // BUG-130: label keeps its colour on error (like text fields).
               style: widget.labelStyle ??
                   StyleText.fontSize14Weight500.copyWith(
-                    color: hasError
-                        ? AppColors.red
-                        : widget.enabled
-                            ? AppColors.text
-                            : AppColors.text.withOpacity(0.4),
+                    color: widget.enabled
+                        ? AppColors.text
+                        : AppColors.text.withOpacity(0.4),
                   ),
               children: widget.required
                   ? [
                       TextSpan(
-                        text: ' *',
+                        text: '*',
                         style: StyleText.fontSize14Weight500
                             .copyWith(color: AppColors.red),
                       )
@@ -253,12 +319,27 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>>
         // to a CustomTextField with the same contentPadding.
         CompositedTransformTarget(
           link: _layerLink,
-          child: GestureDetector(
-            onTap: _toggleDropdown,
+          child: Focus(
+            focusNode: _focus,
+            canRequestFocus: widget.enabled,
+            onKeyEvent: _onKey,
+            child: Semantics(
+            button: true,
+            label: widget.label ?? widget.hint,
+            value: _selectedItem?.label,
+            child: GestureDetector(
+            onTap: () {
+              if (widget.enabled) _focus.requestFocus();
+              _toggleDropdown();
+            },
+            child: SizedBox(
+            height: widget.fieldHeight,
             child: InputDecorator(
               key: _triggerKey,
-              isFocused: false,
+              isFocused: _hasFocus,
               isEmpty: _selectedItem == null,
+              expands: widget.fieldHeight != null,
+              textAlignVertical: TextAlignVertical.center,
               decoration: InputDecoration(
                 isDense: true,
                 contentPadding: widget.triggerPadding ??
@@ -284,6 +365,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>>
                         borderRadius: radius,
                         borderSide: BorderSide.none,
                       ),
+                // BUG-123: visible keyboard focus ring.
                 focusedBorder: hasError
                     ? OutlineInputBorder(
                         borderRadius: radius,
@@ -292,7 +374,8 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>>
                       )
                     : OutlineInputBorder(
                         borderRadius: radius,
-                        borderSide: BorderSide.none,
+                        borderSide:
+                            BorderSide(color: AppColors.primary, width: 1.5.w),
                       ),
                 disabledBorder: OutlineInputBorder(
                   borderRadius: radius,
@@ -361,6 +444,9 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>>
                   // isEmpty — but we still need a zero-height child.
                   : const SizedBox.shrink(),
             ),
+            ),
+          ),
+          ),
           ),
         ),
 
@@ -369,9 +455,9 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>>
           SizedBox(height: 4.h),
           Text(
             widget.errorText!,
-            style: widget.errorStyle ??
-                StyleText.fontSize12Weight400.copyWith(color: AppColors.red),
+            style: widget.errorStyle ?? customFieldErrorStyle(),
           ),
+          SizedBox(height: 6.h), // BUG-131: same spacing as text fields
         ] else if (widget.helperText != null) ...[
           SizedBox(height: 4.h),
           Text(

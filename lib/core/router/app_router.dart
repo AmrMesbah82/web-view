@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../main_widgets/not_found_page.dart';
+
 
 
 import '../../features/about_us/presentation/ui/pages/about_us_page.dart';
@@ -94,6 +96,25 @@ CustomTransitionPage<T> animatedPage<T>({
 class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: '/',
+    // BUG-56: unknown URLs showed a raw "GoException: no routes for location"
+    // developer page. Common wrong paths are redirected; anything else gets a
+    // branded, bilingual "Page not found" with the site header and a Home
+    // button.
+    redirect: (context, state) {
+      const aliases = {
+        '/contact-us': '/contact',
+        '/about-us':   '/about',
+        '/career':     '/careers',
+        '/home':       '/',
+        '/service':    '/services',
+      };
+      final path = state.uri.path.toLowerCase();
+      final target = aliases[path.endsWith('/') && path.length > 1
+          ? path.substring(0, path.length - 1)
+          : path];
+      return target;
+    },
+    errorBuilder: (context, state) => const NotFoundPage(),
     routes: [
 
       // ── Public pages ───────────────────────────────────────────────────────
@@ -159,11 +180,15 @@ class AppRouter {
         path: '/blog/:index',
         name: 'blog',
         pageBuilder: (context, state) {
-          final index =
-              int.tryParse(state.pathParameters['index'] ?? '0') ?? 0;
+          // BUG-83: the URL carries the post id (/blog/<id>) but it was
+          // parsed as an int and never passed on, so the page always showed
+          // the FIRST Important Read. Pass the id through.
+          final postId = state.pathParameters['index'];
           return animatedPage(
             key:   state.pageKey,
-            child: BlogDetailPage(),
+            child: BlogDetailPage(
+              initialPostId: (postId == null || postId.isEmpty) ? null : postId,
+            ),
           );
         },
       ),

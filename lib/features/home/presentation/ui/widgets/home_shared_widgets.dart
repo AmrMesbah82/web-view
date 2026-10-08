@@ -106,7 +106,8 @@ class _SectionImage extends StatelessWidget {
           width: width, height: height,
           color: AppColors.card,
           alignment: Alignment.center,
-          child: SvgPicture.network(
+          // BUG-68: section images may now be photos (PNG/JPG/WebP).
+          child: _SmartNetworkImage(
             imageUrl,
             width:  (width ?? double.infinity) * 0.75,
             height: height * 0.75,

@@ -25,9 +25,13 @@ class _DesktopTabItemState extends State<_DesktopTabItem> {
   Widget build(BuildContext context) {
     // ✅ FIX: icon uses primaryColor on secondary background when not selected,
     // so the real uploaded image shows through. Only apply white tint when selected.
+    // BUG-137: the dark-green Mission icon on the DARK secondary tile was
+    // 2.11:1. A dark secondary is swapped for a light brand tint (≥ 3:1).
     final Color iconBg = widget.isSelected
         ? widget.primaryColor
-        : widget.secondaryColor;
+        : (widget.secondaryColor.computeLuminance() < 0.2
+            ? Color.lerp(widget.primaryColor, Colors.white, 0.85)!
+            : widget.secondaryColor);
     final Color hoverBg = _hoverTint(widget.primaryColor);
 
     return MouseRegion(

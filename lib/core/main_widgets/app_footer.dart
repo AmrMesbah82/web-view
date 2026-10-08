@@ -7,6 +7,7 @@
 // Created by: Amr Mesbah
 
 import 'package:flutter/material.dart';
+import '../widgets/smart_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
@@ -33,8 +34,10 @@ const Color _kFallbackPrimary    = Color(0xFF008037);
 const Color _kFallbackFooterBg   = Color(0xFFF5F5F5); // fallback if headerFooterColor is empty
 
 List<FooterColumnModel> _syncedFooterColumns(HomePageModel model) {
+  // Footer column titles/visibility follow the MAIN navbar items
+  // (mainNavButtons / mainPage/main), NOT the Home page nav cards.
   final navByRoute = <String, NavButtonModel>{
-    for (final btn in model.navButtons)
+    for (final btn in model.mainNavButtons)
       if (btn.route.isNotEmpty) btn.route: btn,
   };
   final List<FooterColumnModel> result = [];
@@ -67,8 +70,10 @@ Color _hexColor(String hex, Color fallback) {
 String _staticCopyright(bool isRtl) {
   final year = DateTime.now().year.toString();
   return isRtl
-      ? 'حقوق النشر © $year بيانات زي للتحول الرقمي. جميع الحقوق محفوظة.'
-      : 'Copyright © $year Bayanat. ALL RIGHT RESERVED.';
+      // BUG-49 / BUG-81: brand is "Bayanatz" (was "Bayanat", "ALL RIGHT
+      // RESERVED"); the Arabic line now uses the same brand name as the site.
+      ? '© $year بيانات زي. جميع الحقوق محفوظة.'
+      : '© $year Bayanatz. All rights reserved.';
 }
 
 class AppFooter extends StatelessWidget {
@@ -147,69 +152,69 @@ class _FooterDesktop extends StatelessWidget {
     ((MediaQuery.of(context).size.width - contentW) / 2)
         .clamp(16.0, double.infinity);
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: hPad),
-      child: Container(
-        padding: EdgeInsets.all(22.sp),
-        decoration: BoxDecoration(
-          color: footerBg, // ✅ CMS-driven color
-          borderRadius: BorderRadiusDirectional.only(
-            topStart: Radius.circular(24.r),
-            topEnd:   Radius.circular(24.r),
+    return Container(
+      padding: EdgeInsets.all(22.sp),
+      decoration: BoxDecoration(
+        color: footerBg, // ✅ CMS-driven color
+        borderRadius: BorderRadiusDirectional.only(
+          topStart: Radius.circular(24.r),
+          topEnd:   Radius.circular(24.r),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _LogoBox(logoUrl: model.branding.logoUrl, primary: primary, size: 50.sp),
+              SizedBox(width: 32.w),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: columns
+                      .map((col) => _FooterColumnWidget(
+                    column:     col,
+                    titleColor: AppColors.text,
+                    primary:    primary,
+                    isRtl:      isRtl,
+                  ))
+                      .toList(),
+                ),
+              ),
+            ],
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _LogoBox(logoUrl: model.branding.logoUrl, primary: primary, size: 50.sp),
-                SizedBox(width: 32.w),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: columns
-                        .map((col) => _FooterColumnWidget(
-                      column:     col,
-                      titleColor: AppColors.text,
-                      primary:    primary,
-                      isRtl:      isRtl,
-                    ))
-                        .toList(),
+          SizedBox(height: 24.h),
+          Divider(color: primary, thickness: 0.5),
+          SizedBox(height: 14.h),
+          // BUG-140: social icons centred on the PAGE (were ≈39 px left of
+          // centre — centred in the space left over by the copyright).
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: _socialIcons(model.socialLinks, primary),
+              ),
+              PositionedDirectional(
+                end: 0,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Text(
+                    _staticCopyright(isRtl),
+                    style: StyleText.fontSize14Weight400.copyWith(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12.sp,
+                    ),
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: 24.h),
-            Divider(color: primary, thickness: 0.5),
-            SizedBox(height: 14.h),
-            Row(
-              children: [
-                const Expanded(flex: 2, child: SizedBox()),
-                Expanded(
-                  flex: 3,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      ..._socialIcons(model.socialLinks, primary),
-                      const Spacer(),
-                      Text(
-                        _staticCopyright(isRtl),
-                        style: StyleText.fontSize14Weight400.copyWith(
-                          color: AppColors.text,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12.sp,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -321,19 +326,7 @@ class _FooterMobile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? firstLabel =
-    (columns.isNotEmpty && columns.first.labels.isNotEmpty)
-        ? _bi(columns.first.labels.first.label, isRtl)
-        : null;
-    final String? firstRoute =
-    (columns.isNotEmpty &&
-        columns.first.labels.isNotEmpty &&
-        columns.first.labels.first.route.isNotEmpty)
-        ? columns.first.labels.first.route
-        : null;
-
     return Container(
-      color: footerBg, // ✅ CMS-driven color
       padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 20.w),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -347,10 +340,32 @@ class _FooterMobile extends StatelessWidget {
               Expanded(child: Divider(color: primary.withOpacity(0.5), thickness: 1)),
             ],
           ),
+          SizedBox(height: 16.h),
+          // BUG-108: phones showed one random link ("Vision"). Figma (iPhone
+          // view, Footer 7126:41848) has exactly one link under the social
+          // icons: "Terms and Conditions" — so that is the one shown here.
+          Builder(builder: (context) {
+            FooterLabelModel? terms;
+            for (final col in columns) {
+              for (final l in col.labels) {
+                final r = l.route.toLowerCase();
+                final en = l.label.en.toLowerCase();
+                if (r.contains('terms') || en.contains('terms')) {
+                  terms ??= l;
+                }
+              }
+            }
+            final String label = terms != null
+                ? _bi(terms.label, isRtl)
+                : (isRtl ? 'الشروط والأحكام' : 'Terms and Conditions');
+            final String route = (terms != null && terms.route.isNotEmpty)
+                ? terms.route
+                : '/about?tab=terms-and-conditions';
+            return Center(
+              child: _FooterLink(label: label, route: route, primary: primary),
+            );
+          }),
           SizedBox(height: 12.h),
-          if (firstLabel != null)
-            _FooterLink(label: firstLabel, route: firstRoute, primary: primary),
-          SizedBox(height: 6.h),
           Text(
             _staticCopyright(isRtl),
             textAlign: TextAlign.center,
@@ -454,8 +469,11 @@ class _FooterLinkState extends State<_FooterLink> {
     final String path        = uri.path;
     final String queryString = uri.query;
     final currentPath        = GoRouterState.of(context).uri.path;
+    // BUG-117: push() kept the OLD address in the bar (Refresh/Share/Back
+    // went to the wrong page). go() changes the URL; the pages read their
+    // tab from the query, so the same page with a new ?tab= switches tab.
     if (queryString.isNotEmpty) {
-      context.push('$path?$queryString');
+      context.go('$path?$queryString');
     } else {
       if (currentPath == path) { context.push(path); } else { context.go(path); }
     }
@@ -504,12 +522,12 @@ class _LogoBox extends StatelessWidget {
       width:  size.w,
       height: size.h,
       child: logoUrl.isNotEmpty
-          ? SvgPicture.network(
+          ? SmartNetworkImage( // BUG-68 / BUG-18
         logoUrl,
         width:   size.w,
         height:  size.h,
         fit:     BoxFit.contain,   // ← was BoxFit.cover (clips sides)
-        placeholderBuilder: (_) => SizedBox(width: size.w, height: size.h),
+        fallback: Image.asset('assets/images/logo.jpg', fit: BoxFit.contain),
       )
           : Image.asset('assets/images/logo.jpg', fit: BoxFit.contain),
     );
@@ -583,8 +601,14 @@ class _SocialIconWidget extends StatelessWidget {
       child: Center(child: iconWidget),
     );
 
+    // BUG-138: icon-only buttons need a name for screen readers.
+    final String name = _socialName(link.url);
     return link.url.isNotEmpty
-        ? GestureDetector(
+        ? Semantics(
+      button: true,
+      link: true,
+      label: name,
+      child: GestureDetector(
       onTap: () async {
         String rawUrl = link.url.trim();
         if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
@@ -604,16 +628,32 @@ class _SocialIconWidget extends StatelessWidget {
         );
       },
       child: MouseRegion(cursor: SystemMouseCursors.click, child: box),
-    )
+    ))
         : box;
   }
+}
+
+/// BUG-138: "Facebook", "LinkedIn", … from the link's address.
+String _socialName(String url) {
+  final u = url.toLowerCase();
+  const names = {
+    'facebook': 'Facebook', 'fb.com': 'Facebook', 'instagram': 'Instagram',
+    'linkedin': 'LinkedIn', 'twitter': 'X (Twitter)', 'x.com': 'X (Twitter)',
+    'youtube': 'YouTube', 'youtu.be': 'YouTube', 'tiktok': 'TikTok',
+    'snapchat': 'Snapchat', 'whatsapp': 'WhatsApp', 'wa.me': 'WhatsApp',
+    'telegram': 't.me', 'github': 'GitHub', 'behance': 'Behance',
+  };
+  for (final e in names.entries) {
+    if (u.contains(e.key)) return e.value == 't.me' ? 'Telegram' : e.value;
+  }
+  return 'Social link';
 }
 
 void _navigateTo(BuildContext context, String route) {
   final uri = Uri.tryParse(route);
   if (uri == null) { context.go(route); return; }
   if (uri.query.isNotEmpty) {
-    context.push('${uri.path}?${uri.query}');
+    context.go('${uri.path}?${uri.query}'); // BUG-117: URL must change
   } else {
     context.go(uri.path);
   }

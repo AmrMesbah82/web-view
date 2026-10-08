@@ -20,16 +20,21 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:website_app/core/custom_svg.dart';
-import 'package:website_app/core/widgets/custom_dropdown.dart';
-import 'package:website_app/core/widgets/textfield.dart';
+import 'package:website_app/core/custom/1-custom_dropdwon.dart';
+import 'package:website_app/core/custom/2-custom_textfield.dart';
 
 import '../../../../../core/main_widgets/app_footer.dart';
+import '../../../../../core/widgets/scroll_with_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/appcolors.dart';
 import '../../../../../core/theme/new_theme.dart';
+import '../../../../../core/utils/flat_codec.dart';
+import '../../../data/models/job_model.dart';
+import '../widgets/job_unavailable_view.dart';
 import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
+import 'package:website_app/core/widgets/format_helper.dart';
 
 part '../widgets/doc_field_state.dart';
 part '../widgets/phone_field.dart';
@@ -48,7 +53,7 @@ Color _parsePrimary(HomeCmsState state) {
   };
   final cl = hex.replaceAll('#', '');
   if (cl.length == 6) {
-    final value = int.tryParse('FF\$cl', radix: 16);
+    final value = int.tryParse('FF$cl', radix: 16);
     if (value != null) return Color(value);
   }
   return _kGreen;
@@ -62,7 +67,7 @@ Color _parseBg(HomeCmsState state) {
   };
   final cl = hex.replaceAll('#', '');
   if (cl.length == 6) {
-    final value = int.tryParse('FF\$cl', radix: 16);
+    final value = int.tryParse('FF$cl', radix: 16);
     if (value != null) return Color(value);
   }
   return AppColors.background;
@@ -119,6 +124,8 @@ class JobApplyPage extends StatefulWidget {
 
 class _JobApplyPageState extends State<JobApplyPage> {
   Map<String, dynamic>? _job;
+  /// BUG-99: visitors may no longer read this job (removed / draft …).
+  bool _noLongerAvailable = false;
   bool _loadingJob = true,
       _submitting = false,
       _submitted = false,
@@ -132,6 +139,28 @@ class _JobApplyPageState extends State<JobApplyPage> {
 
   String _countryCode = '+20';
 
+
+  /// BUG-116: phone layout (one field per row) — set in build().
+  bool _isPhone = false;
+
+  /// Two fields side by side on desktop / tablet, stacked on phones.
+  Widget _pair(Widget a, Widget b) {
+    if (_isPhone) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [a, SizedBox(height: 10.h), b],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: a),
+        SizedBox(width: 24.w),
+        Expanded(child: b),
+      ],
+    );
+  }
+
   // ── Dynamic document fields — built from admin requiredDocuments ──
   List<_DocFieldState> _docFields = [];
 
@@ -142,14 +171,29 @@ class _JobApplyPageState extends State<JobApplyPage> {
   }
 
   Future<void> _loadJob() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('jobListings')
-        .doc(widget.jobId)
-        .get(const GetOptions(source: Source.server))
-        .onError((_, __) { if (mounted) setState(() => _loadingJob = false); return Future.error(''); });
+    final DocumentSnapshot<Map<String, dynamic>> doc;
+    try {
+      doc = await FirebaseFirestore.instance
+          .collection('jobListings')
+          .doc(widget.jobId)
+          .get(const GetOptions(source: Source.server));
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadingJob = false;
+          _noLongerAvailable = e.code == 'permission-denied';
+        });
+      }
+      return;
+    } catch (_) {
+      if (mounted) setState(() => _loadingJob = false);
+      return;
+    }
     if (!mounted) return;
     if (doc.exists && doc.data() != null) {
-      final data = doc.data()!;
+      // Admin writes the FLAT VERSIONED format — decode to the nested map this
+      // page reads (title/requiredDocuments/requiredSkills/…).
+      final data = FlatCodec.decode(doc.data()!, JobPostModel.flatTemplate);
       setState(() {
         _job = data;
         _loadingJob = false;
@@ -180,7 +224,9 @@ class _JobApplyPageState extends State<JobApplyPage> {
       final map = d as Map<String, dynamic>;
       final name = map['name'] as String? ?? 'Document';
       final type = map['docType'] as String? ?? 'PDF';
-      return _DocFieldState(name: name, docType: type);
+      // Older docs without the flag default to required.
+      final required = map['isRequired'] as bool? ?? true;
+      return _DocFieldState(name: name, docType: type, isRequired: required);
     }).toList();
 
   }
@@ -192,16 +238,17 @@ class _JobApplyPageState extends State<JobApplyPage> {
 
   String _str(String key) => _job?[key] as String? ?? '';
 
-  String _fmtDate(String? iso) {
+  /// Bilingual date — localized month name AND numerals (EN/AR).
+  String _fmtDate(String? iso, bool isRtl) {
     if (iso == null || iso.isEmpty) return '—';
     final dt = DateTime.tryParse(iso);
     if (dt == null) return iso;
-    const m = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${dt.day} ${m[dt.month - 1]} ${dt.year}';
+    return FormDateTimeHelper.formatDayMonthYear(dt, arabic: isRtl);
   }
+
+  /// Localizes digits inside any value when the page is in Arabic.
+  String _num(String text, bool isRtl) =>
+      isRtl ? FormDateTimeHelper.toArabicDigits(text) : text;
 
   // ── PDF-only file picker for a specific doc field ──────────────────────────
   Future<void> _pickFile(int index) async {
@@ -272,22 +319,64 @@ class _JobApplyPageState extends State<JobApplyPage> {
     return uri.hasScheme && uri.hasAuthority && uri.host.contains('.');
   }
 
+  /// BUG-104: one application per e-mail and job — the e-mail (normalised)
+  /// is the document id, so a second submission is refused by the rules.
+  static String _applicantKey(String email) => email
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9@._+\-]'), '_');
+
+  static bool _isValidEmail(String v) =>
+      RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(v.trim());
+
+  void _toast(String en, String ar, bool isRtl) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_t(en, ar, isRtl))),
+    );
+  }
+
   Future<void> _submit(bool isRtl) async {
     setState(() => _formSubmitted = true);
 
     // ── Validate required personal fields ──
+    // BUG-130: same feedback as the Contact form (fields marked + one toast).
     if (_firstNameCtrl.text.trim().isEmpty ||
+        _lastNameCtrl.text.trim().isEmpty ||
         _emailCtrl.text.trim().isEmpty ||
+        !_isValidEmail(_emailCtrl.text) ||
         _phoneCtrl.text.trim().isEmpty ||
         _yearCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _t('Please fill required fields', 'يرجى ملء الحقول المطلوبة', isRtl),
-          ),
-        ),
-      );
+      _toast('Please complete the highlighted fields.',
+          'يرجى استكمال الحقول المحددة باللون الأحمر.', isRtl);
       return;
+    }
+
+    // ── Validate required doc fields (respect admin's Required/Optional switch) ──
+    for (final doc in _docFields) {
+      if (!doc.isRequired) continue;
+      final missing = doc.docType == 'PDF'
+          ? doc.fileBytes == null
+          : doc.linkController.text.trim().isEmpty;
+      if (missing) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              doc.docType == 'PDF'
+                  ? _t(
+                      '${doc.name} is required. Please upload a PDF file.',
+                      '${doc.name} مطلوب. يرجى رفع ملف PDF.',
+                      isRtl,
+                    )
+                  : _t(
+                      '${doc.name} is required. Please enter a link.',
+                      '${doc.name} مطلوب. يرجى إدخال رابط.',
+                      isRtl,
+                    ),
+            ),
+          ),
+        );
+        return;
+      }
     }
 
     // ── Validate all Link-type doc fields for valid URL ──
@@ -381,12 +470,15 @@ class _JobApplyPageState extends State<JobApplyPage> {
       }
     }
 
+    final applicantKey = _applicantKey(_emailCtrl.text);
     final submitFailed = await FirebaseFirestore.instance
         .collection('jobListings')
         .doc(widget.jobId)
         .collection('applications')
-        .add({
+        .doc(applicantKey)
+        .set({
       'jobId': widget.jobId,
+      'applicantKey': applicantKey, // BUG-104
       'jobTitle': jobTitle,
       'department': _str('department'),
       'firstName': _firstNameCtrl.text.trim(),
@@ -417,7 +509,8 @@ class _JobApplyPageState extends State<JobApplyPage> {
       'salaryRange':
       '${(_job?['salaryMin'] as num?)?.toInt() ?? 0} - ${(_job?['salaryMax'] as num?)?.toInt() ?? 0}',
       'currency': _str('salaryCurrency'),
-      'jobLocation': '',
+      // BUG-120: the admin "Location" column showed "-" for every row.
+      'jobLocation': _str('location'),
       'employmentDuration':
       '${_str('employmentDurationText')} ${_str('employmentDurationType')}',
       'requiredQualification': _biText(
@@ -435,19 +528,21 @@ class _JobApplyPageState extends State<JobApplyPage> {
     if (!mounted) return;
     if (submitFailed != null) {
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _t('Failed to submit', 'فشل في الإرسال', isRtl),
-          ),
-        ),
-      );
+      // BUG-104: the rules refuse a second document with the same e-mail.
+      final duplicate = submitFailed is FirebaseException &&
+          submitFailed.code == 'permission-denied';
+      duplicate
+          ? _toast('You have already applied to this job with this email.',
+              'لقد تقدّمت بالفعل لهذه الوظيفة بهذا البريد الإلكتروني.', isRtl)
+          : _toast("We couldn't send your application. Please try again.",
+              'تعذر إرسال طلبك. يرجى المحاولة مرة أخرى.', isRtl);
       return;
     }
     await FirebaseFirestore.instance
         .collection('jobListings')
         .doc(widget.jobId)
-        .update({'totalApplications': FieldValue.increment(1)});
+        .update({'totalApplications': FieldValue.increment(1)})
+        .catchError((_) {});
     if (!mounted) return;
     setState(() {
       _submitting = false;
@@ -482,7 +577,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
 
         if (_loadingJob)
           return Scaffold(
-            backgroundColor: const Color(0xFFF1F2ED),
+            backgroundColor: bgColor, // branding background from model
             body: Column(
               children: [
                 AppNavbar(currentRoute: '/careers'),
@@ -491,19 +586,42 @@ class _JobApplyPageState extends State<JobApplyPage> {
               ],
             ),
           );
-        if (_submitted) return _buildSuccessScreen(primary, isRtl);
+        if (_submitted) return _buildSuccessScreen(primary, bgColor, isRtl);
+
+        // BUG-99: removed / ended / draft jobs no longer show the form.
+        if (_job == null) {
+          return JobUnavailableView(
+            reason: _noLongerAvailable
+                ? JobUnavailableReason.closed
+                : JobUnavailableReason.notFound,
+          );
+        }
+        final openState = jobOpenStateOfMap(_job!);
+        if (openState != JobOpenState.open) {
+          return JobUnavailableView(
+            reason: openState == JobOpenState.notStarted
+                ? JobUnavailableReason.notStarted
+                : JobUnavailableReason.closed,
+            opensOn: DateTime.tryParse(_str('hiringStartDate')),
+          );
+        }
+
+        // BUG-116 / BUG-134: phones get one field per row and 16 px margins.
+        final double screenW = MediaQuery.sizeOf(context).width;
+        _isPhone = screenW < 600;
+        final double contentW = _isPhone ? screenW - 32 : 1000.w;
 
         final title = _biText(_job?['title'] as Map<String, dynamic>?, isRtl);
 
         return Directionality(
           textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
           child: Scaffold(
-            backgroundColor: const Color(0xFFF1F2ED),
+            backgroundColor: bgColor, // branding background from model
             body: Column(
               children: [
                 AppNavbar(currentRoute: '/careers'),
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: ScrollWithFooter(
                     child: SizedBox(
                       width: double.infinity,
                       child: Column(
@@ -511,14 +629,13 @@ class _JobApplyPageState extends State<JobApplyPage> {
                           SizedBox(height: 40.h),
                           Center(
                             child: SizedBox(
-                              width: 1000.w,
+                              width: contentW,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     _t('Applying For Job', 'التقديم على وظيفة', isRtl),
-                                    style: StyleText.fontSize14Weight400.copyWith(
-                                      fontFamily: 'Cairo',
+                                    style: StyleText.fontSize16Weight700.copyWith(
                                       fontSize: 36.sp,
                                       fontWeight: FontWeight.w700,
                                       color: primary,
@@ -527,7 +644,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                                   SizedBox(height: 24.h),
                                   Container(
                                     width: double.infinity,
-                                    padding: EdgeInsets.all(28.sp),
+                                    padding: EdgeInsets.all(15.sp),
                                     decoration: BoxDecoration(
                                       color: AppColors.card,
                                       borderRadius: BorderRadius.circular(8.r),
@@ -569,9 +686,10 @@ class _JobApplyPageState extends State<JobApplyPage> {
                         ],
                       ),
                     ),
+                    // BUG-65: footer scrolls with the page (was pinned).
+                    footer: const AppFooter(),
                   ),
                 ),
-                const AppFooter(),
               ],
             ),
           ),
@@ -584,16 +702,16 @@ class _JobApplyPageState extends State<JobApplyPage> {
   //  SUCCESS SCREEN
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildSuccessScreen(Color primary, bool isRtl) {
+  Widget _buildSuccessScreen(Color primary, Color bgColor, bool isRtl) {
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF1F2ED),
+        backgroundColor: bgColor, // branding background from model
         body: Column(
           children: [
             AppNavbar(currentRoute: '/careers'),
             Expanded(
-              child: SingleChildScrollView(
+              child: ScrollWithFooter(
                 child: SizedBox(
                   width: double.infinity,
                   child: Column(
@@ -623,8 +741,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                                     isRtl,
                                   ),
                                   textAlign: TextAlign.center,
-                                  style: StyleText.fontSize14Weight400.copyWith(
-                                    fontFamily: 'Cairo',
+                                  style: StyleText.fontSize16Weight700.copyWith(
                                     fontSize: 18.sp,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.black87,
@@ -638,8 +755,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                                     isRtl,
                                   ),
                                   textAlign: TextAlign.center,
-                                  style: StyleText.fontSize14Weight400.copyWith(
-                                    fontFamily: 'Cairo',
+                                  style: StyleText.fontSize13Weight400.copyWith(
                                     fontSize: 13.sp,
                                     height: 1.6,
                                     color: Colors.black54,
@@ -654,9 +770,10 @@ class _JobApplyPageState extends State<JobApplyPage> {
                     ],
                   ),
                 ),
+                // BUG-65: footer scrolls with the page (was pinned).
+                footer: const AppFooter(),
               ),
             ),
-            const AppFooter(),
           ],
         ),
       ),
@@ -675,7 +792,6 @@ class _JobApplyPageState extends State<JobApplyPage> {
         Text(
           title.isEmpty ? _t('Untitled', 'بدون عنوان', isRtl) : title,
           style: StyleText.fontSize16Weight700.copyWith(
-            fontFamily: 'Cairo',
             fontSize: 16.sp,
             fontWeight: FontWeight.w700,
             color: _kLabel,
@@ -686,15 +802,15 @@ class _JobApplyPageState extends State<JobApplyPage> {
         SizedBox(height: 12.h),
         _summaryRow(
           _t('Hire Date:', 'تاريخ التعيين:', isRtl),
-          _fmtDate(_str('hiringStartDate')),
+          _fmtDate(_str('hiringStartDate'), isRtl),
           _t('Hire End Date:', 'تاريخ انتهاء التعيين:', isRtl),
-          _fmtDate(_str('hiringEndDate')),
+          _fmtDate(_str('hiringEndDate'), isRtl),
           primary,
         ),
         SizedBox(height: 6.h),
         _summaryRow(
           _t('Work Type:', 'نوع العمل:', isRtl),
-          _str('workType'),
+          WorkTypeExt.fromString(_str('workType')).localized(isRtl),
           '',
           '',
           primary,
@@ -702,17 +818,25 @@ class _JobApplyPageState extends State<JobApplyPage> {
         SizedBox(height: 6.h),
         _summaryRow(
           _t('Employment Type:', 'نوع التوظيف:', isRtl),
-          _str('employmentType'),
+          EmploymentTypeExt.fromString(_str('employmentType')).localized(isRtl),
           _t('Employment Duration:', 'مدة التوظيف:', isRtl),
-          '${_str('employmentDurationText')} ${_str('employmentDurationType')}',
+          _num(
+            '${_str('employmentDurationText')} '
+            '${EmploymentDurationExt.fromString(_str('employmentDurationType')).localized(isRtl)}',
+            isRtl,
+          ),
           primary,
         ),
         SizedBox(height: 6.h),
         _summaryRow(
           _t('Experience Level:', 'مستوى الخبرة:', isRtl),
-          _str('experienceLevel'),
+          ExperienceLevelExt.fromString(_str('experienceLevel')).localized(isRtl),
           _t('Compensation Range:', 'نطاق الراتب:', isRtl),
-          '${(_job?['salaryMin'] as num?)?.toInt() ?? 0} - ${(_job?['salaryMax'] as num?)?.toInt() ?? 0}',
+          // Figma (Apply, 7126:49672): "5000 - 10000" — no currency.
+          _num(
+            '${(_job?['salaryMin'] as num?)?.toInt() ?? 0} - ${(_job?['salaryMax'] as num?)?.toInt() ?? 0}',
+            isRtl,
+          ),
           primary,
         ),
         SizedBox(height: 6.h),
@@ -731,7 +855,6 @@ class _JobApplyPageState extends State<JobApplyPage> {
             Text(
               _t('Skills:', 'المهارات:', isRtl),
               style: StyleText.fontSize13Weight500.copyWith(
-                fontFamily: 'Cairo',
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w500,
                 color: _kLabel,
@@ -756,8 +879,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                     ),
                     child: Text(
                       _biText(s['name'] as Map<String, dynamic>?, isRtl),
-                      style: StyleText.fontSize14Weight400.copyWith(
-                        fontFamily: 'Cairo',
+                      style: StyleText.fontSize12Weight400.copyWith(
                         fontSize: 12.sp,
                         color: _kLabel,
                       ),
@@ -784,89 +906,74 @@ class _JobApplyPageState extends State<JobApplyPage> {
         Text(
           _t('Personal Information', 'المعلومات الشخصية', isRtl),
           style: StyleText.fontSize16Weight700.copyWith(
-            fontFamily: 'Cairo',
             fontSize: 16.sp,
             fontWeight: FontWeight.w700,
             color: primary,
           ),
         ),
         SizedBox(height: 16.h),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: CustomValidatedTextFieldMaster(
-                label: _t('First Name', 'الاسم الأول', isRtl),
-                hint: _t('Text Here', 'اكتب هنا', isRtl),
-                controller: _firstNameCtrl,
-                height: 36,
-                fillColor: Colors.white,
-                submitted: _formSubmitted,
-                primaryColor: primary,
-              ),
-            ),
-            SizedBox(width: 24.w),
-            Expanded(
-              child: CustomValidatedTextFieldMaster(
-                label: _t('Last Name', 'اسم العائلة', isRtl),
-                hint: _t('Text Here', 'اكتب هنا', isRtl),
-                controller: _lastNameCtrl,
-                height: 36,
-                fillColor: Colors.white,
-                submitted: _formSubmitted,
-                primaryColor: primary,
-              ),
-            ),
-          ],
+        // BUG-116: stacked on phones. Labels / "Text Here" hints as in Figma
+        // (Apply form, 7126:49672 — only Resume / Cover Letter carry a *).
+        _pair(
+          CustomTextField(
+            label: _t('First Name', 'الاسم الأول', isRtl),
+            hint: _t('Text Here', 'أدخل النص هنا', isRtl),
+            controller: _firstNameCtrl,
+            height: 36,
+            fillColor: Colors.white,
+            submitted: _formSubmitted,
+          ),
+          CustomTextField(
+            label: _t('Last Name', 'اسم العائلة', isRtl),
+            hint: _t('Text Here', 'أدخل النص هنا', isRtl),
+            controller: _lastNameCtrl,
+            height: 36,
+            fillColor: Colors.white,
+            submitted: _formSubmitted,
+          ),
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: CustomValidatedTextFieldMaster(
-                label: _t('Email', 'البريد الإلكتروني', isRtl),
-                hint: _t('Text Here', 'اكتب هنا', isRtl),
-                controller: _emailCtrl,
-                height: 36,
-                fillColor: Colors.white,
-                submitted: _formSubmitted,
-                primaryColor: primary,
-              ),
-            ),
-            SizedBox(width: 24.w),
-            Expanded(
-              child: _PhoneField(
-                label: _t('Phone Number', 'رقم الهاتف', isRtl),
-                controller: _phoneCtrl,
-                submitted: _formSubmitted,
-                selectedCode: _countryCode,
-                onCodeChanged: (v) {
-                  if (v != null) setState(() => _countryCode = v);
-                },
-                isRtl: isRtl,
-                primaryColor: primary,
-              ),
-            ),
-          ],
+        SizedBox(height: 10.h),
+        _pair(
+          CustomTextField(
+            label: _t('Email', 'البريد الإلكتروني', isRtl),
+            hint: _t('Text Here', 'أدخل النص هنا', isRtl),
+            controller: _emailCtrl,
+            height: 36,
+            fillColor: Colors.white,
+            submitted: _formSubmitted,
+            keyboardType: TextInputType.emailAddress,
+            errorText: _formSubmitted &&
+                    _emailCtrl.text.trim().isNotEmpty &&
+                    !_isValidEmail(_emailCtrl.text)
+                ? _t('Please enter a valid email.',
+                    'يرجى إدخال بريد إلكتروني صحيح', isRtl)
+                : null,
+          ),
+          _PhoneField(
+            label: _t('Phone', 'رقم الهاتف', isRtl), // Figma
+            controller: _phoneCtrl,
+            submitted: _formSubmitted,
+            selectedCode: _countryCode,
+            onCodeChanged: (v) {
+              if (v != null) setState(() => _countryCode = v);
+            },
+            isRtl: isRtl,
+            primaryColor: primary,
+          ),
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: CustomValidatedTextFieldMaster(
-                label: _t('Year Of Graduation', 'سنة التخرج', isRtl),
-                hint: _t('Text Here', 'اكتب هنا', isRtl),
-                controller: _yearCtrl,
-                height: 36,
-                fillColor: Colors.white,
-                onlyDigits: true,
-                submitted: _formSubmitted,
-                primaryColor: primary,
-              ),
-            ),
-            SizedBox(width: 24.w),
-            const Expanded(child: SizedBox()),
-          ],
+        SizedBox(height: 10.h),
+        _pair(
+          CustomTextField(
+            label: _t('Year Of Graduation', 'سنة التخرج', isRtl),
+            hint: _t('Text Here', 'أدخل النص هنا', isRtl),
+            controller: _yearCtrl,
+            height: 36,
+            fillColor: Colors.white,
+            onlyDigits: true,
+            maxLength: 4,
+            submitted: _formSubmitted,
+          ),
+          const SizedBox(), // Figma: Year Of Graduation alone on its row
         ),
       ],
     );
@@ -883,7 +990,6 @@ class _JobApplyPageState extends State<JobApplyPage> {
         Text(
           _t('Profile Information', 'معلومات الملف الشخصي', isRtl),
           style: StyleText.fontSize16Weight700.copyWith(
-            fontFamily: 'Cairo',
             fontSize: 16.sp,
             fontWeight: FontWeight.w700,
             color: primary,
@@ -907,16 +1013,21 @@ class _JobApplyPageState extends State<JobApplyPage> {
   /// Builds a PDF upload box for a given document requirement
   Widget _buildPdfUploadField(
       int index, _DocFieldState doc, Color primary, bool isRtl) {
-    final bool hasError = doc.error != null;
+    // "Required" error only when the admin flagged this doc as required
+    final bool missingRequired =
+        _formSubmitted && doc.isRequired && doc.fileName == null;
+    final bool hasError = doc.error != null || missingRequired;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Label ──
-        Text(
-          doc.name,
+        // ── Label ── (BUG-128: required documents get the red "*")
+        requiredLabel(
+          doc.isRequired
+              ? doc.name
+              : '${doc.name} (${_t('Optional', 'اختياري', isRtl)})',
+          required: doc.isRequired,
           style: StyleText.fontSize13Weight500.copyWith(
-            fontFamily: 'Cairo',
             fontSize: 13.sp,
             fontWeight: FontWeight.w500,
             color: _kLabel,
@@ -949,8 +1060,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                       SizedBox(height: 6.h),
                       Text(
                         doc.fileName!,
-                        style: StyleText.fontSize14Weight400.copyWith(
-                          fontFamily: 'Cairo',
+                        style: StyleText.fontSize12Weight400.copyWith(
                           fontSize: 12.sp,
                           color: _kLabel,
                         ),
@@ -974,8 +1084,7 @@ class _JobApplyPageState extends State<JobApplyPage> {
                         'اسحب وأفلت ملف PDF هنا',
                         isRtl,
                       ),
-                      style: StyleText.fontSize14Weight400.copyWith(
-                        fontFamily: 'Cairo',
+                      style: StyleText.fontSize12Weight400.copyWith(
                         fontSize: 12.sp,
                         color: Colors.black54,
                       ),
@@ -993,7 +1102,6 @@ class _JobApplyPageState extends State<JobApplyPage> {
                       child: Text(
                         _t('Browse Files', 'استعراض الملفات', isRtl),
                         style: StyleText.fontSize12Weight600.copyWith(
-                          fontFamily: 'Cairo',
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -1032,13 +1140,18 @@ class _JobApplyPageState extends State<JobApplyPage> {
         if (hasError) ...[
           SizedBox(height: 4.h),
           Text(
-            _t(
-              'Invalid file type. Please upload a PDF file only.',
-              'نوع الملف غير صالح. يرجى رفع ملف PDF فقط.',
-              isRtl,
-            ),
-            style: StyleText.fontSize14Weight400.copyWith(
-              fontFamily: 'Cairo',
+            doc.error != null
+                ? _t(
+                    'Invalid file type. Please upload a PDF file only.',
+                    'نوع الملف غير صالح. يرجى رفع ملف PDF فقط.',
+                    isRtl,
+                  )
+                : _t(
+                    'This field is required.',
+                    'هذا الحقل مطلوب',
+                    isRtl,
+                  ),
+            style: StyleText.fontSize11Weight400.copyWith(
               fontSize: 11.sp,
               color: Colors.red,
             ),
@@ -1056,12 +1169,11 @@ class _JobApplyPageState extends State<JobApplyPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _UrlValidatedTextField(
-          label: doc.name,
-          hint: _t(
-            'https://example.com/${doc.name.toLowerCase().replaceAll(' ', '-')}',
-            'https://example.com/${doc.name.toLowerCase().replaceAll(' ', '-')}',
-            isRtl,
-          ),
+          label: doc.isRequired
+              ? doc.name
+              : '${doc.name} (${_t('Optional', 'اختياري', isRtl)})',
+          isRequired: doc.isRequired,
+          hint: _t('Insert Link', 'أدخل الرابط', isRtl), // Figma
           controller: doc.linkController,
           submitted: _formSubmitted,
           primaryColor: primary,
@@ -1097,13 +1209,12 @@ class _JobApplyPageState extends State<JobApplyPage> {
             ),
           )
               : Text(
+            // Figma (Apply, 7126:49672): "SEND".
             _t('SEND', 'إرسال', isRtl),
             style: StyleText.fontSize16Weight700.copyWith(
-              fontFamily: 'Cairo',
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
               color: Colors.white,
-              letterSpacing: isRtl ? 0 : 1,
             ),
           ),
         ),
@@ -1140,7 +1251,6 @@ class _JobApplyPageState extends State<JobApplyPage> {
           TextSpan(
             text: '$label ',
             style: StyleText.fontSize13Weight500.copyWith(
-              fontFamily: 'Cairo',
               fontSize: 13.sp,
               fontWeight: FontWeight.w500,
               color: _kLabel,
@@ -1149,7 +1259,6 @@ class _JobApplyPageState extends State<JobApplyPage> {
           TextSpan(
             text: value,
             style: StyleText.fontSize13Weight600.copyWith(
-              fontFamily: 'Cairo',
               fontSize: 13.sp,
               fontWeight: FontWeight.w600,
               color: primary,

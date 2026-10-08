@@ -60,7 +60,7 @@ class _ValueDetailPanel extends StatelessWidget {
           ],
           if (shortDesc.isNotEmpty) ...[
             Text(
-              FormatHelper.capitalize(shortDesc),
+              shortDesc,
               style: StyleText.fontSize12Weight500.copyWith(
                 fontFamily: 'Cairo',
                 fontSize: 12.sp,
@@ -73,7 +73,7 @@ class _ValueDetailPanel extends StatelessWidget {
           ],
           if (fullDesc.isNotEmpty)
             Text(
-              FormatHelper.capitalize(fullDesc),
+              fullDesc,
               style: StyleText.fontSize11Weight400.copyWith(
                 fontFamily: 'Cairo',
                 fontSize: 11.sp,

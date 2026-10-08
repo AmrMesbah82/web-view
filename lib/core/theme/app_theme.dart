@@ -229,7 +229,7 @@ abstract class AppTheme {
     'indicator': const Color(0xffE9E9E9),
     'starredCard': Colors.white,
     'black': const Color(0xff2D2D2D),
-    'secondaryBlack': const Color(0xff797979),
+    'secondaryBlack': const Color(0xff797979), // Figma grey
     'whiteShadow': const Color(0xD9D9D9E0),
     'darkWhiteShadow': const Color(0x9E9E9E9E),
     'white': Colors.white,
@@ -247,7 +247,7 @@ abstract class AppTheme {
     'yellow': const Color(0xffE5B800),
     'fieldBorder': const Color(0xffE5E5ED),
     'oddRowColor': Colors.white,
-    'secondaryText': const Color(0xff797979),
+    'secondaryText': const Color(0xff797979), // Figma grey
     'spanText': const Color(0xff797979),
     'secondaryButton': const Color(0xCCCCCCCC),
     'fullBlack': const Color(0xff000000),

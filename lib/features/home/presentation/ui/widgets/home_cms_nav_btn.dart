@@ -36,7 +36,10 @@ class _CmsNavBtnState extends State<_CmsNavBtn> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit:  (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
+      child: Semantics(
+        button: true,
+        label: widget.label,
+        child: GestureDetector(
         onTap: widget.route.isNotEmpty
             ? () => context.go(widget.route)
             : null,
@@ -46,14 +49,17 @@ class _CmsNavBtnState extends State<_CmsNavBtn> {
           height:   48.h,
           padding:  EdgeInsets.symmetric(
               horizontal: widget.mobile ? 16.w : 22.w),
+          // BUG-135: white text on a 30 % tint was 1.54:1 — the hover state is
+          // now the solid brand colour (white on #008037 ≈ 5:1).
           decoration: BoxDecoration(
             color: _hovered
-                ? widget.primary.withOpacity(.3)
+                ? widget.primary
                 : Colors.white,
             borderRadius: BorderRadius.circular(8.r),
           ),
           child: Center(child: Text(widget.label, style: textStyle)),
         ),
+      ),
       ),
     );
   }

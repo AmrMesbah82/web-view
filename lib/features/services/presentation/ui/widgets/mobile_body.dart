@@ -35,11 +35,11 @@ class _MobileBody extends StatelessWidget {
                 return Padding(
                   padding: EdgeInsets.only(right: isLast ? 0 : 10),
                   child: _BlogNavButton(
-                    label: FormatHelper.capitalize(
+                    label: 
                       _tb(e.value.descriptionTitle, isRtl).isNotEmpty
                           ? _tb(e.value.descriptionTitle, isRtl)
                           : _tb(e.value.question, isRtl),
-                    ),
+                    
                     isSelected: selected.id == e.value.id,
                     onTap:      () => onTabChange(e.value.id),
                     isMobile:   true,
@@ -87,7 +87,7 @@ class _MobileBody extends StatelessWidget {
                               _formatDate(selected.createdAt, isRtl),
                               style: StyleText.fontSize14Weight400.copyWith(
                                 fontSize:   12,
-                                color:      Colors.black45,
+                                color:      const Color(0xFF797979) /* Figma grey */,
                               ),
                             ),
                           ],

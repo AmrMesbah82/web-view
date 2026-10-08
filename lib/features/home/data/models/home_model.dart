@@ -356,6 +356,11 @@ class HomePageModel {
   final BiText                  title;
   final BiText                  shortDescription;
   final List<NavButtonModel>    navButtons;
+  // Nav items for the MAIN application navbar — sourced from mainPage/main.
+  // Kept SEPARATE from [navButtons] (the Home page nav cards) so the two
+  // features are fully independent. Injected at load time from the Main doc;
+  // not persisted by the website.
+  final List<NavButtonModel>    mainNavButtons;
   final List<SectionCardModel>  sections;
   final List<HeaderItemModel>   headerItems;
   final List<FooterColumnModel> footerColumns;
@@ -369,6 +374,7 @@ class HomePageModel {
     this.title            = const BiText(),
     this.shortDescription = const BiText(),
     this.navButtons       = const [],
+    this.mainNavButtons   = const [],
     this.sections         = const [],
     this.headerItems      = const [],
     this.footerColumns    = const [],
@@ -383,6 +389,7 @@ class HomePageModel {
     BiText?                  title,
     BiText?                  shortDescription,
     List<NavButtonModel>?    navButtons,
+    List<NavButtonModel>?    mainNavButtons,
     List<SectionCardModel>?  sections,
     List<HeaderItemModel>?   headerItems,
     List<FooterColumnModel>? footerColumns,
@@ -398,6 +405,7 @@ class HomePageModel {
         title:                title                ?? this.title,
         shortDescription:     shortDescription     ?? this.shortDescription,
         navButtons:           navButtons           ?? this.navButtons,
+        mainNavButtons:       mainNavButtons       ?? this.mainNavButtons,
         sections:             sections             ?? this.sections,
         headerItems:          headerItems          ?? this.headerItems,
         footerColumns:        footerColumns        ?? this.footerColumns,

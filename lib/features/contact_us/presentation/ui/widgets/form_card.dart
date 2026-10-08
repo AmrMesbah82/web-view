@@ -5,6 +5,8 @@ class _FormCard extends StatelessWidget {
       phoneCtrl, entityNameCtrl, subjectCtrl, messageCtrl,
       otherLanguageCtrl; // ← NEW
   final bool   submitted, isMobile, isRtl;
+  /// BUG-102: phone filled in but not a plausible mobile number.
+  final bool   phoneInvalid;
   final String phoneCode, preferredLanguage;
   final String? selectedLocation, selectedEntityType, selectedEntitySize;
   final Color  primaryColor;
@@ -29,6 +31,7 @@ class _FormCard extends StatelessWidget {
     required this.onEntitySizeChanged,
     required this.onSend,           required this.isRtl,
     required this.primaryColor,     this.isMobile = false,
+    this.phoneInvalid = false,
   });
 
   // ── Helper: builds one custom radio dot + label widget ──
@@ -107,6 +110,7 @@ class _FormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final double rad = isMobile ? 12 : 12.r;
 
+    // Figma (Contact Us, 7126:34692): "GET IN TOUCH" in capitals.
     final String title             = _t(context, en: 'GET IN TOUCH',       ar: 'تواصل معنا');
     final String prefLangLabel     = _t(context, en: 'Preferred Language', ar: 'اللغة المفضلة');
     final String firstNameLabel    = _t(context, en: 'First Name',         ar: 'الاسم الأول');
@@ -114,12 +118,19 @@ class _FormCard extends StatelessWidget {
     final String emailLabel        = _t(context, en: 'Email',              ar: 'البريد الإلكتروني');
     final String phoneLabel        = _t(context, en: 'Phone Number',       ar: 'رقم الهاتف');
     final String locationLabel     = _t(context, en: 'Location',           ar: 'الموقع');
-    final String entityNameLabel   = _t(context, en: "Entity's Name",      ar: 'اسم الجهة');
+    final String entityNameLabel   = _t(context, en: "Entity's Name",      ar: 'اسم الجهة'); // Figma
     final String entityTypeLabel   = _t(context, en: "Entity's Type",      ar: 'نوع الجهة');
     final String entitySizeLabel   = _t(context, en: "Entity's Size",      ar: 'حجم الجهة');
     final String subjectLabel      = _t(context, en: 'Subject',            ar: 'الموضوع');
     final String msgLabel          = _t(context, en: 'Message',            ar: 'الرسالة');
-    final String hint              = _t(context, en: 'Text Here',          ar: 'اكتب هنا');
+    // Figma (Contact Us, 7126:34692): every text field says "Text Here".
+    final String textHere          = _t(context, en: 'Text Here',          ar: 'أدخل النص هنا');
+    final String firstNameHint     = textHere;
+    final String lastNameHint      = textHere;
+    final String entityNameHint    = textHere;
+    final String subjectHint       = textHere;
+    final String messageHint       = textHere;
+    final String phoneInvalidMsg   = _t(context, en: 'Please enter a valid mobile number.', ar: 'يرجى إدخال رقم جوال صحيح.');
     final String sendLabel         = _t(context, en: 'Send',               ar: 'إرسال');
     final String selectLocation    = _t(context, en: 'Select Location',    ar: 'اختر الموقع');
     final String selectType        = _t(context, en: 'Select Type',        ar: 'اختر النوع');
@@ -255,7 +266,7 @@ class _FormCard extends StatelessWidget {
           _pair(
             CustomValidatedTextFieldMaster(
               label:         firstNameLabel,
-              hint:          hint,
+              hint:          firstNameHint,
               controller:    firstNameCtrl,
               submitted:     submitted,
               height:        36,
@@ -265,7 +276,7 @@ class _FormCard extends StatelessWidget {
             ),
             CustomValidatedTextFieldMaster(
               label:         lastNameLabel,
-              hint:          hint,
+              hint:          lastNameHint,
               controller:    lastNameCtrl,
               submitted:     submitted,
               height:        36,
@@ -281,11 +292,10 @@ class _FormCard extends StatelessWidget {
             CustomValidatedTextFieldMaster(
               label:        emailLabel,
               primaryColor: primaryColor,
-              hint: _t(context,
-                  en: 'Enter your email',
-                  ar: 'أدخل البريد الإلكتروني'),
+              hint: textHere,
               controller:    emailCtrl,
               submitted:     submitted,
+              isEmail:       true, // BUG-14
               height:        36,
               textDirection: dir,
               textAlign:     align,
@@ -294,6 +304,7 @@ class _FormCard extends StatelessWidget {
               label:         phoneLabel,
               controller:    phoneCtrl,
               submitted:     submitted,
+              errorText:     phoneInvalid ? phoneInvalidMsg : null,
               isMobile:      isMobile,
               selectedCode:  phoneCode,
               onCodeChanged: onCodeChanged,
@@ -319,7 +330,7 @@ class _FormCard extends StatelessWidget {
             ),
             CustomValidatedTextFieldMaster(
               label:         entityNameLabel,
-              hint:          hint,
+              hint:          entityNameHint,
               controller:    entityNameCtrl,
               submitted:     false, // optional
               height:        36,
@@ -338,7 +349,7 @@ class _FormCard extends StatelessWidget {
               value:        selectedEntityType,
               items:        entityTypeItems,
               onChanged:    onEntityTypeChanged,
-              submitted:    false,
+              submitted:    submitted, // BUG-55: required on Send → show why
               isRtl:        isRtl,
               isMobile:     isMobile,
               primaryColor: primaryColor,
@@ -349,7 +360,7 @@ class _FormCard extends StatelessWidget {
               value:        selectedEntitySize,
               items:        entitySizeItems,
               onChanged:    onEntitySizeChanged,
-              submitted:    false,
+              submitted:    submitted, // BUG-55
               isRtl:        isRtl,
               isMobile:     isMobile,
               primaryColor: primaryColor,
@@ -362,7 +373,7 @@ class _FormCard extends StatelessWidget {
           CustomValidatedTextFieldMaster(
               primaryColor:  primaryColor,
               label:         subjectLabel,
-              hint:          hint,
+              hint:          subjectHint,
               controller:    subjectCtrl,
               submitted:     submitted,
               height:        36,
@@ -376,7 +387,7 @@ class _FormCard extends StatelessWidget {
           CustomValidatedTextFieldMaster(
               primaryColor:  primaryColor,
               label:         msgLabel,
-              hint:          hint,
+              hint:          messageHint,
               controller:    messageCtrl,
               submitted:     submitted,
               height:        72,

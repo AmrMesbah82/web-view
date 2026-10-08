@@ -100,11 +100,17 @@ Widget _svgIconBox({
   required Color  primaryColor,
   Color secondaryColor = _kGreenLight,
 }) {
+  // BUG-137: the dark-green icons sat on the DARK secondary colour
+  // (#0F6434 on #243E2F = 1.6:1). A dark secondary is swapped for a light
+  // tint of the brand colour so the icon stays visible (≥ 3:1).
+  final Color tileBg = secondaryColor.computeLuminance() < 0.2
+      ? Color.lerp(primaryColor, Colors.white, 0.85)!
+      : secondaryColor;
   return Container(
     width:  size,
     height: size,
     decoration: BoxDecoration(
-        color:        secondaryColor,
+        color:        tileBg,
         borderRadius: BorderRadius.circular(radius)),
     child: Center(
       child: url.isNotEmpty

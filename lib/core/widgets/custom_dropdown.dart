@@ -34,6 +34,10 @@ class CustomDropdownFormFieldInvMaster extends StatelessWidget {
   final bool showColorDots;
   final double borderRadius;
 
+  /// BUG-131: shown under the field with the SAME red border + text style as
+  /// the text fields (was a separate, smaller Text with a grey border).
+  final String? errorText;
+
   const CustomDropdownFormFieldInvMaster({
     Key? key,
     required this.selectedValue,
@@ -54,6 +58,7 @@ class CustomDropdownFormFieldInvMaster extends StatelessWidget {
     this.itemColors,
     this.showColorDots = false,
     this.borderRadius = 8.0,
+    this.errorText,
   }) : super(key: key);
 
   Color? _getItemColor(Map<String, String> item) {
@@ -107,6 +112,9 @@ class CustomDropdownFormFieldInvMaster extends StatelessWidget {
         vertical: ((fieldHeight - 20) / 2).h,
       ),
       itemHeight: fieldHeight.h,
+      // BUG-132: same box height as the text fields next to it.
+      fieldHeight: fieldHeight.h,
+      errorText: errorText,
       maxOverlayHeight: 225.h,
       valueStyle:
           StyleText.fontSize12Weight400.copyWith(color: AppColors.text),

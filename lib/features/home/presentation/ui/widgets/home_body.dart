@@ -10,11 +10,15 @@ class _HomeBody extends StatelessWidget {
   final double        navbarHeight;
   final GlobalKey     navbarKey;
 
+  /// See HomePage.showFooter — false only in the admin's Home preview.
+  final bool showFooter;
+
   const _HomeBody({
     required this.data,
     required this.isRtl,
     required this.navbarHeight,
     required this.navbarKey,
+    this.showFooter = true,
   });
 
   @override
@@ -51,7 +55,7 @@ class _HomeBody extends StatelessWidget {
 
               // ✅ Middle content — scrolls, takes all remaining space
               Expanded(
-                child: SingleChildScrollView(
+                child: _ScrollWithFooter(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -69,16 +73,16 @@ class _HomeBody extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // BUG-65 / BUG-33 / BUG-37: footer scrolls with the page.
+                  footer: showFooter ? _Reveal(
+                  delay:     const Duration(milliseconds: 100),
+                  direction: _SlideDirection.fromBottom,
+                  duration:  const Duration(milliseconds: 600),
+                  child: const AppFooter(),
+                ) : null,
                 ),
               ),
 
-              // ✅ Footer — always visible at bottom
-              _Reveal(
-                delay:     const Duration(milliseconds: 100),
-                direction: _SlideDirection.fromBottom,
-                duration:  const Duration(milliseconds: 600),
-                child: const AppFooter(),
-              ),
             ],
           ),
         ),

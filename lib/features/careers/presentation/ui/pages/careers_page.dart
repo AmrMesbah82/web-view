@@ -25,6 +25,7 @@ import 'package:website_app/core/widgets/button.dart';
 import 'package:website_app/core/widgets/navigator.dart';
 
 import '../../../../../core/main_widgets/app_footer.dart';
+import '../../../../../core/widgets/scroll_with_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/appcolors.dart';
 import '../../../../../core/theme/new_theme.dart';
@@ -92,31 +93,120 @@ Color _parseColor(String hex, {Color fallback = _kFallbackPrimary}) {
 
 // ── Breakpoints ───────────────────────────────────────────────────────────────
 
-class CareersPage extends StatefulWidget {
-  const CareersPage({super.key});
+/// The public Careers page.
+///
+/// The live site builds it with no arguments and behaves exactly as before: it
+/// reads its cubits from the app-wide providers and loads them from Firestore.
+///
+/// The ADMIN preview passes cubits already holding the draft being edited. They
+/// are provided with `.value` here, and every `load()` this page calls returns
+/// immediately on a cubit that is already loaded — so the same page code renders
+/// the draft without a single network read.
+class CareersPage extends StatelessWidget {
+  const CareersPage({
+    super.key,
+    this.careersCubit,
+    this.whyJoinCubit,
+    this.internsSectionCubit,
+    this.internCubit,
+    this.ourTeamsCubit,
+    this.initialTab,
+    this.showFooter = true,
+  });
+
+  /// Careers CMS document — the overview and statistics above the tabs.
+  final CareersCmsCubit? careersCubit;
+
+  /// The 'whyJoinOurTeam' section (the page looks this one up by type).
+  final CareersSectionCubit? whyJoinCubit;
+
+  /// The 'ourInterns' section — the Interns tab header's icon and title.
+  final CareersSectionCubit? internsSectionCubit;
+
+  final InternCubit? internCubit;
+  final OurTeamsCubit? ourTeamsCubit;
+
+  /// Which tab to open on: 0 = Why Join Our Team · 1 = Interns · 2 = Our Team.
+  /// Null keeps the `?tab=` URL behaviour the live site has.
+  final int? initialTab;
+
+  /// Whether the site footer is drawn under the page. The live site always
+  /// shows it; the admin preview hides it, because its frame is a fixed-height
+  /// viewport and the admin screen carries its own actions below it.
+  final bool showFooter;
 
   @override
-  State<CareersPage> createState() => _CareersPageState();
+  Widget build(BuildContext context) {
+    Widget child = _CareersPageView(
+      internsSection: internsSectionCubit,
+      initialTab:     initialTab,
+      showFooter:     showFooter,
+    );
+
+    // Only the cubits actually passed in are overridden; anything left null
+    // keeps coming from the app-wide providers, exactly as on the live site.
+    if (ourTeamsCubit != null) {
+      child = BlocProvider<OurTeamsCubit>.value(
+          value: ourTeamsCubit!, child: child);
+    }
+    if (internCubit != null) {
+      child = BlocProvider<InternCubit>.value(value: internCubit!, child: child);
+    }
+    if (whyJoinCubit != null) {
+      child = BlocProvider<CareersSectionCubit>.value(
+          value: whyJoinCubit!, child: child);
+    }
+    if (careersCubit != null) {
+      child = BlocProvider<CareersCmsCubit>.value(
+          value: careersCubit!, child: child);
+    }
+    return child;
+  }
 }
 
-class _CareersPageState extends State<CareersPage> {
+class _CareersPageView extends StatefulWidget {
+  const _CareersPageView({
+    this.internsSection,
+    this.initialTab,
+    this.showFooter = true,
+  });
+
+  /// Supplied by the preview; otherwise this page creates and owns its own.
+  final CareersSectionCubit? internsSection;
+  final int? initialTab;
+  final bool showFooter;
+
+  @override
+  State<_CareersPageView> createState() => _CareersPageViewState();
+}
+
+class _CareersPageViewState extends State<_CareersPageView> {
   bool _showLoader = true;
   int _selectedTab = 0;
 
   // Dedicated section cubit for the "Our Interns" tab header (icon + title).
   // Kept as an explicit instance (not a global provider) to avoid clashing
   // with the type-based CareersSectionCubit used for 'whyJoinOurTeam'.
-  final CareersSectionCubit _internsSection =
-      CareersSectionCubit(sectionKey: 'ourInterns');
+  late final CareersSectionCubit _internsSection;
+
+  /// False when the cubit came from outside — then closing it is not ours to do.
+  late final bool _ownsInternsSection;
 
   @override
   void initState() {
     super.initState();
+    _internsSection =
+        widget.internsSection ?? CareersSectionCubit(sectionKey: 'ourInterns');
+    _ownsInternsSection = widget.internsSection == null;
+    _selectedTab = widget.initialTab ?? 0;
+
     Future.delayed(const Duration(seconds: 12), () {
       if (mounted && _showLoader) setState(() => _showLoader = false);
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Each of these returns immediately on a cubit that is already loaded,
+      // which is how the preview's seeded drafts survive untouched.
       context.read<HomeCmsCubit>().load();
       context.read<CareersCmsCubit>().load();
       // ── Load Firebase data for all three tab sections ──────────────────
@@ -131,8 +221,18 @@ class _CareersPageState extends State<CareersPage> {
   }
 
   @override
+  void didUpdateWidget(covariant _CareersPageView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The admin preview switches tab from outside.
+    final int? tab = widget.initialTab;
+    if (tab != null && tab != oldWidget.initialTab && tab != _selectedTab) {
+      setState(() => _selectedTab = tab);
+    }
+  }
+
+  @override
   void dispose() {
-    _internsSection.close();
+    if (_ownsInternsSection) _internsSection.close();
     super.dispose();
   }
 
@@ -144,7 +244,18 @@ class _CareersPageState extends State<CareersPage> {
 
   void _readTabParam() {
     if (!mounted) return;
-    final uri = GoRouterState.of(context).uri;
+    // A tab asked for in code wins — the URL must not override it.
+    if (widget.initialTab != null) return;
+    // Outside a GoRouter route — the admin preview pushes this page with the
+    // plain Navigator — there is no URL to read, and that is not an error.
+    final Uri? uri = () {
+      try {
+        return GoRouterState.of(context).uri;
+      } catch (_) {
+        return null;
+      }
+    }();
+    if (uri == null) return;
     final tabParam = uri.queryParameters['tab'];
     final resolved = (tabParam != null && tabParam.isNotEmpty)
         ? _resolveTabParam(tabParam)
@@ -330,7 +441,7 @@ class _CareersPageState extends State<CareersPage> {
                                             currentRoute: '/careers'),
                                       ),
                                       Expanded(
-                                        child: SingleChildScrollView(
+                                        child: ScrollWithFooter(
                                           child: Column(
                                             crossAxisAlignment:
                                             CrossAxisAlignment.center,
@@ -376,15 +487,16 @@ class _CareersPageState extends State<CareersPage> {
                                               ),
                                             ],
                                           ),
+                                          // BUG-65 / BUG-33 / BUG-37: footer scrolls with the page.
+                                          footer: widget.showFooter ? _Reveal(
+                                          delay:
+                                          const Duration(milliseconds: 100),
+                                          direction: _SlideDirection.fromBottom,
+                                          duration:
+                                          const Duration(milliseconds: 600),
+                                          child: const AppFooter(),
+                                        ) : null,
                                         ),
-                                      ),
-                                      _Reveal(
-                                        delay:
-                                        const Duration(milliseconds: 100),
-                                        direction: _SlideDirection.fromBottom,
-                                        duration:
-                                        const Duration(milliseconds: 600),
-                                        child: const AppFooter(),
                                       ),
                                     ],
                                   ),

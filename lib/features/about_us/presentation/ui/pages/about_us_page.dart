@@ -10,6 +10,11 @@
 // UPDATED: Added Strategic House images (EN and AR) to Tab 1 "Our Strategy"
 // UPDATED: All device sizes (Desktop, Tablet, Mobile) now display both Strategic House images
 // UPDATED: Responsive design for all screen sizes
+// UPDATED: AboutPage now accepts optional pre-built cubits. The live site
+//          passes nothing and behaves exactly as before — the page creates and
+//          loads its own from Firestore. The ADMIN preview passes in cubits
+//          already seeded with the draft being edited, so the same page code
+//          renders unsaved work without a single network read.
 
 // ignore_for_file: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
@@ -25,6 +30,7 @@ import 'package:website_app/core/custom_svg.dart';
 import 'package:website_app/core/widgets/format_heper.dart';
 
 import '../../../../../core/main_widgets/app_footer.dart';
+import '../../../../../core/widgets/scroll_with_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/appcolors.dart';
 import '../../../../../core/theme/new_theme.dart';
@@ -62,6 +68,10 @@ part '../widgets/mobile_tab_data.dart';
 part '../widgets/mobile_accordion_item.dart';
 part '../widgets/values_grid_mobile.dart';
 
+// BUG-65: used from a part file — referenced here so an IDE
+// "Optimize Imports" can't drop the import.
+typedef _ScrollWithFooter = ScrollWithFooter;
+
 const Color _kDefaultGreen = Color(0xFF2D8C4E);
 const Color _kGreenLight = Color(0xFFE8F5EE);
 const Color _kSurface = Color(0xFFFFFFFF);
@@ -69,18 +79,68 @@ const Color _kDivider = Color(0xFFDDE8DD);
 const Color _kLoaderNeutral = Color(0xFFF5F5F5);
 
 class AboutPage extends StatelessWidget {
-  const AboutPage({super.key});
+  const AboutPage({
+    super.key,
+    this.aboutCubit,
+    this.termsCubit,
+    this.strategyCubit,
+    this.initialTopTab,
+    this.initialSubTab,
+    this.showFooter = true,
+  });
+
+  /// Optional pre-built cubits.
+  ///
+  /// Leave them null — as the live site does — and the page creates its own and
+  /// loads them from Firestore, exactly as before.
+  ///
+  /// The admin preview passes cubits already holding the draft being edited.
+  /// They are provided with `.value`, so nothing calls `load()` on them and no
+  /// network read happens; the page renders unsaved work through the very same
+  /// widgets visitors see.
+  final AboutCubit? aboutCubit;
+  final TermsCubit? termsCubit;
+  final StrategyCubit? strategyCubit;
+
+  /// Which tab to open on, when the caller already knows.
+  ///
+  /// The live site leaves these null and keeps reading `?tab=` from the URL, as
+  /// before. The admin previews pass them so the Strategy screen opens on the
+  /// Our Strategy tab and the Terms screen on Terms / Privacy — their preview
+  /// frame does not take taps, so the tab cannot be picked by hand there.
+  ///
+  /// 0 = About Us · 1 = Our Strategy · 2 = Terms and Conditions ·
+  /// 3 = Privacy Policy. [initialSubTab] picks Vision / Mission / Values inside
+  /// the About Us tab.
+  final int? initialTopTab;
+  final int? initialSubTab;
+
+  /// Whether the site footer is drawn under the page.
+  ///
+  /// The live site always shows it. The admin previews hide it — the preview
+  /// frame is a fixed-height viewport, and the footer takes room the page's own
+  /// content needs; the admin screen carries its own actions below the frame.
+  final bool showFooter;
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => AboutCubit()..load()),
-        BlocProvider(create: (_) => TermsCubit()..load()),
-        BlocProvider(create: (_) => StrategyCubit()..load()),
+        aboutCubit == null
+            ? BlocProvider<AboutCubit>(create: (_) => AboutCubit()..load())
+            : BlocProvider<AboutCubit>.value(value: aboutCubit!),
+        termsCubit == null
+            ? BlocProvider<TermsCubit>(create: (_) => TermsCubit()..load())
+            : BlocProvider<TermsCubit>.value(value: termsCubit!),
+        strategyCubit == null
+            ? BlocProvider<StrategyCubit>(create: (_) => StrategyCubit()..load())
+            : BlocProvider<StrategyCubit>.value(value: strategyCubit!),
       ],
-      child: const _AboutPageView(),
-      // done
-      // test
+      child: _AboutPageView(
+        initialTopTab: initialTopTab,
+        initialSubTab: initialSubTab,
+        showFooter:    showFooter,
+      ),
     );
   }
 }

@@ -4,7 +4,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../../job/domain/base_repository/about_company_repo.dart';
+import '../../domain/base_repository/about_us_company_repo.dart';
 import '../models/about_us_company_model.dart';
 
 

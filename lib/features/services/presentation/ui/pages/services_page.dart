@@ -26,10 +26,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:website_app/core/widgets/format_heper.dart';
+import 'package:website_app/core/widgets/format_helper.dart';
 import 'package:website_app/features/home/data/models/home_model.dart';
 import 'package:website_app/features/services/data/models/services_model.dart';
 
 import '../../../../../core/main_widgets/app_footer.dart';
+import '../../../../../core/widgets/scroll_with_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/app_wight.dart';
 import '../../../../../core/theme/appcolors.dart';
@@ -77,7 +79,13 @@ const int _kMaxBlogPosts = 5;
 
 class ServicesPage extends StatefulWidget {
   final String? scrollTo;
-  const ServicesPage({super.key, this.scrollTo});
+
+  /// Whether the site footer is drawn under the page. The live site always
+  /// shows it; the admin preview hides it, because its frame is a fixed-height
+  /// viewport and the admin screen carries its own actions below it.
+  final bool showFooter;
+
+  const ServicesPage({super.key, this.scrollTo, this.showFooter = true});
   @override
   State<ServicesPage> createState() => _ServicesPageState();
 }
@@ -262,7 +270,7 @@ class _ServicesPageState extends State<ServicesPage> {
 
                               // ✅ Middle content — scrolls, takes all remaining space
                               Expanded(
-                                child: SingleChildScrollView(
+                                child: ScrollWithFooter(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.stretch,
                                     children: [
@@ -290,16 +298,16 @@ class _ServicesPageState extends State<ServicesPage> {
                                       ),
                                     ],
                                   ),
+                                  // BUG-65 / BUG-33 / BUG-37: footer scrolls with the page.
+                                  footer: widget.showFooter ? _Reveal(
+                                  delay: const Duration(milliseconds: 100),
+                                  direction: _SlideDirection.fromBottom,
+                                  duration: const Duration(milliseconds: 600),
+                                  child: const AppFooter(),
+                                ) : null,
                                 ),
                               ),
 
-                              // ✅ Footer — always visible at bottom
-                              _Reveal(
-                                delay: const Duration(milliseconds: 100),
-                                direction: _SlideDirection.fromBottom,
-                                duration: const Duration(milliseconds: 600),
-                                child: const AppFooter(),
-                              ),
                             ],
                           ),
                         ),

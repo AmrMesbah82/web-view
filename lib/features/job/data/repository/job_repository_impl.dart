@@ -5,6 +5,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../../core/utils/flat_codec.dart';
 import '../../domain/base_repository/job_repo.dart';
 import '../models/job_model.dart';
 
@@ -25,30 +26,45 @@ class JobListingRepoImpl implements JobListingRepo {
 
   @override
   Future<List<JobPostModel>> fetchAllJobs() async {
+    // BUG-13: the public Careers / Jobs pages showed NO jobs. Two reasons:
+    //  • a single document that failed to parse (blank number, Timestamp
+    //    date…) threw and emptied the whole list — now each document is
+    //    parsed on its own and a bad one is skipped;
+    //  • orderBy('Last_Updated_At') silently drops every document that lacks
+    //    that field — the list is now sorted in memory instead.
+    //
+    // BUG-01 / BUG-99: the rules now only let visitors read published jobs
+    // (scalar `Public_Listed == true`, written by the admin app). A query must
+    // ask for exactly that, otherwise Firestore refuses the whole query.
+    final query = _collection.where('Public_Listed', isEqualTo: true);
+    QuerySnapshot<Map<String, dynamic>> snapshot;
     try {
-      final snapshot = await _collection
-          .orderBy('postedDate', descending: true)
-          .get(const GetOptions(source: Source.server));
+      snapshot = await query.get(const GetOptions(source: Source.server));
+    } catch (_) {
+      snapshot = await query.get(const GetOptions(source: Source.cache));
+    }
 
-      final jobs = snapshot.docs.map((doc) {
-        return JobPostModel.fromMap(doc.id, doc.data());
-      }).toList();
-
-      return jobs;
-    } catch (e) {
-      // Fallback to cache if server fails
+    final entries = <({JobPostModel job, DateTime stamp})>[];
+    for (final doc in snapshot.docs) {
       try {
-        final snapshot = await _collection
-            .orderBy('postedDate', descending: true)
-            .get(const GetOptions(source: Source.cache));
-        final jobs = snapshot.docs.map((doc) {
-          return JobPostModel.fromMap(doc.id, doc.data());
-        }).toList();
-        return jobs;
-      } catch (cacheError) {
-        rethrow;
+        final job = JobPostModel.fromMap(
+          doc.id,
+          FlatCodec.decode(doc.data(), JobPostModel.flatTemplate),
+        );
+        entries.add((job: job, stamp: _stamp(doc.data()['Last_Updated_At'])));
+      } catch (_) {
+        // skip a malformed job instead of hiding every job
       }
     }
+    entries.sort((a, b) => b.stamp.compareTo(a.stamp));
+    return entries.map((e) => e.job).toList();
+  }
+
+  static DateTime _stamp(dynamic v) {
+    try {
+      if (v != null) return (v as dynamic).toDate() as DateTime;
+    } catch (_) {}
+    return DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -57,16 +73,19 @@ class JobListingRepoImpl implements JobListingRepo {
 
   @override
   Future<JobPostModel?> fetchJobById(String id) async {
+    final DocumentSnapshot<Map<String, dynamic>> doc;
     try {
-      final doc = await _collection.doc(id).get(const GetOptions(source: Source.server));
-      if (!doc.exists || doc.data() == null) {
-        return null;
-      }
-      final job = JobPostModel.fromMap(doc.id, doc.data()!);
-      return job;
-    } catch (e) {
+      doc = await _collection.doc(id).get(const GetOptions(source: Source.server));
+    } on FirebaseException catch (e) {
+      // BUG-99: a removed / draft job is no longer readable by visitors.
+      if (e.code == 'permission-denied') return null;
       rethrow;
     }
+    if (!doc.exists || doc.data() == null) return null;
+    return JobPostModel.fromMap(
+      doc.id,
+      FlatCodec.decode(doc.data()!, JobPostModel.flatTemplate),
+    );
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -153,11 +172,14 @@ class JobListingRepoImpl implements JobListingRepo {
   @override
   Stream<List<JobPostModel>> streamAllJobs() {
     return _collection
-        .orderBy('postedDate', descending: true)
+        .orderBy('Last_Updated_At', descending: true)
         .snapshots()
         .map((snapshot) {
       final jobs = snapshot.docs.map((doc) {
-        return JobPostModel.fromMap(doc.id, doc.data());
+        return JobPostModel.fromMap(
+          doc.id,
+          FlatCodec.decode(doc.data(), JobPostModel.flatTemplate),
+        );
       }).toList();
       return jobs;
     });

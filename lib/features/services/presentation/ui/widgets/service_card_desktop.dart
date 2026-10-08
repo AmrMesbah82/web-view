@@ -44,7 +44,7 @@ class _ServiceCardDesktopState extends State<_ServiceCardDesktop> {
                 style: StyleText.fontSize14Weight400
                     .copyWith(fontSize: 13.sp)),
             SizedBox(height: 6.h),
-            Text(FormatHelper.capitalize(_t(widget.item.description, widget.isRtl)),
+            Text(_t(widget.item.description, widget.isRtl),
                 style: StyleText.fontSize12Weight500.copyWith(
                     color:    AppColors.secondaryBlack,
                     fontSize: 11.sp,

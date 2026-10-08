@@ -76,3 +76,9 @@ Future<void> _preloadSvgImages(List<String> urls) async {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 enum _SlideDirection { fromBottom, fromLeft, fromRight, fromTop }
+
+// BUG-145: one date format per language (EN "29 Sep 2026", AR "٢٩ سبتمبر ٢٠٢٦").
+String _formatDate(DateTime? dt, bool isRtl) {
+  if (dt == null) return '';
+  return FormDateTimeHelper.formatDayMonthYear(dt, arabic: isRtl);
+}

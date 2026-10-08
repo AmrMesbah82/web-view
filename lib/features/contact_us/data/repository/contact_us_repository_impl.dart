@@ -4,61 +4,35 @@
 // UPDATED: SendGrid email calls added after Firestore save
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 
 import '../../domain/base_repository/contact_us_repo.dart';
-import '../../domain/base_repository/sendgrid_repository.dart';
 import '../models/contact_us_model.dart';
 
 class ContactRepoImpl implements ContactRepo {
   // Same collection the admin app reads ('contactSubmissions' — was 'contact_submissions')
   final _col      = FirebaseFirestore.instance.collection('contactSubmissions');
-  final _sendGrid = SendGridRepository();
 
   // ── Submit (public website) ────────────────────────────────────────────────
 
   @override
-  Future<void> submitContact(ContactSubmission submission) async {
-    // 1️⃣ Save to Firestore
-    final doc = _col.doc();
-    await doc.set(submission.copyWith(id: doc.id).toMap());
-
-    // 2️⃣ Send company notification email
+  Future<void> submitContact(
+    ContactSubmission submission, {
+    required String verificationToken,
+  }) async {
+    // BUG-51: the submission is written by the `submitContactForm` Cloud
+    // Function, which first checks the OTP token issued by `verifyOTP`, then
+    // saves to 'contactSubmissions' and sends both e-mails server-side.
+    // Firestore rules no longer allow the public to create submissions
+    // directly, so the phone verification can't be skipped.
     try {
-      await _sendGrid.sendContactNotification(
-        toEmail:           'm.handousa@bayanatz.com',
-        submitterName:     submission.fullName,
-        submitterEmail:    submission.email,
-        submitterPhone:    '${submission.countryCode}${submission.phoneNumber}',
-        subject:           submission.subject,
-        message:           submission.message,
-        isArabic:          submission.preferredLanguage == 'ar',
-        preferredLanguage: submission.preferredLanguage,
-        location:          submission.location,
-        entityName:        submission.entityName,
-        entityType:        submission.entityType,
-        entitySize:        submission.entitySize,
-      );
-    } catch (e) {
-    }
-
-    // 3️⃣ Send confirmation email to submitter
-    try {
-      await _sendGrid.sendContactConfirmation(
-        toEmail:           submission.email,
-        submitterName:     submission.fullName,
-        subject:           submission.subject,
-        message:           submission.message,
-        isArabic:          submission.preferredLanguage == 'ar',
-        preferredLanguage: submission.preferredLanguage,
-        location:          submission.location,
-        entityName:        submission.entityName,
-        entityType:        submission.entityType,
-        entitySize:        submission.entitySize,
-      );
-      // dsfasd
-
-    } catch (e) {
+      await FirebaseFunctions.instance.httpsCallable('submitContactForm').call({
+        'verificationToken': verificationToken,
+        'submission': submission.toMap(),
+      });
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception(e.message ?? 'Your message could not be sent.');
     }
   }
 

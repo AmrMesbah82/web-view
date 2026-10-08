@@ -44,7 +44,7 @@ class _ServiceCardMobile extends StatelessWidget {
             ],
           ),
           SizedBox(height: 8.h),
-          Text(FormatHelper.capitalize(_t(item.description, isRtl)),
+          Text(_t(item.description, isRtl),
               style: StyleText.fontSize12Weight400.copyWith(
                   fontFamily: 'Cairo',
                   fontSize:   12.sp,

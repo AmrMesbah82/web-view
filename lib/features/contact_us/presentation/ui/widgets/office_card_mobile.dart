@@ -50,7 +50,7 @@ class _OfficeCardMobile extends StatelessWidget {
               Text(text,
                   textAlign: TextAlign.center,
                   style: StyleText.fontSize13Weight400.copyWith(
-                      color: Colors.black45, fontSize: 12.sp)),
+                      color: const Color(0xFF797979) /* Figma grey */, fontSize: 12.sp)),
             ],
           ),
         ),

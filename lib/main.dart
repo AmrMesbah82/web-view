@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:website_app/features/about_us/domain/base_repository/about_us_company_repo.dart';
@@ -10,6 +11,7 @@ import 'package:website_app/features/about_us/domain/base_repository/about_us_co
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:website_app/features/about_us/presentation/controller/about_us_company_cubit.dart';
+import 'package:website_app/features/about_us/data/repository/about_company_repository_impl.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -39,7 +41,11 @@ import 'firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   usePathUrlStrategy(); // ← removes the # from URLs
+  // BUG-117: any remaining context.push() also updates the address bar, so
+  // Refresh / Share / Back always match the page that is shown.
+  GoRouter.optionURLReflectsImperativeAPIs = true;
   AppTheme.setCurrentThemeColors();
   runApp(const BayanatzApp());
 }
@@ -168,11 +174,11 @@ class BayanatzApp extends StatelessWidget {
               create: (_) => JobListingCubit(repo: JobListingRepoImpl())..loadJobs(),
             ),
 
-            // BlocProvider<AboutCompanyCubit>(
-            //   create: (_) => AboutCompanyCubit(
-            //     repo: AboutCompanyRepoImp(),
-            //   )..loadAboutCompany(),
-            // ),
+            BlocProvider<AboutCompanyCubit>(
+              create: (_) => AboutCompanyCubit(
+                repo: AboutCompanyRepoImpl(),
+              )..loadAboutCompany(),
+            ),
 
             BlocProvider<DepartmentCubit>(
               create: (_) => DepartmentCubit(

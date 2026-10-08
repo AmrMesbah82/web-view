@@ -4,7 +4,8 @@ class _OtpDialog extends StatefulWidget {
   final String       phoneNumber;
   final bool         isRtl;
   final Color        primaryColor;
-  final VoidCallback onVerified;
+  /// Receives the one-time verification token from the server (BUG-51).
+  final ValueChanged<String> onVerified;
 
   const _OtpDialog({
     required this.phoneNumber,
@@ -141,7 +142,7 @@ class _OtpDialogState extends State<_OtpDialog> {
       textDirection: widget.isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: BlocListener<ContactOtpCubit, ContactOtpState>(
         listener: (context, state) {
-          if (state is OtpVerified) widget.onVerified();
+          if (state is OtpVerified) widget.onVerified(state.verificationToken);
           if (state is OtpError) {
             setState(() => _hasError = true);
           }
@@ -169,12 +170,32 @@ class _OtpDialogState extends State<_OtpDialog> {
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // ── SVG Illustration ──
+                      // ── BUG-14: close (X) button ──
+                      Align(
+                        alignment: AlignmentDirectional.topEnd,
+                        child: IconButton(
+                          tooltip: widget.isRtl ? 'إغلاق' : 'Close',
+                          icon: Icon(Icons.close,
+                              size: isMobile ? 20 : 22.sp,
+                              color: Colors.grey.shade700),
+                          onPressed: () {
+                            context.read<ContactOtpCubit>().reset();
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ),
+                      // ── SVG Illustration ── (BUG-14: fallback icon instead
+                      // of a blank area if the asset can't be loaded)
                       SvgPicture.asset(
                         'assets/images/mobile_code_dialog.svg',
                         width:  isMobile ? 120 : 140.w,
                         height: isMobile ? 100 : 120.h,
                         fit:    BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.sms_outlined,
+                          size:  isMobile ? 72 : 84.sp,
+                          color: widget.primaryColor,
+                        ),
                       ),
                       SizedBox(height: isMobile ? 20 : 24.h),
 

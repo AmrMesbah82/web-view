@@ -49,6 +49,19 @@ String _localizeDigits(String input, bool isRtl) {
 /// The "Last Updated: " / "آخر تحديث: " prefix.
 String _lastUpdatedPrefix(bool isRtl) => isRtl ? 'آخر تحديث: ' : 'Last Updated: ';
 
+/// BUG-17: shown instead of an empty Terms / Privacy text.
+String _pendingDocText(bool isRtl, String attachEnUrl, String attachArUrl) {
+  final bool hasFile = attachEnUrl.isNotEmpty || attachArUrl.isNotEmpty;
+  if (hasFile) {
+    return isRtl
+        ? 'يمكنك تحميل النسخة الكاملة من الروابط أدناه.'
+        : 'You can download the full document using the links below.';
+  }
+  return isRtl
+      ? 'يتم إعداد هذه الصفحة حاليًا. للاستفسارات يرجى التواصل معنا من صفحة "تواصل معنا".'
+      : 'This page is being prepared. For any questions, please reach us through the Contact Us page.';
+}
+
 /// Formats a date bilingually with localized month names AND numerals:
 /// EN → "12 Mar 2026", AR → "١٢ مارس ٢٠٢٦". Null renders as an em dash.
 String _formatAboutDate(DateTime? d, bool isRtl) {
@@ -75,7 +88,7 @@ String _downloadDocLabel({
 }
 
 // Document titles used by the Terms / Privacy download buttons.
-const String _kTermsTitleEn   = 'Terms and Conditions';
+const String _kTermsTitleEn   = 'Terms and Conditions'; // BUG-143 + Figma: one name everywhere
 const String _kTermsTitleAr   = 'الشروط والأحكام';
 const String _kPrivacyTitleEn = 'Privacy Policy';
 const String _kPrivacyTitleAr = 'سياسة الخصوصية';

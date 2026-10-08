@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../core/custom_svg.dart';
 import '../../../../../core/main_widgets/app_footer.dart';
+import '../../../../../core/widgets/scroll_with_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/appcolors.dart';
 import '../../../../home/presentation/controller/home_cubit.dart';
@@ -15,6 +16,8 @@ import '../../../data/models/job_model.dart';
 import '../../controller/job_cubit.dart';
 import '../../controller/job_state.dart';
 import 'package:website_app/core/theme/new_theme.dart';
+import 'package:website_app/core/widgets/format_heper.dart';
+import 'package:website_app/core/widgets/format_helper.dart';
 
 part '../widgets/localization_helper.dart';
 part '../widgets/filter_tab.dart';
@@ -71,10 +74,15 @@ class _JobListingsPageState extends State<JobListingsPage> {
     context.read<HomeCmsCubit>().load();
   }
 
-  List<JobPostModel> _getActiveJobs(List<JobPostModel> all) => all
-      .where((j) =>
-  j.status == JobStatus.active && j.publishStatus == 'published')
-      .toList();
+  List<JobPostModel> _getActiveJobs(List<JobPostModel> all) {
+    // BUG-103: a job the admin shows as "Scheduled" (hiring starts later) was
+    // listed because its STORED status was still "Active". Same rule as the
+    // admin now: status + hiring window + max applications (jobOpenStateOf).
+    return all.where((j) {
+      if (j.publishStatus == 'draft') return false;
+      return j.openState == JobOpenState.open;
+    }).toList();
+  }
 
   /// Returns localized display label + raw EN key for each unique department.
   /// Uses hardcoded [_kDeptAr] map for Arabic translation.
@@ -113,7 +121,12 @@ class _JobListingsPageState extends State<JobListingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final double contentW = (339.w * 4) + (12.w * 3);
+    // BUG-134: on phones the title and "All" chip touched the screen edge
+    // (≈4 px). Same 16 px side margin as the other pages.
+    final double screenW = MediaQuery.sizeOf(context).width;
+    final bool isPhone = screenW < 600;
+    final double contentW =
+        isPhone ? screenW - 32 : (339.w * 4) + (12.w * 3);
 
     // ✅ Wrap with HomeCmsCubit BlocBuilder for dynamic background color
     return BlocBuilder<HomeCmsCubit, HomeCmsState>(
@@ -127,6 +140,16 @@ class _JobListingsPageState extends State<JobListingsPage> {
               data.branding.backgroundColor,
               fallback: AppColors.background),
           _ => AppColors.background,
+        };
+
+        // ✅ Accent/text color driven by the CMS branding (mainPage/main model),
+        // NOT a hardcoded green. Falls back to the old green until branding loads.
+        final Color primaryColor = switch (homeState) {
+          HomeCmsLoaded(:final data) =>
+              _parseColor(data.branding.primaryColor, fallback: _kGreen),
+          HomeCmsSaved(:final data) =>
+              _parseColor(data.branding.primaryColor, fallback: _kGreen),
+          _ => _kGreen,
         };
 
         return BlocBuilder<LanguageCubit, LanguageState>(
@@ -147,9 +170,9 @@ class _JobListingsPageState extends State<JobListingsPage> {
                           elevation: 0,
                           child: AppNavbar(currentRoute: '/careers'),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Center(
-                            child: CircularProgressIndicator(color: _kGreen),
+                            child: CircularProgressIndicator(color: primaryColor),
                           ),
                         ),
                         const AppFooter(),
@@ -191,15 +214,15 @@ class _JobListingsPageState extends State<JobListingsPage> {
                           child: AppNavbar(currentRoute: '/careers'),
                         ),
                         Expanded(
-                          child: SingleChildScrollView(
+                          child: ScrollWithFooter(
                             child: SizedBox(
                               width: double.infinity,
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  SizedBox(height: 48.h),
+                                  SizedBox(height: 40.h),
                                   SizedBox(
-                                    width: 1000.w,
+                                    width: isPhone ? screenW : 1015.w,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
@@ -210,9 +233,9 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                               l.heroTitle,
                                               textAlign: l.isAr ? TextAlign.right : TextAlign.left,
                                               style: StyleText.fontSize14Weight400.copyWith(
-                                                fontSize: 40.sp,
+                                                fontSize:48.sp,
                                                 fontWeight: FontWeight.w700,
-                                                color: _kGreen,
+                                                color: primaryColor,
                                               ),
                                             ),
                                           ),
@@ -225,7 +248,7 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                               padding: EdgeInsets.all(6.r),
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
-                                                borderRadius: BorderRadius.circular(10.r),
+                                                  borderRadius: BorderRadius.circular(6.r),
                                               ),
                                               child: SingleChildScrollView(
                                                 scrollDirection: Axis.horizontal,
@@ -235,12 +258,14 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                                     _FilterTab(
                                                       label: l.allLabel,
                                                       isSelected: _selectedDept == null,
+                                                      primary: primaryColor,
                                                       onTap: () => setState(() => _selectedDept = null),
                                                     ),
                                                     ...departments.map(
                                                           (dept) => _FilterTab(
                                                         label: dept.display,
                                                         isSelected: _selectedDept == dept.key,
+                                                        primary: primaryColor,
                                                         onTap: () => setState(() => _selectedDept = dept.key),
                                                       ),
                                                     ),
@@ -260,7 +285,7 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                               style: StyleText.fontSize22Weight700.copyWith(
                                                 fontSize: 22.sp,
                                                 fontWeight: FontWeight.w700,
-                                                color: Colors.black45,
+                                                color: const Color(0xFF797979) /* Figma grey */,
                                               ),
                                             ),
                                           ),
@@ -294,9 +319,9 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                                         style: StyleText.fontSize12Weight600.copyWith(
                                                           fontSize: 12.sp,
                                                           fontWeight: FontWeight.w600,
-                                                          color: _kGreen,
+                                                          color: primaryColor,
                                                           decoration: TextDecoration.underline,
-                                                          decorationColor: _kGreen,
+                                                          decorationColor: primaryColor,
                                                         ),
                                                       ),
                                                     ),
@@ -305,38 +330,69 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                               ),
                                             ),
                                           ),
-                                        Center(
-                                          child: SizedBox(
-                                            width: contentW,
-                                            child: Column(
-                                              children: filteredJobs.isEmpty
-                                                  ? [
-                                                Padding(
-                                                  padding: EdgeInsets.symmetric(vertical: 48.h),
-                                                  child: Text(
-                                                    _selectedDept == null
-                                                        ? l.noJobsAll
-                                                        : l.noJobsDept(
-                                                      departments
-                                                          .firstWhere(
-                                                            (d) => d.key == _selectedDept,
-                                                        orElse: () => (display: _selectedDept!, key: _selectedDept!),
-                                                      )
-                                                          .display,
+                                        // ── Job list (or empty illustration) ──────────────
+                                        // BUG-125: the empty list showed only an
+                                        // illustration — now a message + Contact link.
+                                        if (filteredJobs.isEmpty)
+                                          Center(
+                                            child: SizedBox(
+                                              width: contentW,
+                                              child: Column(
+                                                children: [
+                                                  CustomSvg(assetPath: "assets/null.svg", width: 200.sp, height: 200.sp,),
+                                                  SizedBox(height: 12.h),
+                                                  Text(
+                                                    _selectedDept == null ? l.noJobsAll : l.noJobsDept(_selectedDept!),
+                                                    textAlign: TextAlign.center,
+                                                    style: StyleText.fontSize16Weight600.copyWith(
+                                                      fontSize: 16.sp,
+                                                      color: AppColors.text,
                                                     ),
-                                                    style: StyleText.fontSize14Weight400.copyWith(fontSize: 14.sp, color: Colors.black45),
                                                   ),
-                                                ),
-                                              ]
-                                                  : filteredJobs
-                                                  .map((job) => Padding(
-                                                padding: EdgeInsets.only(bottom: 16.h),
-                                                child: _JobCard(job: job, l: l),
-                                              ))
-                                                  .toList(),
+                                                  SizedBox(height: 6.h),
+                                                  Text(
+                                                    l.checkBackSoon,
+                                                    textAlign: TextAlign.center,
+                                                    style: StyleText.fontSize14Weight400.copyWith(
+                                                      fontSize: 13.sp,
+                                                      color: AppColors.secondaryText,
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 12.h),
+                                                  TextButton(
+                                                    onPressed: () => context.go('/contact'),
+                                                    child: Text(
+                                                      l.contactUs,
+                                                      style: StyleText.fontSize14Weight600.copyWith(
+                                                        fontSize: 14.sp,
+                                                        color: primaryColor,
+                                                        decoration: TextDecoration.underline,
+                                                        decorationColor: primaryColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          )
+                                        else
+                                          Center(
+                                            child: SizedBox(
+                                              width: contentW,
+                                              child: Column(
+                                                children: [
+                                                  for (final job in filteredJobs) ...[
+                                                    _JobCard(
+                                                      job: job,
+                                                      l: l,
+                                                      primary: primaryColor,
+                                                    ),
+                                                    SizedBox(height: 16.h),
+                                                  ],
+                                                ],
+                                              ),
                                             ),
                                           ),
-                                        ),
                                         SizedBox(height: 64.h),
                                       ],
                                     ),
@@ -344,9 +400,10 @@ class _JobListingsPageState extends State<JobListingsPage> {
                                 ],
                               ),
                             ),
+                            // BUG-65: footer scrolls with the page (was pinned).
+                            footer: const AppFooter(),
                           ),
                         ),
-                        const AppFooter(),
                       ],
                     ),
                   ),

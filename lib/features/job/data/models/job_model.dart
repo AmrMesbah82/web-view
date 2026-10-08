@@ -60,10 +60,20 @@ extension WorkTypeExt on WorkType {
   String get label {
     switch (this) {
       case WorkType.onSite: return 'On Site';
-      case WorkType.remote: return 'Remotely';
+      case WorkType.remote: return 'Remotely'; // Figma job page: "Work Type: Remotely"
       case WorkType.hybrid: return 'Hybrid';
     }
   }
+
+  String get labelAr {
+    switch (this) {
+      case WorkType.onSite: return 'في الموقع';
+      case WorkType.remote: return 'عن بُعد';
+      case WorkType.hybrid: return 'هجين';
+    }
+  }
+
+  String localized(bool isAr) => isAr ? labelAr : label;
 
   static WorkType fromString(String s) {
     switch (s.toLowerCase()) {
@@ -86,6 +96,15 @@ extension EmploymentTypeExt on EmploymentType {
       case EmploymentType.partTime: return 'Part Time';
     }
   }
+
+  String get labelAr {
+    switch (this) {
+      case EmploymentType.fullTime: return 'دوام كامل';
+      case EmploymentType.partTime: return 'دوام جزئي';
+    }
+  }
+
+  String localized(bool isAr) => isAr ? labelAr : label;
 
   static EmploymentType fromString(String s) {
     switch (s.toLowerCase()) {
@@ -110,6 +129,17 @@ extension ExperienceLevelExt on ExperienceLevel {
     }
   }
 
+  String get labelAr {
+    switch (this) {
+      case ExperienceLevel.intern:     return 'متدرب';
+      case ExperienceLevel.junior:     return 'مبتدئ';
+      case ExperienceLevel.senior:     return 'خبير';
+      case ExperienceLevel.leadership: return 'قيادي';
+    }
+  }
+
+  String localized(bool isAr) => isAr ? labelAr : label;
+
   static ExperienceLevel fromString(String s) {
     switch (s.toLowerCase()) {
       case 'intern':     return ExperienceLevel.intern;
@@ -121,7 +151,7 @@ extension ExperienceLevelExt on ExperienceLevel {
   }
 }
 
-enum EmploymentDuration { open, month, week }
+enum EmploymentDuration { open, month, week, year }
 
 extension EmploymentDurationExt on EmploymentDuration {
   String get label {
@@ -129,14 +159,27 @@ extension EmploymentDurationExt on EmploymentDuration {
       case EmploymentDuration.open:  return 'Open';
       case EmploymentDuration.month: return 'Month';
       case EmploymentDuration.week:  return 'Week';
+      case EmploymentDuration.year:  return 'Year'; // admin BUG-47 added "Year"
     }
   }
+
+  String get labelAr {
+    switch (this) {
+      case EmploymentDuration.open:  return 'مفتوح';
+      case EmploymentDuration.month: return 'شهر';
+      case EmploymentDuration.week:  return 'أسبوع';
+      case EmploymentDuration.year:  return 'سنة';
+    }
+  }
+
+  String localized(bool isAr) => isAr ? labelAr : label;
 
   static EmploymentDuration fromString(String s) {
     switch (s.toLowerCase()) {
       case 'open':  return EmploymentDuration.open;
       case 'month': return EmploymentDuration.month;
       case 'week':  return EmploymentDuration.week;
+      case 'year':  return EmploymentDuration.year;
       default:      return EmploymentDuration.open;
     }
   }
@@ -282,6 +325,9 @@ class JobPostModel {
   // Job Information
   final BilingualTextJob title;
   final String department;
+
+  /// Office location chosen in admin (On Site / Hybrid jobs).
+  final String location;
   final WorkType workType;
   final EmploymentType employmentType;
   final String employmentDurationText; // e.g. "3 Weeks"
@@ -318,6 +364,7 @@ class JobPostModel {
     required this.id,
     required this.title,
     this.department = '',
+    this.location = '',
     this.workType = WorkType.onSite,
     this.employmentType = EmploymentType.fullTime,
     this.employmentDurationText = '',
@@ -352,12 +399,40 @@ class JobPostModel {
     ],
   );
 
+  // BUG-13: tolerant readers. One job saved with a blank number ("" — see
+  // BUG-28) or a Timestamp date used to throw inside fromMap, which failed the
+  // WHOLE list, so the public Careers / Jobs pages showed no jobs at all.
+  static int _asInt(dynamic v) {
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v.trim()) ?? 0;
+    return 0;
+  }
+
+  static double _asDouble(dynamic v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v.trim()) ?? 0;
+    return 0;
+  }
+
+  static DateTime? _asDate(dynamic v) {
+    if (v == null) return null;
+    if (v is DateTime) return v;
+    if (v is String) return v.trim().isEmpty ? null : DateTime.tryParse(v);
+    if (v is num) return DateTime.fromMillisecondsSinceEpoch(v.toInt());
+    try {
+      return (v as dynamic).toDate() as DateTime; // Firestore Timestamp
+    } catch (_) {
+      return null;
+    }
+  }
+
   factory JobPostModel.fromMap(String id, Map<String, dynamic> map) {
     return JobPostModel(
       id: id,
       title: BilingualTextJob.fromMap(
           (map['title'] as Map<String, dynamic>?) ?? {}),
       department: map['department'] as String? ?? '',
+      location: map['location'] as String? ?? '',
       workType:
       WorkTypeExt.fromString(map['workType'] as String? ?? 'On Site'),
       employmentType: EmploymentTypeExt.fromString(
@@ -368,8 +443,8 @@ class JobPostModel {
           map['employmentDurationType'] as String? ?? 'open'),
       experienceLevel: ExperienceLevelExt.fromString(
           map['experienceLevel'] as String? ?? 'junior'),
-      salaryMin: (map['salaryMin'] as num?)?.toDouble() ?? 0,
-      salaryMax: (map['salaryMax'] as num?)?.toDouble() ?? 0,
+      salaryMin: _asDouble(map['salaryMin']),
+      salaryMax: _asDouble(map['salaryMax']),
       salaryCurrency: map['salaryCurrency'] as String? ?? 'SAR',
       requiredQualification: BilingualTextJob.fromMap(
           (map['requiredQualification'] as Map<String, dynamic>?) ?? {}),
@@ -388,12 +463,12 @@ class JobPostModel {
           .map((b) => BenefitItem.fromMap(b))
           .toList(),
       hiringStartDate: map['hiringStartDate'] != null
-          ? DateTime.tryParse(map['hiringStartDate'] as String)
+          ? _asDate(map['hiringStartDate'])
           : null,
       hiringEndDate: map['hiringEndDate'] != null
-          ? DateTime.tryParse(map['hiringEndDate'] as String)
+          ? _asDate(map['hiringEndDate'])
           : null,
-      maxApplications: map['maxApplications'] as int? ?? 0,
+      maxApplications: _asInt(map['maxApplications']),
       requiredDocuments:
       ((map['requiredDocuments'] as List<dynamic>?) ?? [])
           .whereType<Map<String, dynamic>>()
@@ -402,12 +477,12 @@ class JobPostModel {
       status: JobStatusExt.fromString(
           map['status'] as String? ?? 'drafted'),
       postedDate: map['postedDate'] != null
-          ? DateTime.tryParse(map['postedDate'] as String)
+          ? _asDate(map['postedDate'])
           : null,
       endedDate: map['endedDate'] != null
-          ? DateTime.tryParse(map['endedDate'] as String)
+          ? _asDate(map['endedDate'])
           : null,
-      totalApplications: map['totalApplications'] as int? ?? 0,
+      totalApplications: _asInt(map['totalApplications']),
       publishStatus: map['publishStatus'] as String? ?? 'draft',
     );
   }
@@ -440,6 +515,52 @@ class JobPostModel {
     'totalApplications': totalApplications,
     'publishStatus': publishStatus,
   };
+
+  /// Nested template for [FlatCodec.decode] — MUST mirror the admin app's
+  /// JobPostModel.flatTemplate so the FLAT VERSIONED docs written by the admin
+  /// (jobListings collection) decode correctly here. One populated sample per
+  /// list so the codec knows each element's sub-keys.
+  static Map<String, dynamic> get flatTemplate => {
+        'title': {'en': '', 'ar': ''},
+        'department': '',
+        'location': '',
+        'workType': '',
+        'employmentType': '',
+        'employmentDurationText': '',
+        'employmentDurationType': '',
+        'experienceLevel': '',
+        'salaryMin': 0,
+        'salaryMax': 0,
+        'salaryCurrency': '',
+        'requiredQualification': {'en': '', 'ar': ''},
+        'requiredSkills': [
+          {
+            'id': '',
+            'name': {'en': '', 'ar': ''}
+          }
+        ],
+        'aboutThisPosition': {'en': '', 'ar': ''},
+        'requirements': {'en': '', 'ar': ''},
+        'preferredSkills': {'en': '', 'ar': ''},
+        'benefits': [
+          {
+            'id': '',
+            'title': {'en': '', 'ar': ''},
+            'shortDescription': {'en': '', 'ar': ''},
+          }
+        ],
+        'hiringStartDate': '',
+        'hiringEndDate': '',
+        'maxApplications': 0,
+        'requiredDocuments': [
+          {'id': '', 'name': '', 'nameAr': '', 'docType': '', 'isRequired': true}
+        ],
+        'status': '',
+        'postedDate': '',
+        'endedDate': '',
+        'totalApplications': 0,
+        'publishStatus': '',
+      };
 
   JobPostModel copyWith({
     String? id,
@@ -594,4 +715,59 @@ class JobPostModel {
       publishStatus: 'published',
     ),
   ];
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// BUG-99 / BUG-103: can a visitor see / apply to this job?
+// The admin derives "Scheduled" / "Ended" from the hiring dates while the
+// stored status can still say "Active" (older jobs), so the public site uses
+// the SAME rule: stored status + hiring window + max applications.
+// ═══════════════════════════════════════════════════════════════════════════
+enum JobOpenState { open, notStarted, closed }
+
+JobOpenState jobOpenStateOf({
+  required String status,
+  DateTime? start,
+  DateTime? end,
+  int maxApplications = 0,
+  int totalApplications = 0,
+  DateTime? now,
+}) {
+  final s = status.trim().toLowerCase();
+  if (s != 'active' && s != 'scheduled') return JobOpenState.closed;
+  final n = now ?? DateTime.now();
+  if (end != null &&
+      n.isAfter(DateTime(end.year, end.month, end.day, 23, 59, 59))) {
+    return JobOpenState.closed;
+  }
+  if (maxApplications > 0 && totalApplications >= maxApplications) {
+    return JobOpenState.closed;
+  }
+  if (start != null && n.isBefore(DateTime(start.year, start.month, start.day))) {
+    return JobOpenState.notStarted;
+  }
+  return JobOpenState.open;
+}
+
+/// Same check on the decoded (nested) map the job / apply pages read.
+JobOpenState jobOpenStateOfMap(Map<String, dynamic> job) {
+  DateTime? date(dynamic v) =>
+      v is String && v.trim().isNotEmpty ? DateTime.tryParse(v) : null;
+  int asInt(dynamic v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
+  return jobOpenStateOf(
+    status: job['status'] as String? ?? '',
+    start: date(job['hiringStartDate']),
+    end: date(job['hiringEndDate']),
+    maxApplications: asInt(job['maxApplications']),
+    totalApplications: asInt(job['totalApplications']),
+  );
+}
+
+extension JobPostOpenState on JobPostModel {
+  JobOpenState get openState => jobOpenStateOf(
+        status: status.label,
+        start: hiringStartDate,
+        end: hiringEndDate,
+        maxApplications: maxApplications,
+        totalApplications: totalApplications,
+      );
 }

@@ -5,6 +5,7 @@ class _MobileBody extends StatelessWidget {
       phoneCtrl, entityNameCtrl, subjectCtrl, messageCtrl,
       otherLanguageCtrl; // ← NEW
   final bool   submitted, isRtl;
+  final bool   phoneInvalid; // BUG-102
   final String phoneCode, preferredLanguage;
   final String? selectedLocation, selectedEntityType, selectedEntitySize;
   final Color  primaryColor;
@@ -22,6 +23,7 @@ class _MobileBody extends StatelessWidget {
     required this.entityNameCtrl,   required this.subjectCtrl,
     required this.messageCtrl,      required this.otherLanguageCtrl,
     required this.submitted,
+    this.phoneInvalid = false,
     required this.phoneCode,        required this.preferredLanguage,
     required this.selectedLocation, required this.selectedEntityType,
     required this.selectedEntitySize,
@@ -72,6 +74,7 @@ class _MobileBody extends StatelessWidget {
               otherLanguageCtrl:   otherLanguageCtrl, // ← NEW
               submitted:           submitted,
               phoneCode:           phoneCode,
+              phoneInvalid:        phoneInvalid,
               preferredLanguage:   preferredLanguage,
               selectedLocation:    selectedLocation,
               selectedEntityType:  selectedEntityType,

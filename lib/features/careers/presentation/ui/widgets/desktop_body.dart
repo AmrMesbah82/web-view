@@ -71,12 +71,17 @@ class _DesktopBody extends StatelessWidget {
             delay: const Duration(milliseconds: 60),
             direction: _SlideDirection.fromLeft,
             duration: const Duration(milliseconds: 650),
-            child: Text(
-              _t('Careers', 'الوظائف', isRtl),
-              style: StyleText.fontSize45Weight600.copyWith(
-                fontSize: titleFz,
-                fontWeight: FontWeight.w700,
-                color: primary,
+            // BUG-142: the intro paragraph sits 10.sp inside its white card,
+            // so the title gets the same inset → one left edge.
+            child: Padding(
+              padding: EdgeInsetsDirectional.only(start: 10.sp),
+              child: Text(
+                _t('Careers', 'الوظائف', isRtl),
+                style: StyleText.fontSize45Weight600.copyWith(
+                  fontSize: titleFz,
+                  fontWeight: FontWeight.w700,
+                  color: primary,
+                ),
               ),
             ),
           ),
@@ -235,6 +240,10 @@ class _DesktopBody extends StatelessWidget {
                   2 => teamTitle,
                   _ => '',
                 };
+                // BUG-143: the tab said "Why Join Our Team?" while the footer
+                // and admin say "Why Join Our Team" — one name, no "?".
+                final String cleanOverride =
+                    tabLabelOverride.trim().replaceFirst(RegExp(r'[?؟]\s*$'), '');
                 return GestureDetector(
                   onTap: () => onTabChange(i),
                   child: MouseRegion(
@@ -267,7 +276,13 @@ class _DesktopBody extends StatelessWidget {
                             decoration: BoxDecoration(
                               borderRadius:
                               BorderRadius.circular(8.r),
-                              color: selected ? primary : secondary,
+                              // BUG-137: primary icon on a DARK secondary
+                              // tile was 2.58:1 → light brand tint instead.
+                              color: selected
+                                  ? primary
+                                  : (secondary.computeLuminance() < 0.2
+                                      ? Color.lerp(primary, Colors.white, 0.85)!
+                                      : secondary),
                             ),
                             child: Center(
                               child: tabIconUrl.isNotEmpty
@@ -298,8 +313,8 @@ class _DesktopBody extends StatelessWidget {
                           ),
                           SizedBox(width: 6.w),
                           Text(
-                            tabLabelOverride.isNotEmpty
-                                ? tabLabelOverride
+                            cleanOverride.isNotEmpty
+                                ? cleanOverride
                                 : _tabs[i].label(isRtl),
                             style:
                             StyleText.fontSize14Weight400.copyWith(
@@ -309,7 +324,7 @@ class _DesktopBody extends StatelessWidget {
                                   : FontWeight.w500,
                               color: selected
                                   ? primary
-                                  : Colors.black54,
+                                  : const Color(0xFF797979), // Figma grey
                             ),
                           ),
                         ],

@@ -14,10 +14,12 @@
 //          Navbar background driven by HomeCmsCubit → HomePageModel.branding.headerFooterColor
 
 import 'package:flutter/material.dart';
+import '../widgets/smart_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:website_app/core/widgets/format_heper.dart';
 
 import '../../features/home/data/models/home_model.dart';
 import '../../features/home/presentation/controller/home_cubit.dart';
@@ -148,14 +150,26 @@ List<({String label, String route, String svgAsset})> _getVisibleNavItems(
   // count, names, order, routes and visibility all reflect the CMS exactly.
   // Fall back to the default tabs only until the CMS has loaded (so we never
   // show extra/hardcoded tabs like "Careers" that the admin removed).
+  // The MAIN navbar reads the Main-page nav items (mainPage/main), exposed on
+  // the model as [mainNavButtons]. This is a SEPARATE feature from the Home
+  // page nav cards ([navButtons], homePage/home_page) — editing one never
+  // affects the other.
   List<NavButtonModel> navButtons = switch (cmsState) {
-    HomeCmsLoaded(:final data) => data.navButtons,
-    HomeCmsSaved(:final data)  => data.navButtons,
+    HomeCmsLoaded(:final data) => data.mainNavButtons,
+    HomeCmsSaved(:final data)  => data.mainNavButtons,
     _                          => const <NavButtonModel>[],
   };
   if (navButtons.isEmpty) {
     navButtons = HomePageModel.defaultModel.navButtons;
   }
+
+  // Defensive: dedupe by route (keep the FIRST occurrence, i.e. the admin's
+  // order). Older saves could contain two buttons with the same route, which
+  // rendered ghost tabs (e.g. a second "Careers").
+  final seenRoutes = <String>{};
+  navButtons = navButtons
+      .where((b) => b.route.isNotEmpty && seenRoutes.add(b.route))
+      .toList();
 
   final bool isAr = languageCode == 'ar';
 
@@ -171,12 +185,11 @@ List<({String label, String route, String svgAsset})> _getVisibleNavItems(
           ))
       .toList();
 
-  // ── Always expose a "Home" tab that routes to '/'. The admin's nav items
-  // (Services / About / Contact / Careers) don't include Home, so without this
-  // there was no way to navigate back to the home page except the logo.
-  // Only inject it when the CMS hasn't already defined a '/' route, to avoid
-  // showing a duplicate Home tab.
-  final bool hasHome = items.any((e) => e.route == '/');
+  // ── Fallback only: if the CMS doc predates the fixed 5-item nav and has NO
+  // '/' button at all, expose a "Home" tab so users can get back to the home
+  // page. Checked against the RAW CMS list (before the status filter) so an
+  // admin who HIDES Home in edit mode is respected — nothing is re-injected.
+  final bool hasHome = navButtons.any((b) => b.route == '/');
   if (!hasHome) {
     items.insert(0, (
       label:    isAr ? 'الرئيسية' : 'Home',
@@ -272,42 +285,43 @@ class _NavbarDesktop extends StatelessWidget {
 
         return Directionality(
           textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: ((MediaQuery.of(context).size.width - contentW) / 2)
-                  .clamp(16.0, double.infinity),
-              right: ((MediaQuery.of(context).size.width - contentW) / 2)
-                  .clamp(16.0, double.infinity),
-              top: 20.h,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color:        navbarBg, // ✅ CMS-driven background
+              borderRadius: BorderRadius.circular(8.r),
             ),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-              decoration: BoxDecoration(
-                color:        navbarBg, // ✅ CMS-driven background
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const _BayanatzLogo(),
-                  Row(
-                    children: navItems
-                        .map((e) => _NavItem(
-                      key:          ValueKey('${e.route}_${langState.locale.languageCode}'),
-                      label:        e.label,
-                      route:        e.route,
-                      currentRoute: currentRoute,
-                      primary:      primary,
-                      onItemTap:    onItemTap,
-                    ))
-                        .toList(),
-                  ),
-                  _LanguageToggle(
+            // BUG-140: the menu was centred in the space BETWEEN the logo and
+            // the language box (≈30 px left of the page centre). It is now
+            // centred on the bar itself; logo / toggle sit at the two ends.
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: _BayanatzLogo(),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: navItems
+                      .map((e) => _NavItem(
+                    key:          ValueKey('${e.route}_${langState.locale.languageCode}'),
+                    label:        FormatHelper.capitalize(e.label),
+                    route:        e.route,
+                    currentRoute: currentRoute,
+                    primary:      primary,
+                    onItemTap:    onItemTap,
+                  ))
+                      .toList(),
+                ),
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: _LanguageToggle(
                     primary:   primary,
                     secondary: _secondaryFromState(cmsState),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -349,7 +363,6 @@ class _NavbarMobile extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             child: Container(
               decoration: BoxDecoration(
-                color:        navbarBg, // ✅ CMS-driven background
                 borderRadius: BorderRadius.circular(6.r),
               ),
               child: Padding(
@@ -358,7 +371,11 @@ class _NavbarMobile extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const _BayanatzLogo(rawSize: true),
-                    GestureDetector(
+                    // BUG-138: was announced as an unnamed "button".
+                    Semantics(
+                      button: true,
+                      label: isRtl ? 'فتح القائمة' : 'Open menu',
+                      child: GestureDetector(
                       onTap: () => _openDrawer(context),
                       child: Container(
                         width:  36.w,
@@ -368,6 +385,7 @@ class _NavbarMobile extends StatelessWidget {
                         child: Icon(Icons.menu_rounded,
                             color: AppColors.textButton, size: 20.sp),
                       ),
+                    ),
                     ),
                   ],
                 ),
@@ -441,7 +459,10 @@ class _FullScreenDrawer extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const _BayanatzLogo(rawSize: true),
-                        GestureDetector(
+                        Semantics(
+                          button: true,
+                          label: 'Close menu / إغلاق القائمة', // BUG-138
+                          child: GestureDetector(
                           onTap: () => Navigator.of(context).pop(),
                           child: Container(
                             width:  36.w,
@@ -453,6 +474,7 @@ class _FullScreenDrawer extends StatelessWidget {
                             child: Icon(Icons.menu_rounded,
                                 color: primary, size: 20.sp),
                           ),
+                        ),
                         ),
                       ],
                     ),
@@ -563,13 +585,14 @@ class _BayanatzLogo extends StatelessWidget {
           _                          => '',
         };
 
+        // BUG-68 / BUG-18: SVG or bitmap logo, bundled logo if it fails.
         final Widget logoWidget = logoUrl.isNotEmpty
-            ? SvgPicture.network(
+            ? SmartNetworkImage(
           logoUrl,
           width:  sz,
           height: sz,
           fit:    BoxFit.fill,
-          placeholderBuilder: (_) => Image(
+          fallback: Image(
             image:  const AssetImage("assets/images/logo.jpg"),
             width:  sz,
             height: sz,
@@ -583,7 +606,11 @@ class _BayanatzLogo extends StatelessWidget {
           fit:    BoxFit.fill,
         );
 
-        return GestureDetector(
+        // BUG-138: the logo button had no accessible name.
+        return Semantics(
+          button: true,
+          label: 'Bayanatz home',
+          child: GestureDetector(
           onTap: () => context.go('/'),
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
@@ -592,6 +619,7 @@ class _BayanatzLogo extends StatelessWidget {
               child: logoWidget,
             ),
           ),
+        ),
         );
       },
     );
@@ -757,7 +785,7 @@ class _LangBtn extends StatelessWidget {
             style: StyleText.fontSize11Weight600.copyWith(
               fontSize:   11.sp,
               fontWeight: AppFontWeights.semiBold,
-              color:      active ? Colors.white : AppColors.secondaryBlack,
+              color:      active ? Colors.white : const Color(0xFF797979), // Figma
             ),
           ),
         ),

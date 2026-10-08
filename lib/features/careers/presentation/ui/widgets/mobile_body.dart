@@ -43,12 +43,16 @@ class _MobileBody extends StatelessWidget {
             delay: const Duration(milliseconds: 60),
             direction: _SlideDirection.fromLeft,
             duration: const Duration(milliseconds: 650),
-            child: Text(
-              _t('Careers', 'الوظائف', isRtl),
-              style: StyleText.fontSize28Weight600.copyWith(
-                fontSize: 30.sp,
-                fontWeight: FontWeight.w700,
-                color: primary,
+            // BUG-142: same 10.sp inset as the intro text inside its card.
+            child: Padding(
+              padding: EdgeInsetsDirectional.only(start: 10.sp),
+              child: Text(
+                _t('Careers', 'الوظائف', isRtl),
+                style: StyleText.fontSize28Weight600.copyWith(
+                  fontSize: 30.sp,
+                  fontWeight: FontWeight.w700,
+                  color: primary,
+                ),
               ),
             ),
           ),

@@ -38,10 +38,10 @@ class _DesktopBody extends StatelessWidget {
                 return Padding(
                   padding: EdgeInsets.only(right: 10.sp),
                   child: _BlogNavButton(
-                    label: FormatHelper.capitalize(
+                    label: 
                         _tb(e.value.descriptionTitle, isRtl).isNotEmpty
                             ? _tb(e.value.descriptionTitle, isRtl)
-                            : _tb(e.value.question, isRtl)),  // ← new:
+                            : _tb(e.value.question, isRtl),  // ← new:
                     isSelected: selected.id == e.value.id,
                     onTap:      () => onTabChange(e.value.id),
                     isMobile:   false,
@@ -69,7 +69,7 @@ class _DesktopBody extends StatelessWidget {
                 children: [
                   // Question as page title
                   Text(
-                    FormatHelper.capitalize(_tb(selected.question, isRtl)),
+                    _tb(selected.question, isRtl),
                     style: AppTextStyles.font28BlackSemiBoldCairo.copyWith(
                       fontSize:   28.sp,
                       fontWeight: FontWeight.w700,
@@ -88,8 +88,8 @@ class _DesktopBody extends StatelessWidget {
                           children: [
                             // descriptionTitle
                             Text(
-                              FormatHelper.capitalize(
-                                  _tb(selected.descriptionTitle, isRtl)),
+                              
+                                  _tb(selected.descriptionTitle, isRtl),
                               style: AppTextStyles.font14BlackCairo.copyWith(
                                 fontSize:   15.sp,
                                 fontWeight: FontWeight.w700,
@@ -98,8 +98,8 @@ class _DesktopBody extends StatelessWidget {
                             SizedBox(height: 10.h),
                             // shortDescription
                             Text(
-                              FormatHelper.capitalize(
-                                  _tb(selected.shortDescription, isRtl)),
+                              
+                                  _tb(selected.shortDescription, isRtl),
                               style: AppTextStyles.font12BlackCairoRegular
                                   .copyWith(
                                 fontSize: 13.sp,

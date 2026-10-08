@@ -66,7 +66,7 @@ class _CmsFooterDesktop extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8.r)),
                   child: Center(
                     child: data.branding.logoUrl.isNotEmpty
-                        ? SvgPicture.network(
+                        ? _SmartNetworkImage( // BUG-68
                       data.branding.logoUrl,
                       width: 28.w, height: 28.h,
                       fit: BoxFit.contain,

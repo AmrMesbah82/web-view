@@ -209,7 +209,7 @@ class _CustomDropdownCalendarState extends State<CustomDropdownCalendar> {
               children: widget.required
                   ? [
                       TextSpan(
-                          text: ' *',
+                          text: '*',
                           style: StyleText.fontSize14Weight500
                               .copyWith(color: AppColors.red))
                     ]

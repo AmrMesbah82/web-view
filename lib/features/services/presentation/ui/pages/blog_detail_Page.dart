@@ -15,10 +15,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:website_app/core/theme/new_theme.dart';
 
 import '../../../../../core/main_widgets/app_footer.dart';
+import '../../../../../core/widgets/scroll_with_footer.dart';
 import '../../../../../core/main_widgets/app_navbar.dart';
 import '../../../../../core/theme/appcolors.dart';
 import '../../../../../core/theme/text.dart';
 import '../../../../../core/widgets/format_heper.dart';
+import '../../../../../core/widgets/format_helper.dart';
 import '../../../../home/presentation/controller/home_cubit.dart';
 import '../../../../home/presentation/controller/home_state.dart';
 import '../../../../home/presentation/controller/lang_state.dart';
@@ -193,7 +195,7 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
 
                         // ✅ Content — scrolls
                         Expanded(
-                          child: SingleChildScrollView(
+                          child: ScrollWithFooter(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
@@ -220,11 +222,10 @@ class _BlogDetailPageState extends State<BlogDetailPage> {
                                 ),
                               ],
                             ),
+                            // BUG-65: footer scrolls with the page (was pinned).
+                            footer: const AppFooter(),
                           ),
                         ),
-
-                        // ✅ Footer — fixed at bottom
-                        const AppFooter(),
                       ],
                     ),
                   );

@@ -34,6 +34,22 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
     );
   }
 
+  @override
+  void didUpdateWidget(covariant _AboutBodyDesktop oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A tab asked for from outside after the first build — the admin Terms
+    // preview switching between Terms and Privacy. Null means "no request" and
+    // never disturbs the tab the visitor picked.
+    final int? topTab = widget.initialTopTab;
+    final int? subTab = widget.initialSubTab;
+    if (topTab != null && topTab != oldWidget.initialTopTab) {
+      setState(() => _selectedTopTab = topTab);
+    }
+    if (subTab != null && subTab != oldWidget.initialSubTab) {
+      setState(() => _selectedTab = subTab);
+    }
+  }
+
   String _tabLabel(int i) => switch (i) {
     0 => widget.isRtl ? 'الرؤية' : 'Vision',
     1 => widget.isRtl ? 'الرسالة' : 'Mission',
@@ -52,7 +68,12 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
   String _tabDesc(int i) => switch (i) {
     0 => _ab(widget.model.vision.subDescription, widget.isRtl),
     1 => _ab(widget.model.mission.subDescription, widget.isRtl),
-    _ => _ab(widget.model.mission.subDescription, widget.isRtl),
+    // BUG-118: "Values" showed the MISSION text. There is no Values intro
+    // in the CMS, so the summary is the list of value titles.
+    _ => widget.model.values
+        .map((v) => _ab(v.title, widget.isRtl).trim())
+        .where((t) => t.isNotEmpty)
+        .join('  •  '),
   };
 
   Widget _downloadButton(String label, String url) {
@@ -126,6 +147,8 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                       fit: BoxFit.contain,
                     ),
                   const Spacer(),
+                  // BUG-17: no "Last Updated: —" when there is no date.
+                  if (lastUpdated != null)
                   Text(
                     _lastUpdatedLabel(lastUpdated),
                     style: StyleText.fontSize14Weight400.copyWith(
@@ -136,8 +159,11 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                 ],
               ),
               SizedBox(height: 16.h),
+              // BUG-17: an empty legal page said nothing at all.
               Text(
-                description,
+                description.trim().isNotEmpty
+                    ? description
+                    : _pendingDocText(widget.isRtl, attachEnUrl, attachArUrl),
                 style: StyleText.fontSize14Weight400.copyWith(
                   fontSize: 13.sp,
                   height: 1.75,
@@ -406,7 +432,7 @@ class _AboutBodyDesktopState extends State<_AboutBodyDesktop> {
                               ),
                               child: Center(
                                 child: Text(
-                                  isRtl ? 'لا يوجد محتوى بعد' : 'No content yet',
+                                  isRtl ? 'هذا المحتوى سيتوفر قريبًا' : 'This content will be available soon.', // BUG-17
                                   style: StyleText.fontSize14Weight400.copyWith(
                                     fontFamily: 'Cairo',
                                     fontSize: 14.sp,

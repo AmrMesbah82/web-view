@@ -1,34 +1,30 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/twilio/twilio_repository.dart';
+// BUG-51: was core/twilio/twilio_repository.dart, which called Twilio from the
+// browser with hard-coded credentials. This one calls our Cloud Functions.
+import '../../domain/base_repository/twilio_repo.dart';
 import 'contact_us_otp_state.dart';
 
 class ContactOtpCubit extends Cubit<ContactOtpState> {
-  final TwilioRepository _twilioRepo = TwilioRepository();
+  final TwilioRepository _twilioRepo;
 
-  ContactOtpCubit() : super(OtpInitial()) {
-  }
+  ContactOtpCubit({TwilioRepository? repo})
+      : _twilioRepo = repo ?? TwilioRepository(),
+        super(OtpInitial());
 
   /// Send OTP to the user's phone number
   Future<void> sendOtp({
     required String phoneNumber,
     required String locale, // 'en' or 'ar'
-  }) async
-  {
-
+  }) async {
     try {
       emit(OtpSending());
-
-      // Call Twilio repository
-      await _twilioRepo.sendOTP(
-        phoneNumber,
-        'sms', // or 'whatsapp' if you want
-        locale,
-      );
-
+      await _twilioRepo.sendOTP(phoneNumber, 'sms', locale);
       emit(OtpSent(phoneNumber: phoneNumber));
-    } catch (e, stackTrace) {
-      emit(OtpError(message: 'Failed to send OTP: $e'));
+    } catch (e) {
+      // BUG-14: a failed send (e.g. 401 / invalid number) is now reported and
+      // the "code sent" dialog is NOT opened.
+      emit(OtpSendFailed(message: _clean(e)));
     }
   }
 
@@ -36,28 +32,23 @@ class ContactOtpCubit extends Cubit<ContactOtpState> {
   Future<void> verifyOtp({
     required String phoneNumber,
     required String code,
-  }) async
-  {
-
+  }) async {
     try {
       emit(OtpVerifying());
-
-      // Call Twilio repository
-      final isValid = await _twilioRepo.verifyOTP(phoneNumber, code);
-
-
-      if (isValid) {
-        emit(OtpVerified());
+      final result = await _twilioRepo.verifyOTP(phoneNumber, code);
+      if (result.approved && (result.verificationToken ?? '').isNotEmpty) {
+        emit(OtpVerified(verificationToken: result.verificationToken!));
       } else {
-        emit(OtpError(message: 'Invalid verification code. Please try again.'));
+        emit(const OtpError(message: 'Invalid verification code. Please try again.'));
       }
-    } catch (e, stackTrace) {
-      emit(OtpError(message: 'Failed to verify OTP: $e'));
+    } catch (e) {
+      emit(OtpError(message: _clean(e)));
     }
   }
 
   /// Reset the OTP state to initial
-  void reset() {
-    emit(OtpInitial());
-  }
+  void reset() => emit(OtpInitial());
+
+  static String _clean(Object e) =>
+      e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
 }

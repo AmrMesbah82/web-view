@@ -403,9 +403,9 @@ class _TabletCards extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SizedBox(height: 36.w + 6.h),
+                    // BUG-124: tablets showed only 2 of the 5 quick links.
                     ...data.navButtons
                         .where((btn) => btn.status)
-                        .take(2)
                         .toList()
                         .asMap()
                         .entries

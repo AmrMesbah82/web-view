@@ -63,6 +63,12 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
       socialLinks: mainData.socialLinks.isNotEmpty
           ? mainData.socialLinks
           : home.socialLinks,
+      // ── Two INDEPENDENT nav features ──────────────────────────────────────
+      // • home.navButtons  → the Home page nav cards (homePage/home_page).
+      //   Left untouched so the hero cards read the HOME doc.
+      // • mainNavButtons   → the application's main navbar (mainPage/main).
+      //   Injected here so app_navbar reads the MAIN doc, never the home one.
+      mainNavButtons: mainData.navButtons,
     );
   }
 
@@ -85,6 +91,8 @@ class HomeCmsCubit extends Cubit<HomeCmsState> {
         socialLinks: mainData.socialLinks.isNotEmpty
             ? mainData.socialLinks
             : home.socialLinks,
+        // Main navbar items come from the Main doc (see _mergeBranding).
+        mainNavButtons: mainData.navButtons,
       );
     } catch (_) {
       // Keep home values on any failure.

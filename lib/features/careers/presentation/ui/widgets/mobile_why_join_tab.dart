@@ -46,7 +46,7 @@ class _MobileWhyJoinTab extends StatelessWidget {
                     style: StyleText.fontSize15Weight400.copyWith(
                       fontSize: 11.sp,
                       height: 1.7,
-                      color: Colors.black45,
+                      color: const Color(0xFF797979) /* Figma grey */,
                     ),
                   ),
               ],

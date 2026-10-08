@@ -7,7 +7,13 @@ import '../../data/models/contact_us_model.dart';
 
 abstract class ContactRepo {
   /// Submit a new message from the public Contact page
-  Future<void> submitContact(ContactSubmission submission);
+  ///
+  /// BUG-51: [verificationToken] is the one-time token returned by the
+  /// `verifyOTP` Cloud Function; the server rejects a submission without it.
+  Future<void> submitContact(
+    ContactSubmission submission, {
+    required String verificationToken,
+  });
 
   /// Fetch all submissions (admin)
   Future<List<ContactSubmission>> fetchAll();

@@ -94,6 +94,8 @@ class _MobileDocPanel extends StatelessWidget {
                           fit: BoxFit.contain,
                         ),
                       const Spacer(),
+                      // BUG-17: no "Last Updated: —" without a date.
+                      if (lastUpdated != null)
                       Builder(builder: (context) {
                         final p = _lastUpdatedParts(context);
                         return RichText(
@@ -115,7 +117,12 @@ class _MobileDocPanel extends StatelessWidget {
                   ),
                   SizedBox(height: 12.h),
                   Text(
-                    description,
+                    description.trim().isNotEmpty
+                        ? description
+                        : _pendingDocText( // BUG-17
+                            Directionality.of(context) == TextDirection.rtl,
+                            attachEnUrl,
+                            attachArUrl),
                     style: StyleText.fontSize11Weight400.copyWith(
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w400,

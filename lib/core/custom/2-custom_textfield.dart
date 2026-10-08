@@ -357,7 +357,12 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
     final text = _controller.text;
     final isEmpty = text.trim().isEmpty;
-    final isRtl = widget.textDirection == TextDirection.rtl;
+    // BUG-122: the message language follows the PAGE (Directionality), not
+    // the field's own text direction — the Arabic Apply form showed English
+    // "This field is required." because its fields don't pass textDirection
+    // (and the phone field is forced LTR).
+    final isRtl = (Directionality.maybeOf(context) ?? widget.textDirection) ==
+        TextDirection.rtl;
 
     if (widget.submitted && isEmpty) {
       return isRtl ? 'هذا الحقل مطلوب' : 'This field is required.';
@@ -365,7 +370,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
     if (widget.onlyDigits &&
         text.isNotEmpty &&
         !RegExp(r'^\d+$').hasMatch(text)) {
-      return 'Only numbers are allowed.';
+      return isRtl ? 'يُسمح بالأرقام فقط.' : 'Only numbers are allowed.';
     }
     return null;
   }
@@ -437,18 +442,19 @@ class _CustomTextFieldState extends State<CustomTextField> {
           RichText(
             text: TextSpan(
               text: widget.label,
+              // BUG-130: labels keep their normal colour on error (the red
+              // border + message mark the field) — same as the Contact form.
               style: widget.labelStyle ??
                   StyleText.fontSize14Weight500.copyWith(
-                    color: hasError
-                        ? AppColors.red
-                        : isDisabled
+                    color: isDisabled
                         ? AppColors.text.withOpacity(0.4)
                         : AppColors.text,
                   ),
+              // BUG-128: required fields are marked with a red " *".
               children: widget.required
                   ? [
                 TextSpan(
-                  text: '',
+                  text: '*',
                   style: StyleText.fontSize14Weight500
                       .copyWith(color: AppColors.red),
                 ),
@@ -610,9 +616,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           hasError
               ? Text(
             resolvedError!,
-            style: widget.errorStyle ??
-                StyleText.fontSize12Weight400
-                    .copyWith(color: AppColors.red),
+            style: widget.errorStyle ?? customFieldErrorStyle(),
           )
               : Text(
             widget.helperText!,
@@ -621,10 +625,34 @@ class _CustomTextFieldState extends State<CustomTextField> {
                   color: AppColors.text.withOpacity(0.5),
                 ),
           ),
+          // BUG-131: breathing room before the next label (was ≈2 px).
+          if (hasError) SizedBox(height: 6.h),
         ],
       ],
     );
   }
+}
+
+/// BUG-131: ONE error style for text fields AND dropdowns.
+TextStyle customFieldErrorStyle() =>
+    StyleText.fontSize12Weight400.copyWith(color: AppColors.red);
+
+/// BUG-128: label with a red " *" for required fields — used by fields that
+/// draw their own label (phone, dropdowns, legacy shim).
+Widget requiredLabel(String label,
+    {bool required = false, TextStyle? style, TextDirection? textDirection}) {
+  final base =
+      style ?? StyleText.fontSize14Weight400.copyWith(color: AppColors.text);
+  return Text.rich(
+    TextSpan(
+      text: label,
+      style: base,
+      children: required
+          ? [TextSpan(text: '*', style: base.copyWith(color: AppColors.red))]
+          : const [],
+    ),
+    textDirection: textDirection,
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

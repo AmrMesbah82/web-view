@@ -3,9 +3,13 @@ part of '../pages/job_page.dart';
 class _FilterTab extends StatefulWidget {
   final String label;
   final bool isSelected;
+  final Color primary;
   final VoidCallback onTap;
   const _FilterTab(
-      {required this.label, required this.isSelected, required this.onTap});
+      {required this.label,
+      required this.isSelected,
+      required this.primary,
+      required this.onTap});
 
   @override
   State<_FilterTab> createState() => _FilterTabState();
@@ -16,7 +20,7 @@ class _FilterTabState extends State<_FilterTab> {
 
   @override
   Widget build(BuildContext context) {
-    final Color hoverBg = Color.lerp(Colors.white, _kGreen, 0.10)!;
+    final Color hoverBg = Color.lerp(Colors.white, widget.primary, 0.10)!;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -30,18 +34,18 @@ class _FilterTabState extends State<_FilterTab> {
           padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
           decoration: BoxDecoration(
             color: widget.isSelected
-                ? _kGreen
+                ? widget.primary
                 : (_hovered ? hoverBg : Colors.transparent),
-            borderRadius: BorderRadius.circular(7.r),
+            borderRadius: BorderRadius.circular(4.r),
           ),
           child: Text(
             widget.label,
             style: StyleText.fontSize13Weight600.copyWith(
               fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w800,
               color: widget.isSelected
                   ? Colors.white
-                  : (_hovered ? _kGreen : Colors.black54),
+                  : (_hovered ? widget.primary : Colors.black54),
             ),
           ),
         ),

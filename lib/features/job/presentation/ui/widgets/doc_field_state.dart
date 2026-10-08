@@ -1,8 +1,9 @@
 part of '../pages/job_apply_page.dart';
 
 class _DocFieldState {
-  final String name;     // e.g. "Resume", "Cover Letter", "Portfolio"
-  final String docType;  // "PDF" or "Link"
+  final String name;       // e.g. "Resume", "Cover Letter", "Portfolio"
+  final String docType;    // "PDF" or "Link"
+  final bool isRequired;   // admin's Required/Optional switch
 
   // ── For PDF type ──
   String? fileName;
@@ -16,6 +17,7 @@ class _DocFieldState {
   _DocFieldState({
     required this.name,
     required this.docType,
+    this.isRequired = true,
   }) : linkController = TextEditingController();
 
   void dispose() {
